@@ -1,5 +1,5 @@
 /* @version 1.1.2 - March 5, 2026*/
-/* @copyright 2026 Global Science Network*/
+/* @copyright 2026 Pseudo SF*/
 /* Inline styles moved from index-developer.html */
 select option {
   background-color: #1a1a2e;
@@ -7,43 +7,266 @@ select option {
 }
 
 .header-settings-btn {
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--psf-accent-light);
-  border: 1px solid var(--psf-accent-medium);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 18px;
+  position: static;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(139, 148, 158, 0.25);
+  background: transparent;
+  border-radius: 6px;
+  padding: 0;
+  font-size: 16px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: #8b949e;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding-bottom: 4px;
 }
 
 .header-settings-btn:hover {
-  background: var(--psf-accent-medium);
-  border-color: var(--psf-accent);
-  box-shadow: 0 0 15px var(--psf-accent-medium);
+  border-color: rgba(88, 166, 255, 0.5);
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.06);
 }
 
 .app-header {
   position: relative;
+  background: #111c2a;
+  border-bottom: 1px solid rgba(88, 166, 255, 0.12);
+  min-height: 64px;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.developer-header-text .core-title.core-bracket-logo {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-family: 'Rajdhani', 'Inter', sans-serif;
+  font-size: 56px;
+  font-weight: 700;
+  color: #e6edf3;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.176));
+  opacity: 1;
+  transform: none;
+  text-shadow:
+    0 0 10px rgba(0, 212, 255, 0.112),
+    0 0 18px rgba(0, 212, 255, 0.056);
+  animation: coreLogoPulse 3s ease-in-out infinite !important;
+  will-change: filter, text-shadow;
+}
+
+.developer-header-text .core-title.core-bracket-logo .core-bracket-mark {
+  color: #58a6ff;
+  font-size: 68px;
+  font-weight: 300;
+  line-height: 1;
+  text-shadow:
+    0 0 10px rgba(88, 166, 255, 0.176),
+    0 0 20px rgba(88, 166, 255, 0.088);
+  will-change: filter, text-shadow;
+}
+
+@keyframes coreLogoPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.176));
+    text-shadow:
+      0 0 10px rgba(0, 212, 255, 0.112),
+      0 0 18px rgba(0, 212, 255, 0.056);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.328));
+    text-shadow:
+      0 0 16px rgba(0, 212, 255, 0.24),
+      0 0 30px rgba(0, 212, 255, 0.136);
+  }
 }
 
 .app-footer {
   position: relative;
+  background: #0b1219;
+  border-top: 1px solid rgba(88, 166, 255, 0.08);
+  min-height: 38px;
 }
 
-.app-footer .footer-center-line {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  margin: 0;
+#main-menu {
+  background: #0e1621;
+  padding: 24px 28px;
+}
+
+.main-menu-section-label {
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(88, 166, 255, 0.45);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+#main-menu .menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+#main-menu .menu-card {
+  background: #161f2e;
+  border: 1px solid rgba(139, 148, 158, 0.15);
+  border-radius: 8px;
+  padding: 24px 22px 18px;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: left;
+}
+
+#main-menu .menu-card:hover {
+  border-color: rgba(88, 166, 255, 0.4);
+  background: #19243a;
+}
+
+#main-menu .menu-card h3 {
+  font-size: 26px;
+  font-weight: 600;
+  color: #e6edf3;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+#main-menu .menu-card p {
+  font-size: 20px;
+  color: #8b949e;
+  line-height: 1.6;
+}
+
+#main-menu .card-icon {
+  margin-bottom: 14px;
+  color: #58a6ff;
+}
+
+#main-menu .card-icon svg {
+  display: block;
+  width: 78px;
+  height: 78px;
+}
+
+.psf-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 24px;
+}
+
+.psf-footer-copy {
+  font-size: 15px;
+  color: #484f58;
+  letter-spacing: 0.03em;
   white-space: nowrap;
 }
 
-.app-footer #gpu-indicator {
-  margin-left: auto;
+.psf-footer-copy span {
+  color: #6e7681;
+}
+
+.psf-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.psf-upgrade-btn {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 8px 22px;
+  background: transparent;
+  border: 1px solid rgba(139, 148, 158, 0.55);
+  border-radius: 8px;
+  color: #ffffff;
+  text-transform: uppercase;
+  transition: background 0.2s;
+  text-decoration: none;
+}
+
+.psf-upgrade-btn:hover,
+.psf-upgrade-btn:visited,
+.psf-upgrade-btn:active {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.psf-upgrade-btn:hover {
+  background: rgba(139, 148, 158, 0.12);
+}
+
+.psf-gpu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  color: #8b949e;
+  letter-spacing: 0.05em;
+}
+
+.psf-gpu-bar {
+  width: 40px;
+  height: 3px;
+  background: rgba(139, 148, 158, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.psf-gpu-fill {
+  height: 100%;
+  width: 62%;
+  background: #58a6ff;
+  border-radius: 2px;
+}
+
+/* In-window settings slide-down mode (mockup-style) */
+.settings-modal-overlay.settings-inline-slide {
+  background: rgba(11, 18, 25, 0.75);
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 30px;
+}
+
+.settings-modal-overlay.settings-inline-slide .settings-modal {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: translateY(-24px);
+  opacity: 0;
+  width: 660px;
+  max-width: 95%;
+  max-height: calc(100vh - 54px);
+  border: 1px solid rgba(88, 166, 255, 0.18);
+  border-radius: 10px;
+  background: #111c2a;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.settings-modal-overlay.settings-inline-slide.open .settings-modal {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.settings-modal-overlay.settings-inline-slide .settings-modal-header {
+  background: #0d1824;
+  border-bottom: 1px solid rgba(88, 166, 255, 0.1);
+  cursor: default;
+}
+
+.settings-modal-overlay.settings-inline-slide .settings-tabs {
+  background: #0d1824;
 }
 
 .footer-no-subscription-badge {
@@ -56,6 +279,14 @@ select option {
   color: #ff6a6a;
   font-weight: 700;
   letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+.footer-no-subscription-badge:visited,
+.footer-no-subscription-badge:hover,
+.footer-no-subscription-badge:active {
+  color: #ff6a6a;
+  text-decoration: none;
 }
 
 .esp32-status-pill {

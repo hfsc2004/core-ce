@@ -7,9 +7,11 @@ const { findCycleCount } = require('./moe-irg-policy');
 function inferColorSequenceContract(message, policy) {
   const text = String(message || '').trim();
   const picoMention = /(raspberry\s*pi\s*pico|\bpico\b)/i.test(text);
+  const piMention = /\braspberry\s*pi\b/i.test(text);
+  const ledLightMention = /\b(red|blue|green|white)\b[\s\w-]{0,24}\b(led|light)\b/i.test(text);
   const hardwareMention = /(gpio|pin|machine\.pin|from\s+machine\s+import\s+pin|microcontroller|serial)/i.test(text);
   const blinkMention = /(blink|flash|cycle|sequence|toggle)/i.test(text);
-  if (!(picoMention || hardwareMention) || !blinkMention) return null;
+  if (!(picoMention || hardwareMention || (piMention && ledLightMention)) || !blinkMention) return null;
 
   const periodMsMatch = text.match(/\b(\d{1,5})\s*(ms|millisecond|milliseconds)\b/i);
   const periodSMatc = text.match(/\b(\d{1,3})(?:\.(\d{1,3}))?\s*(s|sec|second|seconds)\b/i);

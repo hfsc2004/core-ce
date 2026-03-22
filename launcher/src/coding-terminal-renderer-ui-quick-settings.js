@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * PSF Coding Terminal - Renderer UI Quick Settings
@@ -14,10 +14,18 @@
     const { state, elements, api, openAgentSettingsModal } = ctx;
 
     function openQuickSettingsModal() {
+      const existing = document.getElementById('ct-settings-drawer-wrap');
+      if (existing) {
+        closeDrawer(existing);
+        return;
+      }
+
       const overlay = document.createElement('div');
-      overlay.className = 'ct-modal';
+      overlay.className = 'ct-settings-drawer-wrap';
+      overlay.id = 'ct-settings-drawer-wrap';
       overlay.innerHTML = `
-      <div class="ct-modal-card">
+      <button class="ct-settings-drawer-backdrop" id="ct-settings-backdrop" aria-label="Close settings"></button>
+      <aside class="ct-settings-drawer" role="dialog" aria-modal="true" aria-label="Quick Settings">
         <div class="ct-modal-header">
           <h3>Quick Settings</h3>
           <button class="ct-btn ct-btn-tiny" id="ct-settings-close">Close</button>
@@ -52,10 +60,12 @@
           </div>
           <p class="ct-settings-mode-row">Mode: <strong>${state.chatMode}</strong> - forces dispatch intent (auto, inspect, or generate).</p>
         </div>
-      </div>`;
+      </aside>`;
       document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add('open'));
+      document.body.classList.add('ct-settings-drawer-open');
 
-      const close = () => overlay.remove();
+      const close = () => closeDrawer(overlay);
       const setBtn = (id, value) => { const el = overlay.querySelector(`#${id}`); if (el) el.textContent = value; };
       const refreshStates = () => {
         setBtn('ct-settings-backend', state.inferenceBackend === 'llama-cpp' ? 'llama.cpp' : 'ollama');
@@ -85,7 +95,7 @@
 
       const bind = (id, fn) => overlay.querySelector(`#${id}`)?.addEventListener('click', fn);
       bind('ct-settings-close', close);
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      bind('ct-settings-backdrop', close);
 
       bind('ct-settings-backend', async () => { await api.handleInferenceBackendCycle(); refreshStates(); });
       bind('ct-settings-router', async () => { await api.handleRouterToggle(); refreshStates(); });
@@ -111,6 +121,15 @@
       bind('ct-settings-agent-config', () => { openAgentSettingsModal(); });
 
       refreshStates();
+    }
+
+    function closeDrawer(overlay) {
+      if (!overlay) return;
+      overlay.classList.remove('open');
+      document.body.classList.remove('ct-settings-drawer-open');
+      window.setTimeout(() => {
+        if (overlay.isConnected) overlay.remove();
+      }, 200);
     }
 
     return { openQuickSettingsModal };

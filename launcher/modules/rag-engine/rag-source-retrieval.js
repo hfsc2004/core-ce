@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * Source-of-record retrieval helpers for hybrid RAG mode.

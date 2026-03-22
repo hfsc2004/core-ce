@@ -9,33 +9,68 @@
 <body>
   <!-- Header -->
   <header class="ct-header">
-    <div class="ct-header-left">
-      <span class="ct-logo">⌨️</span>
-      <span class="ct-title">PSF Coding Terminal</span>
-      <div class="ct-header-model-pickers">
-        <select id="model-select" class="ct-btn" style="max-width: 320px;">
-          <option value="">Coder: loading...</option>
-        </select>
-        <select id="router-model-select" class="ct-btn" style="max-width: 260px;">
-          <option value="">Router: loading...</option>
-        </select>
-      </div>
+    <div class="ct-wordmark">
+      <span class="ct-bracket">[</span>CORE<span class="ct-bracket">]</span>
     </div>
-    <div class="ct-header-right">
-      <span class="ct-session-group">
-        <span class="ct-session-label">Session:</span>
-        <button class="ct-btn ct-btn-small" id="btn-session-new" title="Start a fresh session">🆕 New</button>
-        <button class="ct-btn ct-btn-small" id="btn-session-save" title="Save current chat session">💾 Save</button>
-        <button class="ct-btn ct-btn-small" id="btn-session-load" title="Load a saved chat session">📂 Load</button>
-        <button class="ct-btn ct-btn-small" id="btn-session-delete" title="Delete saved sessions">🗑️ Delete</button>
-      </span>
-      <button class="ct-btn ct-btn-small" id="btn-project-root-top" title="Set Project Root">Project Root</button>
-      <button class="ct-btn ct-btn-small" id="btn-rlm-folder-top" title="Manage RLM attachments">RLM Folder</button>
-      <button class="ct-btn ct-btn-small" id="btn-stop-top" title="Stop current generation">Stop</button>
-      <button class="ct-btn ct-btn-icon" id="btn-rag" title="RAG Sources">📚</button>
-      <button class="ct-btn ct-btn-icon" id="btn-git" title="Git Status">⎇</button>
-      <button class="ct-btn ct-btn-icon" id="btn-settings" title="Settings">⚙️</button>
+
+    <div class="ct-page-id">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="2" width="24" height="24" rx="4"></rect>
+        <polyline points="10,9 6,14 10,19"></polyline>
+        <polyline points="18,9 22,14 18,19"></polyline>
+        <line x1="15" y1="8" x2="13" y2="20"></line>
+      </svg>
+      <span class="ct-page-name">Coding Terminal</span>
     </div>
+
+    <div class="ct-sep"></div>
+
+    <div class="ct-model-group">
+      <span class="ct-model-label">Coder</span>
+      <select id="model-select" class="ct-select">
+        <option value="">loading...</option>
+      </select>
+    </div>
+    <div class="ct-model-group">
+      <span class="ct-model-label">Router</span>
+      <select id="router-model-select" class="ct-select">
+        <option value="">loading...</option>
+      </select>
+    </div>
+
+    <div class="ct-sep"></div>
+
+    <span class="ct-session-group">
+      <span class="ct-session-label">Session:</span>
+      <button class="ct-btn ct-btn-small" id="btn-session-new" title="Start a fresh session">New</button>
+      <button class="ct-btn ct-btn-small" id="btn-session-save" title="Save current chat session">Save</button>
+      <button class="ct-btn ct-btn-small" id="btn-session-load" title="Load a saved chat session">Load</button>
+      <button class="ct-btn ct-btn-small" id="btn-session-delete" title="Delete saved sessions">Delete</button>
+    </span>
+
+    <div class="ct-sep"></div>
+
+    <button class="ct-btn ct-btn-small" id="btn-project-root-top" title="Set Project Root">Project</button>
+    <button class="ct-btn ct-btn-small ct-btn-context" id="btn-rag-top" title="Select active RAG folder">RAG: Auto</button>
+    <button class="ct-btn ct-btn-small" id="btn-rlm-folder-top" title="Manage RLM attachments">RLM Folder</button>
+    <button class="ct-btn ct-btn-small ct-btn-stop" id="btn-stop-top" title="Stop current generation">Stop</button>
+
+    <button class="ct-btn ct-btn-icon" id="btn-rag" title="RAG Sources" aria-label="RAG Sources">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#d2991e" stroke-width="1.7" stroke-linecap="round">
+        <path d="M3,6.5 C3,4.5 10,4.5 10,6.5 C10,8.5 3,8.5 3,6.5Z"></path>
+        <line x1="1" y1="6.5" x2="3" y2="6.5"></line>
+        <line x1="10" y1="6.5" x2="12" y2="6.5"></line>
+      </svg>
+    </button>
+    <button class="ct-btn ct-btn-icon" id="btn-git" title="Git Status" aria-label="Git Status">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#f0883e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="3.5" cy="3" r="1.8"></circle>
+        <circle cx="9.5" cy="3" r="1.8"></circle>
+        <circle cx="3.5" cy="10" r="1.8"></circle>
+        <line x1="3.5" y1="4.8" x2="3.5" y2="8.2"></line>
+        <path d="M9.5,4.8 Q9.5,7.5 3.5,8.2"></path>
+      </svg>
+    </button>
   </header>
 
   <!-- Main Content Area -->
@@ -193,6 +228,44 @@
       </div>
     </div>
   </main>
+
+  <div class="ct-settings-rail" id="ct-settings-rail">
+    <button class="ct-settings-rail-btn ct-settings-rail-toggle" id="btn-settings-drawer-handle" title="Toggle Settings" aria-label="Toggle Settings">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" id="ct-settings-rail-arrow">
+        <line x1="2" y1="6.5" x2="11" y2="6.5"></line>
+        <polyline points="7,3 11,6.5 7,10"></polyline>
+      </svg>
+    </button>
+    <button class="ct-settings-rail-btn" id="btn-settings-rail-rag" title="RAG">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#d2991e" stroke-width="1.5" stroke-linecap="round">
+        <ellipse cx="6.5" cy="3.5" rx="4.5" ry="1.8"></ellipse>
+        <path d="M2,3.5 L2,9.5 Q2,11 6.5,11 Q11,11 11,9.5 L11,3.5"></path>
+        <path d="M2,6.5 Q2,8 6.5,8 Q11,8 11,6.5"></path>
+      </svg>
+    </button>
+    <button class="ct-settings-rail-btn" id="btn-settings-rail-git" title="Git">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#f0883e" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="3.5" cy="3" r="1.8"></circle>
+        <circle cx="9.5" cy="3" r="1.8"></circle>
+        <circle cx="3.5" cy="10" r="1.8"></circle>
+        <line x1="3.5" y1="4.8" x2="3.5" y2="8.2"></line>
+        <path d="M9.5,4.8 Q9.5,7.5 3.5,8.2"></path>
+      </svg>
+    </button>
+    <button class="ct-settings-rail-btn" id="btn-settings-rail-plan" title="Plan Run">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round">
+        <polygon points="2,1.5 11,6.5 2,11.5"></polygon>
+      </svg>
+    </button>
+    <button class="ct-settings-rail-btn" id="btn-settings-rail-trace" title="Model Trace">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#8b949e" stroke-width="1.5" stroke-linecap="round">
+        <rect x="1" y="1" width="11" height="11" rx="2"></rect>
+        <line x1="3.5" y1="5" x2="9.5" y2="5"></line>
+        <line x1="3.5" y1="7" x2="9.5" y2="7"></line>
+        <line x1="3.5" y1="9" x2="6.5" y2="9"></line>
+      </svg>
+    </button>
+  </div>
 
   <!-- Status Bar -->
   <footer class="ct-status-bar">

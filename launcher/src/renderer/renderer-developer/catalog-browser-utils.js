@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 (function catalogBrowserUtilsScope() {
   const splitFilePattern = /-(\d{5})-of-(\d{5})\.gguf$/i;

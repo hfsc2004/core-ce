@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- Version: 1.1.2 -->
-<!-- Copyright © 2026 Global Science Network -->
+<!-- Copyright © 2026 Pseudo SF -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -17,7 +17,9 @@
     <header class="app-header">
       <div class="logo-container developer-logo-container">
         <div class="header-text developer-header-text">
-          <p class="core-title">CORE</p>
+          <p class="core-title core-bracket-logo">
+            <span class="core-bracket-mark">[</span>CORE<span class="core-bracket-mark">]</span>
+          </p>
         </div>
         <img src="../assets/PSF_Logo_White_256.png" alt="Pseudo Science Fiction Logo" class="psf-logo">
       </div>
@@ -28,8 +30,8 @@
       </div>
       
       <!-- Settings Button -->
-      <button id="header-settings-btn" class="header-settings-btn" onclick="window.electronAPI.openSettingsWindow()" title="Settings" style="display: none;">
-        ⚙️
+      <button id="header-settings-btn" class="header-settings-btn" onclick="window.SettingsModal?.show?.('huggingface')" title="Settings" style="display: flex;">
+        ···
       </button>
     </header>
 
@@ -61,41 +63,54 @@
 
       <!-- Main Menu -->
       <div id="main-menu" class="screen">
+        <div class="main-menu-section-label">Core Modules</div>
         <div class="menu-grid">
           <div class="menu-card" style="--card-index:0;" onclick="launchTerminal()">
-            <div class="card-icon">💻</div>
-            <h3>PSF Terminal</h3>
-            <p>Command-driven terminal with attachments and RLM-assisted document tools</p>
+            <div class="card-icon">
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="36" height="28" rx="3"/><polyline points="12,18 19,22 12,26"/><line x1="21" y1="26" x2="32" y2="26"/></svg>
+            </div>
+            <h3>Terminal</h3>
+            <p>Command-driven interface with RLM document tools and attachment support</p>
           </div>
 
           <div class="menu-card" style="--card-index:1;" onclick="showScreen('model-ordering')">
-            <div class="card-icon">📊</div>
-            <h3>PSF Relay</h3>
-            <p>Mixture of Experts / Industrial Reflex Gateway Pipeline Orchestrator</p>
+            <div class="card-icon">
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="18" width="10" height="10" rx="2"/><rect x="31" y="6" width="10" height="10" rx="2"/><rect x="31" y="28" width="10" height="10" rx="2"/><line x1="13" y1="22" x2="31" y2="11"/><line x1="13" y1="22" x2="31" y2="33"/></svg>
+            </div>
+            <h3>Relay</h3>
+            <p>MoE / IRG pipeline orchestrator for physical device control</p>
           </div>
 
           <div class="menu-card" style="--card-index:2;" onclick="launchCodingTerminal()">
-            <div class="card-icon">⌨️</div>
-            <h3>PSF Coding Terminal</h3>
-            <p>Integrated Router/Coder workspace with project-root grounding, RAG, and Git</p>
+            <div class="card-icon">
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="36" height="28" rx="3"/><polyline points="14,18 9,22 14,26"/><polyline points="30,18 35,22 30,26"/><line x1="20" y1="28" x2="24" y2="16"/></svg>
+            </div>
+            <h3>Coding Terminal</h3>
+            <p>Router/coder workspace with project-root grounding, RAG and Git</p>
           </div>
 
           <div class="menu-card" style="--card-index:3;" onclick="launchInterface('openwebui')">
-            <div class="card-icon">🌐</div>
+            <div class="card-icon">
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="22" cy="22" r="16"/><line x1="6" y1="22" x2="38" y2="22"/><line x1="22" y1="6" x2="22" y2="38"/><path d="M14,10 Q22,18 30,10"/><path d="M14,34 Q22,26 30,34"/></svg>
+            </div>
             <h3>Open WebUI</h3>
             <p>Web chat interface with conversation management and built-in tools</p>
           </div>
 
           <div class="menu-card" style="--card-index:4;" onclick="launchInterface('anythingllm')">
-            <div class="card-icon">🤖</div>
+            <div class="card-icon">
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="25" y="5" width="14" height="14" rx="2"/><rect x="5" y="25" width="14" height="14" rx="2"/><rect x="25" y="25" width="14" height="14" rx="2"/><line x1="19" y1="12" x2="25" y2="12"/><line x1="19" y1="32" x2="25" y2="32"/><line x1="12" y1="19" x2="12" y2="25"/><line x1="32" y1="19" x2="32" y2="25"/></svg>
+            </div>
             <h3>AnythingLLM</h3>
             <p>Community workspace for teams, agents, and document workflows</p>
           </div>
 
           <div class="menu-card" style="--card-index:5;" onclick="showScreen('model-browser')">
-            <div class="card-icon">📥</div>
-            <h3>Browse & Download Models</h3>
-            <p>Browse catalog and download models from HuggingFace</p>
+            <div class="card-icon">
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="30" width="32" height="8" rx="2"/><line x1="22" y1="6" x2="22" y2="26"/><polyline points="13,18 22,27 31,18"/><circle cx="12" cy="34" r="1.5" fill="currentColor" stroke="none"/><circle cx="22" cy="34" r="1.5" fill="currentColor" stroke="none"/><circle cx="32" cy="34" r="1.5" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <h3>Browse & Download</h3>
+            <p>2.5M+ models from HuggingFace - open and gated - in a few clicks</p>
           </div>
 
         </div>
@@ -192,10 +207,19 @@
       <div id="index-heavy-screens-slot"></div>
 
       <div id="model-ordering" class="screen">
-        <div class="screen-header" style="position: relative;">
-          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
-          <h2>PSF Relay</h2>
-          <div style="position: absolute; left: 50%; transform: translateX(-50%); color: var(--psf-accent, #00d4ff); font-size: 24px; font-weight: 600; pointer-events: none; line-height: 1;">
+        <div class="screen-header" style="background:#0f1a27; border-bottom:1px solid rgba(88,166,255,0.08);">
+          <button class="btn-back" onclick="showScreen('main-menu')" style="color:#e6edf3; border-color:rgba(139,148,158,0.35); font-size:18px; padding:9px 18px;">← Back</button>
+          <h2 style="color:#e6edf3; font-size:28px; display:flex; align-items:center; gap:10px;">
+            <svg width="28" height="28" viewBox="0 0 44 44" fill="none" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="18" width="10" height="10" rx="2"></rect>
+              <rect x="31" y="6" width="10" height="10" rx="2"></rect>
+              <rect x="31" y="28" width="10" height="10" rx="2"></rect>
+              <line x1="13" y1="22" x2="31" y2="11"></line>
+              <line x1="13" y1="22" x2="31" y2="33"></line>
+            </svg>
+            <span>PSF Relay</span>
+          </h2>
+          <div style="margin-left:auto; margin-right:18px; color:#6e7681; font-size:20px; letter-spacing:0.04em; line-height:1;">
             Pipeline Orchestrator
           </div>
         </div>
@@ -218,7 +242,7 @@
         <div class="about-content">
           <h3 id="about-product-name">Pseudo Science Fiction - Core</h3>
           <p id="about-app-version">Version 1.1.2</p>
-          <p style="color: #ff6b6b; font-weight: bold;">CORE-CE</p>
+          <p style="color: #ff6b6b; font-weight: bold;">Community Edition</p>
           
           <div class="about-section">
             <h4>📄 Documentation</h4>
@@ -251,20 +275,21 @@
     </div>
 
     <!-- Footer -->
-    <footer class="app-footer" style="display: flex; align-items: center; justify-content: space-between;">
-      <p class="footer-center-line">
+    <footer class="app-footer psf-footer">
+      <div class="psf-footer-copy">
         Copyright © <span id="footer-copyright-year">2026</span>
-        <a id="footer-company-link" href="https://pseudosf.com" target="_blank" rel="noopener">
-          <span id="footer-company-name">Pseudo Science Fiction</span>
-        </a>
-        - <span id="footer-product-name">Pseudo Science Fiction - Core</span>
+        <a id="footer-company-link" href="https://pseudosf.com" target="_blank" rel="noopener"><span id="footer-company-name">Pseudo SF</span></a>
         <span id="footer-app-version">v1.1.2</span>
-        <span id="footer-security-tag">CORE-CE</span>
-        <span id="footer-subscription-tag" class="footer-no-subscription-badge">No Subscription</span>
-        <span id="footer-compliance-proof-tag">PROOF:UNVERIFIED</span>
-      </p>
-      <div id="gpu-indicator" class="gpu-badge" style="display: none; padding: 5px 12px; background: rgba(255,255,255,0.1); border-radius: 4px; font-size: 12px;">
-        <span id="gpu-icon">⏳</span> <span id="gpu-text">Detecting...</span>
+        <span id="footer-security-tag">Core [Community Edition]</span>
+        <span id="footer-compliance-proof-tag" style="display:none;">PROOF:UNVERIFIED</span>
+      </div>
+      <div class="psf-footer-right">
+        <a id="footer-subscription-tag" class="psf-upgrade-btn" href="https://pseudosf.com/upgrade" target="_blank" rel="noopener">▲ UPGRADE</a>
+        <div id="gpu-indicator" class="psf-gpu" style="display: flex;">
+          <div class="psf-gpu-bar"><div class="psf-gpu-fill"></div></div>
+          <span id="gpu-icon" style="display:none;">⏳</span>
+          <span id="gpu-text">GPU Inference</span>
+        </div>
       </div>
     </footer>
   </div>

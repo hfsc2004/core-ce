@@ -1,7 +1,7 @@
 /**
  * AnythingLLM Manager Common - Platform-independent functions
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 
 const fs = require('fs');

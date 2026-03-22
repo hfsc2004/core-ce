@@ -1,5 +1,5 @@
 REM @version 1.1.2 - March 5, 2026
-REM @copyright 2026 Global Science Network
+REM @copyright 2026 Pseudo SF
 @echo off
 title PSF Robotics Archive Collection
 cd /d "%~dp0"

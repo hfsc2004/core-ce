@@ -61,6 +61,7 @@
     ragCollapsed: false,
     gitControlsCollapsed: false,
     gitStatusCollapsed: false,
+    contextRailCollapsed: true,
     ragBuckets: [],
     ragActiveBucket: null,
     editorFiles: [],
@@ -156,6 +157,7 @@
     applyRouterDebugToggleUi();
     applyRagCollapseUi();
     applyGitCollapseUi();
+    applyContextRailUi();
     updateStreamingUi();
     loadModelSelector();
     loadRouterModelSelector();
@@ -352,11 +354,14 @@
       handleHeaderRagClick: delegate('ui', 'handleHeaderRagClick'),
       handleHeaderGitClick: delegate('ui', 'handleHeaderGitClick'),
       handleHeaderSettingsClick: delegate('ui', 'handleHeaderSettingsClick'),
+      handleContextRailToggle: delegate('ui', 'handleContextRailToggle'),
+      handleContextRailSelect: delegate('ui', 'handleContextRailSelect'),
       handleSessionNew,
       handleSessionSave,
       handleSessionLoad,
       handleSessionDelete,
       handleSelectProjectRoot: delegate('project', 'handleSelectProjectRoot'),
+      handleSelectRagBucketFromHeader: delegate('rag', 'handleSelectRagBucketFromHeader'),
       openRlmAttachmentManager: delegate('project', 'openRlmAttachmentManager'),
       handleModelSelection: delegate('runtime', 'handleModelSelection'),
       handleRouterModelSelection: delegate('runtime', 'handleRouterModelSelection'),
@@ -415,6 +420,7 @@
   const applyRouterDebugToggleUi = () => callFeature('ui', 'applyRouterDebugToggleUi');
   const applyRagCollapseUi = () => callFeature('ui', 'applyRagCollapseUi');
   const applyGitCollapseUi = () => callFeature('ui', 'applyGitCollapseUi');
+  const applyContextRailUi = () => callFeature('ui', 'applyContextRailUi');
   const updateStreamingUi = () => callFeature('chat', 'updateStreamingUi');
   const refreshRagBuckets = () => callFeature('rag', 'refreshRagBuckets');
   const refreshRagSources = () => callFeature('rag', 'refreshRagSources');

@@ -1,5 +1,5 @@
 /* @version 1.1.2 - March 5, 2026*/
-/* @copyright 2026 Global Science Network*/
+/* @copyright 2026 Pseudo SF*/
 /* =============================================================================
    Context Panel
    ============================================================================= */
@@ -90,6 +90,56 @@
   align-items: center;
   justify-content: center;
   z-index: 10000;
+}
+
+.ct-settings-drawer-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  pointer-events: none;
+}
+
+.ct-settings-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+
+.ct-settings-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(58vw, 860px);
+  min-width: 620px;
+  background: var(--ct-bg-primary);
+  border-left: 1px solid var(--ct-border);
+  box-shadow: -10px 0 26px rgba(0, 0, 0, 0.34);
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.ct-settings-drawer-wrap.open {
+  pointer-events: auto;
+}
+
+.ct-settings-drawer-wrap.open .ct-settings-drawer-backdrop {
+  opacity: 1;
+}
+
+.ct-settings-drawer-wrap.open .ct-settings-drawer {
+  transform: translateX(0);
+}
+
+.ct-settings-drawer .ct-modal-body {
+  flex: 1;
+  overflow: auto;
 }
 
 .ct-modal-card {

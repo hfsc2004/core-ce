@@ -1,6 +1,6 @@
 #!/bin/bash
 # @version 1.1.2 - March 5, 2026
-# @copyright 2026 Global Science Network
+# @copyright 2026 Pseudo SF
 # Pseudo Science Fiction Core Collection - Python WebUI Builder (macOS)
 # This script creates a portable Python venv with Open WebUI pre-installed
 # Run this ONCE on macOS to create the bundle

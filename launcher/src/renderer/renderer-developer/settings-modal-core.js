@@ -22,6 +22,12 @@ async function showSettingsModal(initialTab = 'huggingface') {
   
   // Insert modal HTML
   document.body.insertAdjacentHTML('beforeend', getSettingsModalHTML(settings));
+  const overlay = document.getElementById('settings-modal-overlay');
+  const inlineSlideMode = !window.__SETTINGS_STANDALONE__ && Boolean(document.getElementById('main-content'));
+  if (overlay && inlineSlideMode) {
+    overlay.classList.add('settings-inline-slide');
+    requestAnimationFrame(() => overlay.classList.add('open'));
+  }
   
   // Initialize draggable
   initSettingsModalDrag();
@@ -47,7 +53,16 @@ function closeSettingsModal(event) {
   }
   
   const overlay = document.getElementById('settings-modal-overlay');
-  if (overlay) overlay.remove();
+  if (overlay) {
+    if (overlay.classList.contains('settings-inline-slide')) {
+      overlay.classList.remove('open');
+      setTimeout(() => {
+        if (overlay.parentNode) overlay.remove();
+      }, 180);
+    } else {
+      overlay.remove();
+    }
+  }
   
   // Clear cached state so it reloads fresh next time
   settingsModalState.hardwareInfo = null;
@@ -64,6 +79,10 @@ function closeSettingsModal(event) {
  * Switch between tabs
  */
 function switchSettingsTab(tabId) {
+  if (tabId === 'theme') {
+    tabId = 'huggingface';
+  }
+
   const previousTab = settingsModalState.activeTab;
   settingsModalState.activeTab = tabId;
 
@@ -102,10 +121,6 @@ function switchSettingsTab(tabId) {
     loadAboutInfo();
   }
   
-  // Load theme from settings file when theme tab is opened
-  if (tabId === 'theme') {
-    loadThemeFromSettings();
-  }
 }
 
 // ============================================================================
@@ -115,6 +130,9 @@ function switchSettingsTab(tabId) {
 
 function initSettingsModalDrag() {
   if (window.__SETTINGS_STANDALONE__) return;
+
+  const overlay = document.getElementById('settings-modal-overlay');
+  if (overlay?.classList?.contains('settings-inline-slide')) return;
 
   const modal = document.getElementById('settings-modal');
   const header = document.getElementById('settings-modal-header');

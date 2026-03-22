@@ -1,7 +1,7 @@
 /**
  * AnythingLLM Manager Windows x64 - Platform-specific implementation
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  * 
  * FEATURES:
  * - Session manager integration for proper process lifecycle tracking

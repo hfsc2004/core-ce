@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 
 window.createMoeChatMessageOps = function createMoeChatMessageOps(ctx = {}) {
@@ -56,7 +56,7 @@ window.createMoeChatMessageOps = function createMoeChatMessageOps(ctx = {}) {
         headerText = '❌ Error';
         break;
       case 'system':
-        headerText = '💡 System';
+        headerText = `<span class="message-header-inline message-system-inline"><span class="message-info-icon" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"><circle cx="5" cy="5" r="4"></circle><line x1="5" y1="4" x2="5" y2="7"></line><circle cx="5" cy="2.5" r="0.4" fill="#58a6ff" stroke="none"></circle></svg></span>SYSTEM</span>`;
         break;
       default:
         break;

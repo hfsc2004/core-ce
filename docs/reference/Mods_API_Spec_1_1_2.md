@@ -1,5 +1,5 @@
 *Version: 1.1.2*
-*Copyright © 2026 Global Science Network*
+*Copyright © 2026 Pseudo SF*
 # Mods API Spec (1.1.2, v1)
 
 ## Purpose

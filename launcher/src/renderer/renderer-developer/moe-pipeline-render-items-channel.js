@@ -1,11 +1,13 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 
 function renderChannelRow(channel, index) {
-  const { editMode } = window.modelOrderingState;
+  const { editMode, expandedMoeItem } = window.modelOrderingState;
+  const isExpanded = expandedMoeItem === channel.id;
+  const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
   const flowCondition = channel.flowCondition || 'always';
   const retryCount = Number.isInteger(Number(channel.retryCount)) ? Number(channel.retryCount) : 0;
@@ -13,13 +15,20 @@ function renderChannelRow(channel, index) {
   const onFailure = channel.onFailure === 'continue' ? 'continue' : 'stop';
 
   return `
-    <div class="moe-item moe-channel" data-moe-id="${channel.id}" data-moe-type="channel" data-index="${index}"
+    <div class="moe-item moe-channel ${isExpanded ? 'expanded' : ''}" data-moe-id="${channel.id}" data-moe-type="channel" data-index="${index}"
          ${editMode ? `draggable="true" ondragstart="handleMoeDragStart(event, '${channel.id}')" ondragend="handleMoeDragEnd(event)"` : ''}
+         onclick="handleMoeItemClick(event, '${channel.id}')"
          style="background: rgba(255,165,0,0.08); border: 2px dashed #ffa500; border-radius: 6px; padding: 8px 15px;
-                cursor: ${editMode ? 'grab' : 'default'}; transition: all 0.15s ease; ${!channel.enabled ? 'opacity: 0.5;' : ''}">
+                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!channel.enabled ? 'opacity: 0.5;' : ''}">
       <div style="display: flex; align-items: center; gap: 12px;">
+        <span onclick="event.stopPropagation(); toggleMoeExpand('${channel.id}')"
+              style="color: #ffa500; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>
         ${editMode ? `<span class="drag-handle" style="color: #ffa500; cursor: grab;">⋮⋮</span>` : ''}
-        <span style="font-size: 16px;">🔗</span>
+        <span style="color: #ffa500; font-weight: bold; min-width: 30px; text-align: center;">${index + 1}</span>
+        <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(88,166,255,0.15);">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#58a6ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="8" x2="14" y2="8"/><polyline points="10,4 14,8 10,12"/></svg>
+        </span>
+        <span style="color:#fff; font-weight:bold; font-size:14px; min-width:80px;">Channel</span>
         <select onchange="updateChannelDirection('${channel.id}', this.value)" onclick="event.stopPropagation()"
                 style="padding: 4px 10px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
           <option value="bidirectional" ${channel.direction === 'bidirectional' ? 'selected' : ''}>↔ Bi-directional</option>
@@ -33,8 +42,9 @@ function renderChannelRow(channel, index) {
           <span style="color: #888; font-size: 11px;">Enabled</span>
         </label>
         <button onclick="event.stopPropagation(); deleteMoeItem('${channel.id}')"
-                style="padding: 4px 8px; background: transparent; border: 1px solid ${theme.error}; border-radius: 4px; color: ${theme.error}; cursor: pointer; font-size: 11px;">🗑️</button>
+                style="padding: 4px 8px; background: transparent; border: 1px solid ${theme.error}; border-radius: 4px; color: ${theme.error}; cursor: pointer; font-size: 11px;">✕</button>
       </div>
+      ${isExpanded ? `
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,165,0,0.2);">
         <label style="color:#888; font-size:11px;">Flow</label>
         <select onchange="updateChannelFlowCondition('${channel.id}', this.value)" onclick="event.stopPropagation()"
@@ -58,6 +68,7 @@ function renderChannelRow(channel, index) {
           <option value="continue" ${onFailure === 'continue' ? 'selected' : ''}>Continue</option>
         </select>
       </div>
+      ` : ''}
     </div>
   `;
 }

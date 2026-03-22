@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * PSF Coding Terminal - Renderer Events Module
@@ -32,12 +32,17 @@
 
       elements.btnRag?.addEventListener('click', api.handleHeaderRagClick);
       elements.btnGit?.addEventListener('click', api.handleHeaderGitClick);
-      elements.btnSettings?.addEventListener('click', api.handleHeaderSettingsClick);
+      elements.btnSettingsDrawerHandle?.addEventListener('click', api.handleContextRailToggle);
+      elements.btnSettingsRailRag?.addEventListener('click', () => api.handleContextRailSelect('rag'));
+      elements.btnSettingsRailGit?.addEventListener('click', () => api.handleContextRailSelect('git'));
+      elements.btnSettingsRailPlan?.addEventListener('click', () => api.handleContextRailSelect('plan'));
+      elements.btnSettingsRailTrace?.addEventListener('click', () => api.handleContextRailSelect('trace'));
       elements.btnSessionNew?.addEventListener('click', api.handleSessionNew);
       elements.btnSessionSave?.addEventListener('click', api.handleSessionSave);
       elements.btnSessionLoad?.addEventListener('click', api.handleSessionLoad);
       elements.btnSessionDelete?.addEventListener('click', api.handleSessionDelete);
       elements.btnProjectRootTop?.addEventListener('click', api.handleSelectProjectRoot);
+      elements.btnRagTop?.addEventListener('click', api.handleSelectRagBucketFromHeader);
       elements.btnRlmFolderTop?.addEventListener('click', api.openRlmAttachmentManager);
       elements.modelSelect?.addEventListener('change', api.handleModelSelection);
       elements.routerModelSelect?.addEventListener('change', api.handleRouterModelSelection);

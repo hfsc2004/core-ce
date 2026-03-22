@@ -209,10 +209,56 @@ function normalizePlanContract(candidate, policy) {
   }
 
   if (action === 'blink_gpio') {
-    const gpio = toBoundedInt(params.gpio, policy?.pico?.defaultGpio, policy?.pico?.allowedGpioMin, policy?.pico?.allowedGpioMax);
-    const periodMs = toBoundedInt(params.periodMs, periodDefault, policy?.pico?.minPeriodMs, policy?.pico?.maxPeriodMs);
-    const iterations = toBoundedInt(params.iterations, policy?.pico?.defaultIterations, 1, policy?.pico?.maxIterations);
+    const gpioRefRaw = params.gpio ?? params.pin ?? params.gpioPin ?? params.pinNumber;
+    const hasExplicitGpioRef = String(gpioRefRaw ?? '').trim() !== '';
+    const gpioRef = resolveGpioReference(gpioRefRaw, policy);
+    if (hasExplicitGpioRef && !gpioRef) return null;
+
+    const gpio = toBoundedInt(
+      gpioRef?.gpio,
+      policy?.pico?.defaultGpio,
+      policy?.pico?.allowedGpioMin,
+      policy?.pico?.allowedGpioMax
+    );
+    const periodMs = toBoundedInt(
+      params.periodMs ?? params.period_ms ?? params.duration ?? params.duration_ms ?? params.onMs ?? params.on_ms,
+      periodDefault,
+      policy?.pico?.minPeriodMs,
+      policy?.pico?.maxPeriodMs
+    );
+    const offMs = toBoundedInt(
+      params.offMs ?? params.off_ms ?? params.delay ?? params.delay_ms ?? params.pauseMs ?? params.pause_ms,
+      null,
+      policy?.pico?.minPeriodMs,
+      policy?.pico?.maxPeriodMs
+    );
+    const iterations = toBoundedInt(
+      params.iterations ?? params.count ?? params.cycles ?? params.times,
+      policy?.pico?.defaultIterations,
+      1,
+      policy?.pico?.maxIterations
+    );
     if (!Number.isInteger(gpio) || !Number.isInteger(periodMs) || !Number.isInteger(iterations)) return null;
+
+    const colorFromPin = gpioRef?.color || inferColorFromGpioPin(gpio, policy);
+    if (colorFromPin && (Number.isInteger(offMs) || (hasExplicitGpioRef && String(gpioRefRaw).toLowerCase().includes('gpio.')))) {
+      const phase = { colors: [colorFromPin], periodMs };
+      if (Number.isInteger(offMs) && offMs !== periodMs) {
+        phase.offMs = offMs;
+      }
+      return {
+        contractVersion: '1.0',
+        target,
+        action: 'blink_multi_phase',
+        params: {
+          phases: [phase],
+          periodMs,
+          cycles: iterations
+        },
+        source: { inferred: false, llmSelectedTool: true, llmAliasNormalized: true }
+      };
+    }
+
     return {
       contractVersion: '1.0',
       target,
@@ -400,6 +446,55 @@ function normalizeColorArray(colorsValue, minLength = 1) {
     .filter((c) => allowed.has(c));
   if (colors.length < minLength) return null;
   return colors;
+}
+
+function inferColorFromGpioPin(pin, policy) {
+  const value = Number(pin);
+  if (!Number.isFinite(value)) return '';
+  const colorPins = policy?.pico?.colorPins || {};
+  if (Number(colorPins.red) === value) return 'red';
+  if (Number(colorPins.blue) === value) return 'blue';
+  if (Number(colorPins.green) === value) return 'green';
+  return '';
+}
+
+function resolveGpioReference(value, policy) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return {
+    gpio: policy?.pico?.defaultGpio,
+    color: inferColorFromGpioPin(policy?.pico?.defaultGpio, policy)
+  };
+
+  const colorTokenMap = {
+    'gpio.red': 'red',
+    'pin.red': 'red',
+    red: 'red',
+    'gpio.blue': 'blue',
+    'pin.blue': 'blue',
+    blue: 'blue',
+    'gpio.green': 'green',
+    'pin.green': 'green',
+    green: 'green'
+  };
+
+  const mappedColor = colorTokenMap[raw];
+  if (mappedColor) {
+    const mappedPin = Number(policy?.pico?.colorPins?.[mappedColor]);
+    if (!Number.isInteger(mappedPin)) return null;
+    return { gpio: mappedPin, color: mappedColor };
+  }
+
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed)) {
+    const gpio = Math.round(parsed);
+    const min = Number(policy?.pico?.allowedGpioMin);
+    const max = Number(policy?.pico?.allowedGpioMax);
+    if (Number.isFinite(min) && gpio < min) return null;
+    if (Number.isFinite(max) && gpio > max) return null;
+    return { gpio, color: inferColorFromGpioPin(gpio, policy) };
+  }
+
+  return null;
 }
 
 function toBoundedInt(value, fallback, min, max) {

@@ -27,9 +27,6 @@ function getSettingsModalHTML(settings) {
           <button class="settings-tab" data-tab="hardware" onclick="SettingsModal.switchTab('hardware')">
             🎛️ Hardware
           </button>
-          <button class="settings-tab" data-tab="theme" onclick="SettingsModal.switchTab('theme')">
-            🎨 Theme
-          </button>
           <button class="settings-tab" data-tab="system" onclick="SettingsModal.switchTab('system')">
             📋 System Info
           </button>
@@ -57,11 +54,6 @@ function getSettingsModalHTML(settings) {
             ${getHardwareTabHTML()}
           </div>
 
-          <!-- Theme Tab -->
-          <div id="settings-tab-theme" class="settings-tab-content">
-            ${getThemeTabHTML()}
-          </div>
-          
           <!-- System Info Tab -->
           <div id="settings-tab-system" class="settings-tab-content">
             ${getSystemInfoTabHTML()}
