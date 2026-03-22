@@ -1,0 +1,18 @@
+{
+  "standard": "",
+  "baseline": "",
+  "profile": "",
+  "evidenceId": "",
+  "assessor": "",
+  "assessmentDate": "",
+  "expiresOn": "",
+  "attestation": "UNVERIFIED",
+  "signature": {
+    "present": false,
+    "verified": false,
+    "algorithm": "",
+    "keyId": "",
+    "signature": "",
+    "publicKeyPem": ""
+  }
+}

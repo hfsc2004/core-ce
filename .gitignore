@@ -1,0 +1,18 @@
+# --- PSF Workspace Git Exclusions (managed) ---
+/binaries/**
+/models/*
+!/models/*.json
+!/models/*.js
+/models/psf-settings.json
+/launcher/node_modules/
+**/node_modules/
+.DS_Store
+# --- /PSF Workspace Git Exclusions ---
+
+# Runtime/session artifacts (local only)
+/.psf/
+/sessions.json
+/sqliteLog.txt
+/webui-debug.log
+/.claude/
+/.gitignore.bak

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<!-- Version: 1.1.2 -->
+<!-- Copyright © 2026 Global Science Network -->
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Model Editor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: transparent;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+    .window {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      border: 2px solid #00d4ff;
+      border-radius: 15px;
+      box-shadow: 0 10px 50px rgba(0, 212, 255, 0.3);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .title-bar {
+      -webkit-app-region: drag;
+      cursor: move;
+      background: linear-gradient(90deg, #0f3460, #1a1a2e);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #00d4ff;
+      border-radius: 13px 13px 0 0;
+    }
+    .title-bar h2 {
+      color: #00d4ff;
+      font-size: 18px;
+      user-select: none;
+    }
+    .title-bar-buttons {
+      -webkit-app-region: no-drag;
+      display: flex;
+      gap: 8px;
+    }
+    .title-bar-buttons button {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+    .btn-minimize { background: #ffc107; color: #000; }
+    .btn-close { background: #ff6b6b; color: #fff; }
+    .btn-minimize:hover { background: #ffca28; transform: scale(1.1); }
+    .btn-close:hover { background: #ff5252; transform: scale(1.1); }
+    .content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .section {
+      background: rgba(0, 212, 255, 0.05);
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #0f3460;
+      margin-bottom: 15px;
+    }
+    .section-purple {
+      background: rgba(138, 43, 226, 0.1);
+      border-color: #8a2be2;
+    }
+    .section h3 {
+      color: #00d4ff;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .section-purple h3 { color: #8a2be2; }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .form-group { margin-bottom: 10px; }
+    .form-group label {
+      display: block;
+      color: #aaa;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid #0f3460;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 13px;
+    }
+    .form-group select option {
+      background: #1a1a2e;
+      color: #fff;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #00d4ff;
+    }
+    .form-group input[readonly] {
+      background: rgba(255, 255, 255, 0.05);
+      color: #888;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 5px;
+    }
+    .btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #00d4ff, #0099cc);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0, 212, 255, 0.3); }
+    .btn-purple {
+      background: linear-gradient(135deg, #8a2be2, #00d4ff);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #aaa;
+      border: 1px solid #0f3460;
+    }
+    .status-msg {
+      display: none;
+      padding: 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+    .status-success { display: block; background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+    .status-error { display: block; background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+    .status-loading { display: block; background: rgba(0, 212, 255, 0.2); color: #00d4ff; }
+    .footer {
+      padding: 15px 20px;
+      border-top: 1px solid #0f3460;
+      display: flex;
+      gap: 10px;
+    }
+    .footer .btn { flex: 1; padding: 10px; font-size: 14px; }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+    .hint {
+      color: #666;
+      font-size: 10px;
+      margin-top: 3px;
+    }
+    
+    /* Loading state */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(26, 26, 46, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .loading-overlay.hidden { display: none; }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid #0f3460;
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading overlay shown until data is received -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+  </div>
+  
+  <div class="window">
+    <div class="title-bar">
+      <h2 id="editor-title">📝 Model Editor</h2>
+      <div class="title-bar-buttons">
+        <button class="btn-minimize" id="btn-minimize" title="Minimize">−</button>
+        <button class="btn-close" id="btn-close" title="Close">×</button>
+      </div>
+    </div>
+    
+    <div class="content">
+      <form id="model-form">
+        <!-- Collection Selection -->
+        <div class="section">
+          <h3>📁 Collection</h3>
+          <div class="form-group">
+            <label>Collection *</label>
+            <select id="model-collection" required>
+              <!-- Populated by JS -->
+            </select>
+            <p id="collection-hint" class="hint" style="display: none;">Change collection to move model to a different collection</p>
+          </div>
+        </div>
+        
+        <!-- Architecture Details (Fetch First) -->
+        <div class="section section-purple">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3>🧠  Architecture Details</h3>
+            <button type="button" class="btn btn-purple" id="btn-fetch-arch">🔍 Fetch from HuggingFace</button>
+          </div>
+          <p class="hint" style="margin-bottom: 10px;">Enter Base Model URL for GGUF repos, or Model Page URL will be used</p>
+          <div class="form-group">
+            <label>Base Model URL (for GGUF repos)</label>
+            <input type="url" id="model-base-url" placeholder="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Hidden Size</label>
+              <input type="number" id="model-hidden-size" placeholder="3584">
+            </div>
+            <div class="form-group">
+              <label>Num Layers</label>
+              <input type="number" id="model-num-layers" placeholder="28">
+            </div>
+            <div class="form-group">
+              <label>Num KV Heads</label>
+              <input type="number" id="model-num-kv-heads" placeholder="4">
+            </div>
+            <div class="form-group">
+              <label>Num Attn Heads</label>
+              <input type="number" id="model-num-attn-heads" placeholder="28">
+            </div>
+          </div>
+          <div id="arch-status" class="status-msg"></div>
+        </div>
+        
+        <!-- Files & Downloads -->
+        <div class="section">
+          <h3>📦 Files & Downloads</h3>
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label>HuggingFace Model Page URL *</label>
+              <button type="button" class="btn btn-primary" id="btn-fetch-model">🔍 Fetch Model Info</button>
+            </div>
+            <input type="url" id="model-url" required placeholder="https://huggingface.co/org/model-GGUF">
+          </div>
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label>Direct Download URL *</label>
+              <button type="button" class="btn btn-primary" id="btn-fetch-file">📊 Fetch File Info</button>
+            </div>
+            <input type="url" id="model-download-url" required placeholder="https://huggingface.co/.../file.gguf">
+          </div>
+          <div id="file-status" class="status-msg"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Filename</label>
+              <input type="text" id="model-filename" placeholder="model-q4_k_m.gguf">
+            </div>
+            <div class="form-group">
+              <label>HuggingFace Repo</label>
+              <input type="text" id="model-hf-repo" placeholder="org/model-GGUF">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Size (MB) *</label>
+              <input type="number" id="model-size-mb" required placeholder="4812">
+            </div>
+            <div class="form-group">
+              <label>File Size (bytes)</label>
+              <input type="number" id="model-file-size-bytes" placeholder="5045739520">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>SHA256 Checksum</label>
+            <input type="text" id="model-sha256" placeholder="abc123..." style="font-family: monospace; font-size: 11px;">
+          </div>
+          <div class="form-group">
+            <label>Per-File SHA256 Checksums (Optional)</label>
+            <textarea
+              id="model-checksum-files"
+              rows="6"
+              placeholder="transformers-00001-of-00002.safetensors = 64hexsha&#10;transformers-00002-of-00002.safetensors = 64hexsha&#10;model.safetensors.index.json = 64hexsha"
+              style="font-family: monospace; font-size: 11px;"
+            ></textarea>
+            <div style="font-size: 11px; color: #9bb6d1; margin-top: 4px;">
+              One file per line: <code>filename = sha256</code>. You can also use <code>:</code> or tab as separator.
+            </div>
+          </div>
+          
+          <!-- Projector for Vision Models -->
+          <div style="margin-top: 12px; padding: 12px; background: rgba(0, 212, 255, 0.1); border-radius: 8px; border: 1px solid #00d4ff;">
+            <label style="color: #00d4ff; font-size: 12px; font-weight: bold;">📷 Projector File (Vision Models Only)</label>
+            <div class="form-row" style="margin-top: 8px;">
+              <div class="form-group">
+                <label>Projector URL</label>
+                <input type="url" id="model-projector-url" placeholder="https://huggingface.co/.../mmproj.gguf">
+              </div>
+              <div class="form-group">
+                <label>Projector Filename</label>
+                <input type="text" id="model-projector-filename" placeholder="mmproj-model-f16.gguf">
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label>Projector SHA256 (Optional)</label>
+              <input type="text" id="model-projector-sha256" placeholder="64-hex sha256" style="font-family: monospace; font-size: 11px;">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Basic Info -->
+        <div class="section">
+          <h3>📋 Basic Information</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label id="model-id-label">Model ID * (lowercase, hyphens)</label>
+              <input type="text" id="model-id" required placeholder="llama-3.1-8b-q4">
+            </div>
+            <div class="form-group">
+              <label>Model Name *</label>
+              <input type="text" id="model-name" required placeholder="Llama 3.1 8B Instruct">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Model Family</label>
+              <input type="text" id="model-family" placeholder="Llama">
+            </div>
+            <div class="form-group">
+              <label>Organization</label>
+              <input type="text" id="model-organization" placeholder="Meta">
+            </div>
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="model-version" placeholder="3.1">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Description *</label>
+            <textarea id="model-description" required rows="8" placeholder="Brief description of the model..."></textarea>
+          </div>
+        </div>
+        
+        <!-- Model Properties -->
+        <div class="section">
+          <h3>⚙️ Model Properties</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Quantization</label>
+              <select id="model-quantization">
+                <option value="">Not Applicable</option>
+                <option value="Q2_K">Q2_K</option>
+                <option value="Q3_K_S">Q3_K_S</option>
+                <option value="Q3_K_M">Q3_K_M</option>
+                <option value="Q3_K_L">Q3_K_L</option>
+                <option value="Q4_0">Q4_0</option>
+                <option value="Q4_K_S">Q4_K_S</option>
+                <option value="Q4_K_M">Q4_K_M</option>
+                <option value="Q5_0">Q5_0</option>
+                <option value="Q5_K_S">Q5_K_S</option>
+                <option value="Q5_K_M">Q5_K_M</option>
+                <option value="Q6_K">Q6_K</option>
+                <option value="Q8_0">Q8_0</option>
+                <option value="F16">F16</option>
+                <option value="F32">F32</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Context Length</label>
+              <input type="number" id="model-context" placeholder="8192">
+            </div>
+            <div class="form-group">
+              <label>Architecture</label>
+              <input type="text" id="model-architecture" placeholder="llama">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="checkbox-group">
+              <input type="checkbox" id="model-supports-vision">
+              <label for="model-supports-vision">Supports Vision</label>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="model-supports-code">
+              <label for="model-supports-code">Supports Code</label>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="model-supports-function-calling">
+              <label for="model-supports-function-calling">Function Calling</label>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="model-supports-stt">
+              <label for="model-supports-stt">STT Model</label>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" id="model-supports-tts">
+              <label for="model-supports-tts">TTS Model</label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Hardware Requirements -->
+        <div class="section">
+          <h3>💻 Hardware Requirements</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Min RAM (GB) *</label>
+              <input type="number" id="model-min-ram" required placeholder="8">
+            </div>
+            <div class="form-group">
+              <label>Recommended RAM (GB) *</label>
+              <input type="number" id="model-rec-ram" required placeholder="16">
+            </div>
+            <div class="form-group">
+              <label>GPU Layers</label>
+              <input type="number" id="model-gpu-layers" placeholder="32">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Integration -->
+        <div class="section">
+          <h3>🔗Integration</h3>
+          <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+              <label>Ollama Model Name</label>
+              <div style="display: flex; gap: 10px;"><input type="text" id="model-ollama-name" placeholder="e.g., gemma3:4b-it-q4_K_M" style="flex: 1;"><button type="button" id="suggest-ollama-btn" onclick="suggestOllamaModel()" style="padding: 8px 15px; background: #0f3460; color: #00d4ff; border: 1px solid #00d4ff; border-radius: 4px; cursor: pointer; white-space: nowrap;">&#10024; Suggest</button></div>
+              <span style="font-size: 11px; color: #666;">Maps to Ollama registry for fetching official config (template, parameters)</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- License -->
+        <div class="section">
+          <h3>⚖️ License</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>License *</label>
+              <input type="text" id="model-license" required placeholder="Apache 2.0">
+            </div>
+            <div class="form-group">
+              <label>License URL</label>
+              <input type="url" id="model-license-url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+    
+    <div class="footer">
+      <button type="submit" form="model-form" id="btn-submit" class="btn btn-primary">Add Model</button>
+      <button type="button" id="btn-cancel" class="btn btn-secondary">Cancel</button>
+    </div>
+  </div>
+  
+  <script src="renderer/renderer-developer/text-input-fallback.js"></script>
+  <script src="model-editor-utils.js"></script>
+  <script src="model-editor-renderer-helpers.js"></script>
+  <script src="model-editor-ollama-suggest.js"></script>
+  <script src="model-editor-renderer.js"></script>
+</body>
+</html>

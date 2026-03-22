@@ -1,0 +1,92 @@
+/* @version 1.1.2 - March 5, 2026*/
+/* @copyright 2026 Global Science Network*/
+/* ============================================================================
+ * PSF OFFLINE STANDARD EDITION - GLOBAL THEME VARIABLES
+ * ============================================================================
+ * These CSS variables control the application's color scheme.
+ * Values are loaded from psf-settings.json (baked in during compilation)
+ * and applied via JavaScript on page load.
+ * ============================================================================ */
+
+:root {
+
+@import url("./styles-standard-sections.css");
+
+  /* Primary accent color - used for headers, buttons, highlights */
+  --psf-accent: #D1D5DB;
+  --psf-accent-light: rgba(209,213,219,0.1);
+  --psf-accent-medium: rgba(209,213,219,0.2);
+  --psf-accent-dark: #9CA3AF;
+  
+  /* Semantic colors */
+  --psf-success: #16A34A;
+  --psf-warning: #ffc107;
+  --psf-error: #dc3545;
+  
+  /* Background colors */
+  --psf-bg-primary: #1a1a2e;
+  --psf-bg-secondary: #16213e;
+  --psf-border: #0f3460;
+  
+  /* Text colors */
+  --psf-text-primary: #e0e0e0;
+  --psf-text-secondary: #aaa;
+  --psf-text-muted: #888;
+  --psf-footer-link: #ffffff;
+}
+
+/* ============================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--psf-bg-primary) 0%, var(--psf-bg-secondary) 100%);
+  color: var(--psf-text-primary);
+  overflow: hidden;
+}
+
+.container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.app-header {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 20px 40px;
+  border-bottom: 2px solid #0f3460;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.psf-logo {
+  height: 80px;
+  width: 80px;
+}
+
+.header-text h1 {
+  font-size: 32px;
+  color: var(--psf-accent);
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.header-text p {
+  font-size: 16px;
+  color: var(--psf-text-muted);
+  margin-top: 5px;
+  letter-spacing: 1px;
+}

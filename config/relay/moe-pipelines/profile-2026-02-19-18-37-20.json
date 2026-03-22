@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "lastModified": "2026-02-19T18:37:23.834Z",
+  "items": [
+    {
+      "id": "agent-1771525958618-mlo6yfscs",
+      "type": "agent",
+      "name": "Agent A",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "systemPrompt": "You are Agent A (small model).\nIf the user message contains the token ESCALATE, output the user message verbatim and nothing else. Otherwise answer normally in one short sentence.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "contains:ESCALATE",
+          "target": "Agent B"
+        },
+        {
+          "match": "*",
+          "target": "end"
+        }
+      ],
+      "tools": [],
+      "enabled": true,
+      "projectorFilename": null
+    },
+    {
+      "id": "agent-1771526206730-3r8vu2n6a",
+      "type": "agent",
+      "name": "Agent B",
+      "modelId": "gemma-3-4b-it-mm",
+      "modelName": "Gemma 3:4B-IT-MM",
+      "collectionKey": "daily-driver-256gb",
+      "filename": "gemma-3-4b-it-mm.gguf",
+      "systemPrompt": "You are Agent B (reasoning model). Give a clear, correct answer.",
+      "routingMode": "dynamic",
+      "routingRules": [],
+      "tools": [],
+      "enabled": true,
+      "projectorFilename": "mmproj-F16.gguf"
+    }
+  ]
+}

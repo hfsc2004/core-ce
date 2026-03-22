@@ -1,0 +1,344 @@
+/* @version 1.1.2 - March 5, 2026*/
+/* @copyright 2026 Global Science Network*/
+/* =============================================================================
+   Context Panel
+   ============================================================================= */
+
+.ct-context-section {
+  border-bottom: 1px solid var(--ct-border);
+}
+
+.ct-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--ct-bg-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ct-rag-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ct-rag-bucket-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--ct-border);
+  border-bottom: 1px solid var(--ct-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ct-rag-bucket-select {
+  flex: 1;
+  min-width: 0;
+  background: var(--ct-bg-primary);
+  color: var(--ct-text-primary);
+  border: 1px solid var(--ct-border);
+  border-radius: 4px;
+  height: 24px;
+  font-size: 11px;
+  padding: 0 6px;
+}
+
+.ct-section-content {
+  padding: 12px;
+  font-size: 13px;
+}
+
+.ct-git-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ct-border);
+}
+
+.ct-git-controls .ct-btn-tiny {
+  width: auto;
+  min-width: 56px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.ct-git-output {
+  border-top: 1px solid var(--ct-border);
+  background: #0f141b;
+  color: #dce7f5;
+  font-family: var(--ct-font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  padding: 10px 12px;
+}
+
+.ct-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.ct-modal-card {
+  width: min(700px, 90vw);
+  background: var(--ct-bg-primary);
+  border: 1px solid var(--ct-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.ct-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ct-border);
+}
+
+.ct-modal-header h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.ct-modal-body {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--ct-text-secondary);
+}
+
+.ct-doc-modal-body {
+  max-height: min(72vh, 760px);
+  overflow: auto;
+  white-space: normal;
+  color: var(--ct-text-primary);
+  line-height: 1.55;
+}
+
+.ct-doc-modal-body p {
+  margin: 0 0 10px 0;
+}
+
+.ct-doc-modal-body pre {
+  background: #0f141b;
+  border: 1px solid var(--ct-border);
+  border-radius: 6px;
+  padding: 10px;
+  overflow: auto;
+}
+
+.ct-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ct-settings-row {
+  display: grid;
+  grid-template-columns: 72px 112px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.ct-settings-subrow {
+  padding-left: 18px;
+  opacity: 0.96;
+}
+
+.ct-settings-state-btn {
+  width: 72px;
+  min-width: 72px;
+  height: 26px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.ct-settings-item {
+  color: var(--ct-text-primary);
+  font-weight: 600;
+}
+
+.ct-settings-desc {
+  color: var(--ct-text-secondary);
+}
+
+.ct-settings-mode-row {
+  margin-top: 10px;
+}
+
+.ct-rag-index-info {
+  padding: 7px 12px;
+  font-size: 11px;
+  color: #9fb4d1;
+  border-top: 1px solid var(--ct-border);
+  border-bottom: 1px solid var(--ct-border);
+  background: rgba(159, 180, 209, 0.07);
+  font-family: var(--ct-font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ct-placeholder {
+  color: var(--ct-text-muted);
+  font-style: italic;
+}
+
+.focus-pulse {
+  outline: 1px solid var(--ct-accent);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.22) inset;
+}
+
+/* RAG Sources */
+.ct-rag-item {
+  padding: 8px;
+  margin-bottom: 8px;
+  background: var(--ct-bg-tertiary);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.ct-rag-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.ct-rag-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ct-rag-file {
+  color: var(--ct-accent);
+  font-family: var(--ct-font-mono);
+  word-break: break-all;
+}
+
+.ct-rag-score {
+  color: var(--ct-success);
+  white-space: nowrap;
+}
+
+.ct-rag-remove {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  line-height: 1;
+  font-size: 11px;
+  color: var(--ct-text-secondary);
+}
+
+.ct-rag-remove:hover {
+  color: var(--ct-error);
+  border-color: rgba(255, 85, 85, 0.5);
+}
+
+.ct-rag-debug {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ct-rag-tag {
+  font-size: 10px;
+  color: #9fb4d1;
+  background: rgba(159, 180, 209, 0.12);
+  border: 1px solid rgba(159, 180, 209, 0.25);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.ct-rag-lines {
+  font-size: 10px;
+  color: var(--ct-text-secondary);
+}
+
+.ct-rag-match {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #c9d3e3;
+}
+
+/* Git Status */
+.ct-git-branch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ct-git-branch-name {
+  color: var(--ct-success);
+  font-family: var(--ct-font-mono);
+}
+
+.ct-git-files {
+  font-size: 12px;
+}
+
+.ct-git-file {
+  padding: 4px 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.ct-git-file-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.ct-git-file-status.modified { background: rgba(255, 184, 108, 0.2); color: var(--ct-warning); }
+.ct-git-file-status.added { background: rgba(80, 250, 123, 0.2); color: var(--ct-success); }
+.ct-git-file-status.deleted { background: rgba(255, 85, 85, 0.2); color: var(--ct-error); }
+
+.ct-trace-content {
+  font-family: var(--ct-font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ct-trace-row {
+  border: 1px solid var(--ct-border);
+  border-radius: 4px;
+  padding: 6px;
+  margin-bottom: 7px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.ct-trace-row:last-child {
+  margin-bottom: 0;
+}
+
+.ct-trace-meta {
+  color: #9fb4d1;
+  margin-bottom: 4px;
+}
+
+.ct-trace-label {
+  color: var(--ct-accent);
+}
+
+.ct-trace-muted {
+  color: var(--ct-text-secondary);
+}

@@ -1,0 +1,273 @@
+/* @version 1.1.2 - March 5, 2026*/
+/* @copyright 2026 Global Science Network*/
+/* =============================================================================
+   Chat View
+   ============================================================================= */
+
+.ct-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ct-router-debug {
+  border-bottom: 1px solid var(--ct-border);
+  background: rgba(0, 212, 255, 0.06);
+  padding: 8px 10px;
+  font-family: var(--ct-font-mono);
+  font-size: 11px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.ct-router-debug-title {
+  color: var(--ct-accent);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.ct-router-debug-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ct-text-secondary);
+}
+
+.ct-router-debug-item {
+  border: 1px solid var(--ct-border);
+  border-radius: 4px;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ct-view.hidden {
+  display: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.ct-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.ct-inline-activity {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--ct-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ct-text-secondary);
+  font-size: 12px;
+}
+
+.ct-inline-activity.active {
+  display: inline-flex;
+}
+
+.ct-inline-activity .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ct-accent);
+  animation: ctThinkingPulse 1.1s ease-in-out infinite;
+}
+
+.ct-inline-activity .dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.ct-inline-activity .dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  animation: ctThinkingDots 1.2s ease-in-out infinite;
+}
+
+.ct-inline-activity .dots span:nth-child(2) { animation-delay: 0.2s; }
+.ct-inline-activity .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+.ct-message {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--ct-bg-secondary);
+}
+
+.ct-message.user {
+  background: rgba(0, 212, 255, 0.1);
+  border-left: 3px solid var(--ct-accent);
+}
+
+.ct-message.assistant {
+  background: var(--ct-bg-secondary);
+}
+
+.ct-message.system {
+  background: transparent;
+  color: var(--ct-text-muted);
+  font-size: 12px;
+  padding: 8px;
+}
+
+.ct-message-role {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--ct-text-muted);
+  margin-bottom: 6px;
+}
+
+.ct-message-content {
+  line-height: 1.6;
+}
+
+.ct-message-thinking {
+  white-space: pre-wrap;
+  font-family: var(--ct-font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9aa3b5;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ct-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+/* =============================================================================
+   Input Area
+   ============================================================================= */
+
+.ct-input-area {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: var(--ct-bg-secondary);
+  border-top: 1px solid var(--ct-border);
+}
+
+.ct-input-area textarea {
+  flex: 1;
+  background: var(--ct-bg-tertiary);
+  border: 1px solid var(--ct-border);
+  color: var(--ct-text-primary);
+  padding: 10px;
+  border-radius: 6px;
+  font-family: var(--ct-font-sans);
+  font-size: 14px;
+  resize: none;
+}
+
+.ct-input-area textarea:focus {
+  outline: none;
+  border-color: var(--ct-accent);
+}
+
+.ct-input-area textarea::placeholder {
+  color: var(--ct-text-muted);
+}
+
+#voice-btn.recording {
+  border-color: var(--ct-error);
+  color: #ffd7d7;
+  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
+}
+
+/* =============================================================================
+   Editor View
+   ============================================================================= */
+
+.ct-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--ct-bg-secondary);
+  border-bottom: 1px solid var(--ct-border);
+}
+
+.ct-filename {
+  flex: 1;
+  font-family: var(--ct-font-mono);
+  font-size: 13px;
+  color: var(--ct-text-secondary);
+  min-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ct-editor-file-select {
+  max-width: 300px;
+  min-width: 160px;
+  background: var(--ct-bg-primary);
+  color: var(--ct-text-primary);
+  border: 1px solid var(--ct-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: var(--ct-font-mono);
+  font-size: 12px;
+}
+
+.ct-editor-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+.ct-editor-chat {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--ct-bg-secondary);
+  border-top: 1px solid var(--ct-border);
+}
+
+.ct-editor-chat textarea {
+  flex: 1;
+  background: var(--ct-bg-tertiary);
+  border: 1px solid var(--ct-border);
+  color: var(--ct-text-primary);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: var(--ct-font-sans);
+  font-size: 13px;
+  resize: none;
+}
+
+.ct-editor-chat textarea:focus {
+  outline: none;
+  border-color: var(--ct-accent);
+}
+
+.ct-editor-chat textarea::placeholder {
+  color: var(--ct-text-muted);
+}
+
+.ct-editor-input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  resize: none;
+  padding: 12px;
+  margin: 0;
+  background: #0f141b;
+  color: #dce7f5;
+  font-family: var(--ct-font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  tab-size: 2;
+}

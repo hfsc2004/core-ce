@@ -1,0 +1,194 @@
+{
+  "version": "1.0",
+  "lastModified": "2026-02-19T00:58:39.087Z",
+  "globalOrder": [
+    "smollm2-360m",
+    "smollm2-1.7b",
+    "smollm2-135m",
+    "phi-3-mini",
+    "llama-3.1-8b",
+    "mistral-7b-v0.3",
+    "whisper-small",
+    "smollm2-135m-gguf",
+    "qwen2.5-7b",
+    "gemma-2-9b",
+    "gemma-3-4b-it-mm",
+    "deepseek-coder-33b",
+    "tinyllama-1.1b",
+    "phi-3.5-mini",
+    "gemma-2-2b",
+    "qwen2.5-3b",
+    "llama-3.2-8b",
+    "qwen2.5-14b",
+    "mistral-nemo-12b",
+    "llama-3.1-70b-q3",
+    "mixtral-8x7b-q4",
+    "sqlcoder-7b",
+    "yarn-mistral-7b-128k",
+    "qwen2.5-72b-q3",
+    "dolphin-mixtral-8x7b",
+    "qwen2.5-32b-q2",
+    "llama-3.1-70b-q2",
+    "llama-3.3-70b-q4",
+    "qwen2.5-72b-q4",
+    "yi-34b-q4",
+    "solar-10.7b-q4",
+    "llava-1.6-mistral-7b",
+    "llava-1.6-vicuna-13b",
+    "llama-3.1-70b-q5",
+    "qwen2.5-72b-q5",
+    "mixtral-8x7b-q5",
+    "mixtral-8x7b-q6",
+    "nous-hermes-2-mixtral-8x7b",
+    "goliath-120b",
+    "qwen2.5-72b-q8",
+    "meta-llama-3-8b",
+    "starcoder2-15b",
+    "multilingual-e5-large",
+    "ibm-granite / granite-docling-258M",
+    "gpt-oss-20b-GGUF",
+    "QwQ-32B-GGUF",
+    "qwen3-vl-4b-thinking-gguf",
+    "smolvlm-256m-instruct-gguf",
+    "exaone-4-0-1-2b-gguf",
+    "granite-4-0-1b-gguf",
+    "qwen-3-1-7b-deepseek-r1-0528-distillation",
+    "ai21labs-ai21-jamba-reasoning-3b-gguf",
+    "microsoft-phi-4-mini-instruct-gguf",
+    "nvidia-nemotron-nano-9b-v2-gguf",
+    "tinyllama-1-1b-chat-v1-0-gguf",
+    "llama-3-2-1b-gguf",
+    "glm-4-7-flash-gguf",
+    "deepseek-coder-6-7b-instruct-gguf",
+    "qwen2-5-coder-7b-instruct-gguf",
+    "qwen3-1-7b-i1-gguf",
+    "qwen2-5-coder-7b-instruct",
+    "qwen2-5-coder-1-5b-instruct-Thomas_Q6_K",
+    "qwen2-5-coder-1-5b-instruct-thomas_q4_k_m",
+    "qwen2-5-coder-7b-instruct-bartowski_q5_k_m"
+  ],
+  "collectionOrders": {
+    "quick-start-128gb": [
+      "smollm2-135m",
+      "smollm2-360m",
+      "smollm2-1.7b",
+      "phi-3-mini",
+      "llama-3.1-8b",
+      "mistral-7b-v0.3",
+      "whisper-small",
+      "smollm2-135m-gguf",
+      "glm-4-7-flash-gguf",
+      "qwen3-1-7b-i1-gguf"
+    ],
+    "daily-driver-256gb": [
+      "qwen2.5-7b",
+      "gemma-2-9b",
+      "gemma-3-4b-it-mm"
+    ],
+    "code-specialist-256gb": [
+      "deepseek-coder-33b",
+      "deepseek-coder-6-7b-instruct-gguf",
+      "qwen2-5-coder-7b-instruct-gguf",
+      "qwen2-5-coder-7b-instruct",
+      "qwen2-5-coder-1-5b-instruct-Thomas_Q6_K",
+      "qwen2-5-coder-1-5b-instruct-thomas_q4_k_m",
+      "qwen2-5-coder-7b-instruct-bartowski_q5_k_m"
+    ],
+    "generalist-512gb": [
+      "tinyllama-1.1b",
+      "phi-3.5-mini",
+      "gemma-2-2b",
+      "qwen2.5-3b",
+      "llama-3.2-8b",
+      "qwen2.5-14b",
+      "mistral-nemo-12b",
+      "llama-3.1-70b-q3",
+      "mixtral-8x7b-q4"
+    ],
+    "developer-512gb": [
+      "sqlcoder-7b"
+    ],
+    "researcher-512gb": [
+      "yarn-mistral-7b-128k",
+      "qwen2.5-72b-q3"
+    ],
+    "uncensored-512gb": [
+      "dolphin-mixtral-8x7b"
+    ],
+    "lightweight-max-512gb": [
+      "qwen2.5-32b-q2",
+      "llama-3.1-70b-q2"
+    ],
+    "complete-archive-1tb": [
+      "llama-3.3-70b-q4",
+      "qwen2.5-72b-q4",
+      "yi-34b-q4",
+      "solar-10.7b-q4",
+      "llava-1.6-mistral-7b",
+      "llava-1.6-vicuna-13b"
+    ],
+    "power-user-1tb": [
+      "llama-3.1-70b-q5",
+      "qwen2.5-72b-q5",
+      "mixtral-8x7b-q5",
+      "mixtral-8x7b-q6"
+    ],
+    "no-guardrails-1tb": [
+      "nous-hermes-2-mixtral-8x7b",
+      "goliath-120b"
+    ],
+    "the-vault-4tb": [
+      "qwen2.5-72b-q8"
+    ],
+    "aaron": [
+      "meta-llama-3-8b",
+      "starcoder2-15b",
+      "multilingual-e5-large",
+      "ibm-granite / granite-docling-258M",
+      "gpt-oss-20b-GGUF",
+      "QwQ-32B-GGUF",
+      "qwen3-vl-4b-thinking-gguf",
+      "smolvlm-256m-instruct-gguf"
+    ],
+    "cody-list": [
+      "exaone-4-0-1-2b-gguf",
+      "granite-4-0-1b-gguf",
+      "qwen-3-1-7b-deepseek-r1-0528-distillation",
+      "ai21labs-ai21-jamba-reasoning-3b-gguf",
+      "microsoft-phi-4-mini-instruct-gguf",
+      "nvidia-nemotron-nano-9b-v2-gguf"
+    ],
+    "ultra-small": [
+      "tinyllama-1-1b-chat-v1-0-gguf",
+      "llama-3-2-1b-gguf"
+    ],
+    "xxxx-large": []
+  },
+  "groups": [],
+  "_moeDocumentation": {
+    "purpose": "This file serves as the configuration layer for model ordering and the future MoE system.",
+    "bmocHandoff": {
+      "ipcChannel": "moe:deploy-configuration",
+      "handler": "session-manager.js",
+      "description": "When MoE deployment is triggered, BMOC (session-manager.js) reads this file to spin up Ollama instances with proper role assignments and port allocations from the Agent pool (53000-62999)."
+    },
+    "groupSchema": {
+      "id": "Unique group identifier (group-timestamp-random)",
+      "name": "User-defined display name",
+      "modelIds": "Array of model IDs belonging to this group",
+      "color": "Hex color for UI display",
+      "moeConfig": {
+        "role": "MoE role assignment (null until Enterprise MoE implementation)",
+        "priority": "Execution priority (1=highest, null=unset)",
+        "routingWeight": "Load balancing weight (0.0-1.0, null=unset)",
+        "connectionType": "External connection type: null, 'usb', 'api', 'tcp'"
+      }
+    },
+    "futureFields": [
+      "roleDefinitions - Map of role names to configurations",
+      "functionDefinitions - Map of function names to action chains",
+      "externalEndpoints - USB/API/TCP endpoint configurations",
+      "coordinatorConfig - MoE orchestration settings"
+    ]
+  }
+}

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<!-- Version: 1.1.2 -->
+<!-- Copyright © 2026 Global Science Network -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pseudo Science Fiction - Core Enterprise</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="renderer/renderer-developer/settings-modal.css">
+  <link rel="stylesheet" href="renderer/renderer-developer/settings-modal-theme-tab.css">
+  <link rel="stylesheet" href="renderer/renderer-developer/index-developer-inline.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-container developer-logo-container">
+        <div class="header-text developer-header-text">
+          <p class="core-title">CORE</p>
+        </div>
+        <img src="../assets/PSF_Logo_White_256.png" alt="Pseudo Science Fiction Logo" class="psf-logo">
+      </div>
+      
+      <!-- Package Title (dynamically loaded) -->
+      <div class="package-title" id="package-title" style="display: none;">
+        <h2>The VAULT Collection</h2>
+      </div>
+      
+      <!-- Settings Button -->
+      <button id="header-settings-btn" class="header-settings-btn" onclick="window.electronAPI.openSettingsWindow()" title="Settings" style="display: none;">
+        ⚙️
+      </button>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content">
+      <!-- Welcome Screen (shows first) -->
+      <div id="welcome-screen" class="screen active">
+        <div class="disclaimer-box">
+          <h2>⚠️ DISCLAIMER</h2>
+          <div class="disclaimer-content">
+            <p>Pseudo Science Fiction claims ownership of original code, workflows, integrations, UI/UX, documentation, and packaging created for this product.</p>
+
+            <p>Third-party models, binaries, and libraries remain the property of their respective owners and are redistributed/used under their original licenses.</p>
+
+            <p>By using this collection, you agree to comply with all applicable licenses and attribution requirements.</p>
+            
+            <p>For complete licensing information, see:</p>
+            <ul>
+              <li><a href="#" onclick="openDocs('LICENSE.txt')">LICENSE.txt</a></li>
+              <li><a href="#" onclick="openDocs('ATTRIBUTIONS.md')">ATTRIBUTIONS.md</a></li>
+              <li><a href="#" onclick="openDocs('docs/reference/IP_OWNERSHIP_AND_ATTRIBUTION.md')">IP Ownership & Attribution Policy</a></li>
+              <li><a href="#" onclick="openDocs('docs/reference/ProvenanceMatrix.md')">Provenance Matrix</a></li>
+              <li><a href="#" onclick="openDocs('licenses/')">Individual Model Licenses</a></li>
+            </ul>
+          </div>
+          <button class="btn-primary" onclick="acceptDisclaimer()">I Accept - Continue</button>
+        </div>
+      </div>
+
+      <!-- Main Menu -->
+      <div id="main-menu" class="screen">
+        <div class="menu-grid">
+          <div class="menu-card" style="--card-index:0;" onclick="launchTerminal()">
+            <div class="card-icon">💻</div>
+            <h3>PSF Terminal</h3>
+            <p>Command-driven terminal with attachments and RLM-assisted document tools</p>
+          </div>
+
+          <div class="menu-card" style="--card-index:1;" onclick="showScreen('model-ordering')">
+            <div class="card-icon">📊</div>
+            <h3>PSF Relay</h3>
+            <p>Mixture of Experts / Industrial Reflex Gateway Pipeline Orchestrator</p>
+          </div>
+
+          <div class="menu-card" style="--card-index:2;" onclick="launchCodingTerminal()">
+            <div class="card-icon">⌨️</div>
+            <h3>PSF Coding Terminal</h3>
+            <p>Integrated Router/Coder workspace with project-root grounding, RAG, and Git</p>
+          </div>
+
+          <div class="menu-card" style="--card-index:3;" onclick="launchInterface('openwebui')">
+            <div class="card-icon">🌐</div>
+            <h3>Open WebUI</h3>
+            <p>Web chat interface with conversation management and built-in tools</p>
+          </div>
+
+          <div class="menu-card" style="--card-index:4;" onclick="launchInterface('anythingllm')">
+            <div class="card-icon">🤖</div>
+            <h3>AnythingLLM</h3>
+            <p>Enterprise-style workspace for teams, agents, and document workflows</p>
+          </div>
+
+          <div class="menu-card" style="--card-index:5;" onclick="showScreen('model-browser')">
+            <div class="card-icon">📥</div>
+            <h3>Browse & Download Models</h3>
+            <p>Browse catalog and download models from HuggingFace</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Hardware Detection Screen -->
+      <div id="hardware-detect" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>System Information</h2>
+        </div>
+        
+        <div class="hardware-info">
+          <div class="info-loading">
+            <div class="spinner"></div>
+            <p>Detecting hardware...</p>
+          </div>
+          
+          <div class="info-display" style="display: none;">
+            <div class="info-card">
+              <h3>💾 Memory</h3>
+              <p class="info-value" id="ram-info">-- GB</p>
+            </div>
+            
+            <div class="info-card">
+              <h3>⚙️ CPU</h3>
+              <p class="info-value" id="cpu-info">-- cores</p>
+            </div>
+            
+            <div class="info-card">
+              <h3>🎮 GPU</h3>
+              <p class="info-value" id="gpu-info">Not detected</p>
+            </div>
+          </div>
+          
+          <div class="recommendations">
+            <h3>📋 Recommended Models</h3>
+            <div id="recommended-models"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model Browser Screen -->
+      <div id="model-browser" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>Browse & Download Models</h2>
+          <button class="btn-secondary" onclick="showScreen('catalog-editor')">🛠️ Catalog Editor</button>
+          <button class="btn-secondary" onclick="showScreen('binary-manager')">📦 Binary Manager</button>
+        </div>
+        
+        <div class="model-grid" id="model-grid">
+          <!-- Models populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Catalog Editor Screen -->
+      <div id="catalog-editor" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>Catalog Editor</h2>
+          <!-- Tool buttons -->
+          <button class="btn-secondary" onclick="showScreen('package-manager')">📦 Package Manager</button>
+          <button class="btn-secondary" onclick="applyCatalogChanges()">✅ Apply Changes</button>
+          <!-- Model operations -->
+          <button class="btn-secondary" onclick="showImportDialog()">📥 Import Models</button>
+          <button class="btn-primary" onclick="showAddModelForm()">+ Add New Model</button>
+        </div>
+        
+        <div id="catalog-editor-content">
+          <div class="info-loading">
+            <div class="spinner"></div>
+            <p>Loading catalog...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Package Manager Screen -->
+      <div id="package-manager" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('catalog-editor')">← Back</button>
+          <h2>Package Manager</h2>
+          <button class="btn-primary" onclick="showAddCollectionForm()">+ Add New Collection</button>
+        </div>
+        
+        <div id="package-manager-content">
+          <div class="info-loading">
+            <div class="spinner"></div>
+            <p>Loading packages...</p>
+          </div>
+        </div>
+      </div>
+      <!-- Binary Manager Screen -->
+      <div id="index-heavy-screens-slot"></div>
+
+      <div id="model-ordering" class="screen">
+        <div class="screen-header" style="position: relative;">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>PSF Relay</h2>
+          <div style="position: absolute; left: 50%; transform: translateX(-50%); color: var(--psf-accent, #00d4ff); font-size: 24px; font-weight: 600; pointer-events: none; line-height: 1;">
+            Pipeline Orchestrator
+          </div>
+        </div>
+        
+        <div id="model-ordering-content" style="padding: 20px;">
+          <div class="info-loading">
+            <div class="spinner"></div>
+            <p>Loading PSF Relay...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- About Screen -->
+      <div id="about" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>About</h2>
+        </div>
+        
+        <div class="about-content">
+          <h3 id="about-product-name">Pseudo Science Fiction - Core</h3>
+          <p id="about-app-version">Version 1.1.2</p>
+          <p style="color: #ff6b6b; font-weight: bold;">ENTERPRISE EDITION</p>
+          
+          <div class="about-section">
+            <h4>📄 Documentation</h4>
+            <button class="btn-secondary" onclick="openDocs('README.md')">Quick Start Guide</button>
+            <button class="btn-secondary" onclick="openDocs('TROUBLESHOOTING.md')">Troubleshooting</button>
+          </div>
+          
+          <div class="about-section">
+            <h4>⚖️ Licenses</h4>
+            <button class="btn-secondary" onclick="openDocs('LICENSE.txt')">Master License</button>
+            <button class="btn-secondary" onclick="openDocs('ATTRIBUTIONS.md')">Model Attributions</button>
+          </div>
+          
+          <div class="about-section">
+            <h4>🔗 Links</h4>
+            <button id="about-website-link" class="btn-secondary" onclick="openExternal('https://pseudosf.com')">Pseudo Science Fiction Website</button>
+            <button class="btn-secondary" onclick="openExternal('https://github.com/psfrobotics')">GitHub</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- GPU Monitor Widget (global, bottom center) -->
+    <div id="gpu-monitor-widget" class="gpu-monitor-widget" style="display: none;">
+      <div class="gpu-monitor-content">
+        <span class="gpu-monitor-icon">🌡️</span>
+        <span id="gpu-monitor-text">--</span>
+        <button class="gpu-monitor-close" onclick="hideGpuMonitorWidget()" title="Hide">×</button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer" style="display: flex; align-items: center; justify-content: space-between;">
+      <p class="footer-center-line">
+        Copyright © <span id="footer-copyright-year">2026</span>
+        <a id="footer-company-link" href="https://pseudosf.com" target="_blank" rel="noopener">
+          <span id="footer-company-name">Pseudo Science Fiction</span>
+        </a>
+        - <span id="footer-product-name">Pseudo Science Fiction - Core</span>
+        <span id="footer-app-version">v1.1.2</span>
+        <span id="footer-security-tag">ENTERPRISE OSS</span>
+        <span id="footer-subscription-tag" class="footer-no-subscription-badge">No Subscription</span>
+        <span id="footer-compliance-proof-tag">PROOF:UNVERIFIED</span>
+      </p>
+      <div id="gpu-indicator" class="gpu-badge" style="display: none; padding: 5px 12px; background: rgba(255,255,255,0.1); border-radius: 4px; font-size: 12px;">
+        <span id="gpu-icon">⏳</span> <span id="gpu-text">Detecting...</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="renderer/renderer-developer/index-developer-heavy-screens.js" charset="UTF-8"></script>
+  <script>window.IndexDeveloperHeavyScreens?.mount?.();</script>
+
+  <!-- Renderer Developer Edition - Modular Components -->
+  <script src="renderer/renderer-developer/ui-modal.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/model-config.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/ui-navigation-shared.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/ui-navigation-hardware.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/ui-navigation-model-browser.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/ui-navigation.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/catalog-editor.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/model-parameter-utils.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/catalog-browser-utils.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/package-manager-modal-utils.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/catalog-browser-render-v2.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/catalog-browser-render-v2-items.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/catalog-browser.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/catalog-browser-actions.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/catalog-browser-model-actions-eval.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/catalog-browser-model-actions.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/package-manager.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/package-manager-hf-config.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/package-manager-hf-file-info.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/package-manager-actions.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/model-actions-developer.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/webui-launchers.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/text-input-fallback.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/utilities-developer.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/interface-launcher.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/binary-manager-ui.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/binary-versions.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/python-webui.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/license-buttons.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-templates-theme.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-templates-tabs.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-templates-about.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-templates.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-theme-custom.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-theme.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-system.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-system-compliance.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-speech-core.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-speech.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-hardware.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-mods.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-core.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-api.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/gpu-monitor-widget.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/blob-mapper-ui.js" charset="UTF-8"></script>
+  
+  <!-- Model Ordering & MoE Pipeline Modules (LOAD ORDER MATTERS!) -->
+    <script src="renderer/renderer-developer/moe-state.js" charset="UTF-8"></script>
+    <script src="renderer/renderer-developer/model-ordering-ui.js" charset="UTF-8"></script>
+    <script src="renderer/renderer-developer/model-ordering-core-helpers.js" charset="UTF-8"></script>
+  <!-- 2. Core functionality -->
+  <script src="renderer/renderer-developer/model-ordering-render.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/model-ordering-core.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/model-ordering-dnd.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/model-ordering-actions.js" charset="UTF-8"></script>
+  <!-- 3. MoE Pipeline -->
+  <script src="renderer/renderer-developer/moe-pipeline-render-endpoint-registry.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-render-items-common.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-render-items-endpoint-row.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-render-items-bindings.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-render-items-agent.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-render-items-channel.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-render-items-gateway.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-render-items.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-render.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-bindings.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-endpoint-registry.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-updates.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-updates-item-identity.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-updates-attachments-core.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-updates-agent-attachments.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-updates-agent-channel.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-updates-gateway-irg.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-updates-serial.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32-shared-ui.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32-firmware-template-part-a.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32-firmware-template-part-b.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32-firmware-template.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32-network.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32-drive-core.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32-ai.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-esp32-drive-ui.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-items.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-save-load.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-deployment-dnd.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-chat-render.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-chat-helpers.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/moe-pipeline-ops-chat.js" charset="UTF-8"></script>
+  
+  <script src="renderer/renderer-developer/index-developer-init.js" charset="UTF-8"></script>
+</body>
+</html>

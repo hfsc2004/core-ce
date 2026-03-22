@@ -1,0 +1,2108 @@
+{
+  "version": "1.1.2",
+  "last_updated": "2026-03-17",
+  "sku_id": "sku-001",
+  "sku_name": "Entry Bundle",
+  "storage": "256GB",
+  "price": 49.99,
+  "collections": {
+    "quick-start-128gb": {
+      "name": "Quick Start Kit",
+      "drive_size": "128GB",
+      "total_size_gb": 13,
+      "description": "Get started with local AI in 5 minutes. Works on any laptop from the last 10 years.",
+      "models": [
+        {
+          "id": "smollm2-135m",
+          "name": "SmolLM2-135M-Instruct-GGUF",
+          "model_family": "SmolLM",
+          "organization": "bartowski",
+          "version": "2",
+          "description": "A very light weight model. Be specific when talking to it.",
+          "url": "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF",
+          "download_url": "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q8_0.gguf?download=true",
+          "filename": "SmolLM2-135M-Instruct-Q8_0.gguf",
+          "huggingface_repo": "bartowski/SmolLM2-135M-Instruct",
+          "size_mb": 139,
+          "file_size_bytes": 144811360,
+          "quantization": null,
+          "context_length": 8192,
+          "architecture": "llama",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 3,
+          "recommended_ram_gb": 5,
+          "gpu_layers": 30,
+          "license": "apache-2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "ollama_model": "smollm2:latest",
+          "base_model_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct",
+          "hidden_size": 576,
+          "num_layers": 30,
+          "num_kv_heads": 3,
+          "num_attention_heads": 9,
+          "sha256": "5a1395716f7913741cc51d98581b9b1228d80987a9f7d3664106742eb06bba83",
+          "projector_url": null,
+          "projector_filename": null,
+          "force_cpu": false,
+          "parameters": "135M",
+          "supports_stt": false,
+          "supports_tts": false,
+          "checksums": {
+            "main": "5a1395716f7913741cc51d98581b9b1228d80987a9f7d3664106742eb06bba83",
+            "files": {
+              "SmolLM2-135M-Instruct-Q8_0.gguf": "5a1395716f7913741cc51d98581b9b1228d80987a9f7d3664106742eb06bba83"
+            }
+          },
+          "projector_sha256": null,
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "SmolLM2-135M-Instruct-Q8_0.gguf",
+              "download_url": "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q8_0.gguf?download=true",
+              "huggingface_repo": "bartowski/SmolLM2-135M-Instruct-GGUF",
+              "sha256": "5a1395716f7913741cc51d98581b9b1228d80987a9f7d3664106742eb06bba83",
+              "checksums": {
+                "main": "5a1395716f7913741cc51d98581b9b1228d80987a9f7d3664106742eb06bba83",
+                "files": {
+                  "SmolLM2-135M-Instruct-Q8_0.gguf": "5a1395716f7913741cc51d98581b9b1228d80987a9f7d3664106742eb06bba83"
+                }
+              }
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "recommended",
+              "min_ram_gb": 3
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 3
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 3
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 3
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 65,
+          "recommendation": "caution",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "local-benchmark+heuristic",
+            "breakdown": {
+              "quality": 19,
+              "deployability": 98,
+              "performance": 89,
+              "reliability": 100,
+              "utility": 25,
+              "discipline": 0
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "smollm2-360m",
+          "name": "SmolLM2 360M",
+          "model_family": "SmolLM",
+          "organization": "HuggingFace",
+          "version": null,
+          "description": "Small but capable model for basic tasks on constrained hardware",
+          "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+          "download_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf?download=true",
+          "filename": "smollm2-360m-instruct-q8_0.gguf",
+          "huggingface_repo": "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+          "size_mb": 369,
+          "file_size_bytes": 386404992,
+          "quantization": "Q8_0",
+          "context_length": 8192,
+          "architecture": "llama",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 4,
+          "recommended_ram_gb": 6,
+          "gpu_layers": 32,
+          "license": "Apache 2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "ollama_model": "smollm:latest",
+          "base_model_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-360M",
+          "hidden_size": 960,
+          "num_layers": 32,
+          "num_kv_heads": 5,
+          "num_attention_heads": 15,
+          "sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+          "projector_url": null,
+          "projector_filename": null,
+          "force_cpu": false,
+          "parameters": "360M",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "smollm2-360m-instruct-q8_0.gguf",
+              "download_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf?download=true",
+              "huggingface_repo": "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF",
+              "sha256": "48ab3034d0dd401fbc721eb1df3217902fee7dab9078992d66431f09b7750201",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 4
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 78,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "local-benchmark+heuristic",
+            "breakdown": {
+              "quality": 63,
+              "deployability": 98,
+              "performance": 64,
+              "reliability": 100,
+              "utility": 75,
+              "discipline": 25
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "smollm2-1.7b",
+          "name": "SmolLM2 1.7B",
+          "size_mb": 1024,
+          "quantization": "Q4_K_M",
+          "url": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
+          "license": "Apache 2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "copyright": "© 2024 HuggingFace",
+          "description": "Capable small model with good reasoning for its size",
+          "use_cases": [
+            "general chat",
+            "writing",
+            "basic coding"
+          ],
+          "min_ram_gb": 4,
+          "recommended_ram_gb": 6,
+          "context_length": 8192,
+          "model_family": "SmolLM",
+          "version": "1.7",
+          "organization": "HuggingFace",
+          "download_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf",
+          "filename": "smollm2-1.7b-instruct-q4_k_m.gguf",
+          "huggingface_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
+          "sha256": "decd2598bc2c8ed08c19adc3c8fdd461ee19ed5708679d1c54ef54a5a30d4f33",
+          "file_size_bytes": 1073741824,
+          "parameter_count": null,
+          "architecture": "Transformer",
+          "release_date": null,
+          "supports_vision": false,
+          "supports_code": true,
+          "supports_function_calling": false,
+          "languages": [
+            "en"
+          ],
+          "gpu_layers": null,
+          "parameters": "1.7B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "smollm2-1.7b-instruct-q4_k_m.gguf",
+              "download_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf",
+              "huggingface_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
+              "sha256": "decd2598bc2c8ed08c19adc3c8fdd461ee19ed5708679d1c54ef54a5a30d4f33",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 4
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 79,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 69,
+              "deployability": 98,
+              "performance": 84,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "phi-3-mini",
+          "name": "Phi-3 Mini 3.8B",
+          "size_mb": 2355,
+          "quantization": "Q4_K_M",
+          "url": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf",
+          "license": "MIT",
+          "license_url": "https://opensource.org/licenses/MIT",
+          "copyright": "© 2024 Microsoft",
+          "description": "Microsoft's efficient small model with excellent performance per parameter",
+          "use_cases": [
+            "general chat",
+            "writing",
+            "analysis",
+            "coding"
+          ],
+          "min_ram_gb": 6,
+          "recommended_ram_gb": 8,
+          "context_length": 4096,
+          "model_family": "Phi",
+          "version": "3.8",
+          "organization": "Microsoft",
+          "download_url": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf",
+          "filename": "Phi-3-mini-4k-instruct-q4.gguf",
+          "huggingface_repo": "microsoft/Phi-3-mini-4k-instruct-gguf",
+          "sha256": "8a83c7fb9049a9b2e92266fa7ad04933bb53aa1e85136b7b30f1b8000ff2edef",
+          "file_size_bytes": 2469396480,
+          "parameter_count": null,
+          "architecture": "Transformer",
+          "release_date": null,
+          "supports_vision": false,
+          "supports_code": true,
+          "supports_function_calling": false,
+          "languages": [
+            "en"
+          ],
+          "gpu_layers": null,
+          "parameters": "3.8B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Phi-3-mini-4k-instruct-q4.gguf",
+              "download_url": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf",
+              "huggingface_repo": "microsoft/Phi-3-mini-4k-instruct-gguf",
+              "sha256": "8a83c7fb9049a9b2e92266fa7ad04933bb53aa1e85136b7b30f1b8000ff2edef",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 6
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 6
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 6
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 6
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 82,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 80,
+              "deployability": 98,
+              "performance": 75,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "llama-3.1-8b",
+          "name": "Llama 3.1 8B Instruct",
+          "size_mb": 4812,
+          "quantization": "Q4_K_M",
+          "url": "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+          "license": "Llama 3.1 Community License",
+          "license_url": "https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/LICENSE",
+          "copyright": "© 2024 Meta",
+          "description": "Meta's flagship 8B model. Excellent general-purpose assistant for everyday tasks.",
+          "use_cases": [
+            "writing",
+            "coding",
+            "research",
+            "general chat",
+            "analysis"
+          ],
+          "min_ram_gb": 8,
+          "recommended_ram_gb": 16,
+          "context_length": 128000,
+          "model_family": "Llama",
+          "version": "3.1",
+          "organization": "Community (bartowski)",
+          "download_url": "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+          "filename": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+          "huggingface_repo": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+          "sha256": "7b064f5842bf9532c91456deda288a1b672397a54fa729aa665952863033557c",
+          "file_size_bytes": 5045747712,
+          "parameter_count": null,
+          "architecture": "Transformer",
+          "release_date": null,
+          "supports_vision": false,
+          "supports_code": true,
+          "supports_function_calling": false,
+          "languages": [
+            "en"
+          ],
+          "gpu_layers": null,
+          "parameters": "8B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+              "huggingface_repo": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+              "sha256": "7b064f5842bf9532c91456deda288a1b672397a54fa729aa665952863033557c",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 8
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 8
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 8
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 8
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 82,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 80,
+              "deployability": 98,
+              "performance": 75,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "mistral-7b-v0.3",
+          "name": "Mistral 7B Instruct v0.3",
+          "model_family": "Mistral",
+          "organization": "Community (bartowski)",
+          "version": "0.3",
+          "description": "Fast, efficient, and capable. Great balance of speed and intelligence.",
+          "url": "https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+          "download_url": "https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+          "filename": "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+          "huggingface_repo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+          "size_mb": 4199,
+          "file_size_bytes": 4402970624,
+          "quantization": "Q4_K_M",
+          "context_length": 32768,
+          "architecture": "Transformer",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 6,
+          "recommended_ram_gb": 12,
+          "gpu_layers": null,
+          "license": "Apache 2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "ollama_model": "mistral:7b",
+          "base_model_url": null,
+          "hidden_size": null,
+          "num_layers": null,
+          "num_kv_heads": null,
+          "num_attention_heads": null,
+          "sha256": "1270d22c0fbb3d092fb725d4d96c457b7b687a5f5a715abe1e818da303e562b6",
+          "projector_url": null,
+          "projector_filename": null,
+          "force_cpu": false,
+          "parameters": "7B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+              "huggingface_repo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+              "sha256": "1270d22c0fbb3d092fb725d4d96c457b7b687a5f5a715abe1e818da303e562b6",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 6
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 6
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 6
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 6
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 81,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 78,
+              "deployability": 98,
+              "performance": 75,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "glm-4-7-flash-gguf",
+          "name": "GLM-4.7-Flash-GGUF",
+          "model_family": null,
+          "organization": "unsloth",
+          "version": null,
+          "description": "GLM 4.7 Flash is a 30B A3B MoE model.",
+          "url": "https://huggingface.co/unsloth/GLM-4.7-Flash-GGUF",
+          "download_url": "https://huggingface.co/unsloth/GLM-4.7-Flash-GGUF/resolve/main/GLM-4.7-Flash-Q4_K_M.gguf?download=true",
+          "filename": "GLM-4.7-Flash-Q4_K_M.gguf",
+          "huggingface_repo": "unsloth/GLM-4.7-Flash-GGUF",
+          "size_mb": 17465,
+          "file_size_bytes": 18312339808,
+          "quantization": null,
+          "context_length": 202752,
+          "architecture": "glm4_moe_lite",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 28,
+          "recommended_ram_gb": 41,
+          "gpu_layers": 47,
+          "license": "mit",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/zai-org/GLM-4.7-Flash",
+          "hidden_size": 2048,
+          "num_layers": 47,
+          "num_kv_heads": 20,
+          "num_attention_heads": 20,
+          "sha256": "29837ed2c0fc5f51981adf8ac8083fcf80743c598381f13e9f06cbad0498b174",
+          "projector_url": null,
+          "projector_filename": null,
+          "parameters": null,
+          "supports_stt": false,
+          "supports_tts": false,
+          "checksums": {
+            "main": "29837ed2c0fc5f51981adf8ac8083fcf80743c598381f13e9f06cbad0498b174",
+            "files": {
+              "GLM-4.7-Flash-Q4_K_M.gguf": "29837ed2c0fc5f51981adf8ac8083fcf80743c598381f13e9f06cbad0498b174"
+            }
+          },
+          "projector_sha256": null,
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "GLM-4.7-Flash-Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/unsloth/GLM-4.7-Flash-GGUF/resolve/main/GLM-4.7-Flash-Q4_K_M.gguf?download=true",
+              "huggingface_repo": "unsloth/GLM-4.7-Flash-GGUF",
+              "sha256": "29837ed2c0fc5f51981adf8ac8083fcf80743c598381f13e9f06cbad0498b174",
+              "checksums": {
+                "main": "29837ed2c0fc5f51981adf8ac8083fcf80743c598381f13e9f06cbad0498b174",
+                "files": {
+                  "GLM-4.7-Flash-Q4_K_M.gguf": "29837ed2c0fc5f51981adf8ac8083fcf80743c598381f13e9f06cbad0498b174"
+                }
+              }
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "unsupported",
+              "min_ram_gb": 28
+            },
+            "pro": {
+              "availability": "supported",
+              "min_ram_gb": 28
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 28
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 28
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 68,
+          "recommendation": "caution",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 98,
+              "performance": 50,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen3-1-7b-i1-gguf",
+          "name": "Qwen3-1.7B-i1-Mradermacher",
+          "model_family": null,
+          "organization": "mradermacher",
+          "version": null,
+          "description": "Qwen3-1.7B-i1-Mradermacher",
+          "url": "https://huggingface.co/mradermacher/Qwen3-1.7B-i1-GGUF",
+          "download_url": "https://huggingface.co/mradermacher/Qwen3-1.7B-i1-GGUF/resolve/main/Qwen3-1.7B.i1-Q4_K_M.gguf?download=true",
+          "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
+          "huggingface_repo": "mradermacher/Qwen3-1.7B-i1-GGUF",
+          "size_mb": 1224,
+          "file_size_bytes": 1282439936,
+          "quantization": "Q4_K_M",
+          "context_length": 40960,
+          "architecture": "qwen3",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 5,
+          "recommended_ram_gb": 10,
+          "gpu_layers": 28,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": "qwen:1.7b",
+          "base_model_url": "https://huggingface.co/Qwen/Qwen3-1.7B",
+          "hidden_size": 2048,
+          "num_layers": 28,
+          "num_kv_heads": 8,
+          "num_attention_heads": 16,
+          "sha256": "f2fd0515cd4a2ee9b6ed419c1174d4838dc9067dd8a36f44d0df643fc0614506",
+          "projector_url": null,
+          "projector_filename": null,
+          "parameters": "1.7B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/mradermacher/Qwen3-1.7B-i1-GGUF/resolve/main/Qwen3-1.7B.i1-Q4_K_M.gguf?download=true",
+              "huggingface_repo": "mradermacher/Qwen3-1.7B-i1-GGUF",
+              "sha256": "f2fd0515cd4a2ee9b6ed419c1174d4838dc9067dd8a36f44d0df643fc0614506",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "recommended",
+              "min_ram_gb": 5
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 5
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 5
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 5
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 75,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 98,
+              "performance": 84,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "x-coder-rl-qwen3-8b-i1-gguf",
+          "name": "X-Coder-RL-Qwen3-8B-i1-GGUF",
+          "model_family": "Qwen",
+          "organization": "mradermacher",
+          "version": null,
+          "description": "X-Coder-RL-Qwen3-8B is a code reasoning foundation model trained with RLVR on fully synthetic rl data, achieving strong performance on competitive programming.",
+          "url": "https://huggingface.co/mradermacher/X-Coder-RL-Qwen3-8B-i1-GGUF",
+          "download_url": "https://huggingface.co/mradermacher/X-Coder-RL-Qwen3-8B-i1-GGUF/resolve/main/X-Coder-RL-Qwen3-8B.i1-Q4_K_M.gguf?download=true",
+          "filename": "X-Coder-RL-Qwen3-8B.i1-Q4_K_M.gguf",
+          "huggingface_repo": "mradermacher/X-Coder-RL-Qwen3-8B-i1-GGUF",
+          "size_mb": 4795,
+          "file_size_bytes": 5027784864,
+          "quantization": "Q4_K_M",
+          "context_length": 32768,
+          "parameters": "8B",
+          "architecture": "qwen3",
+          "supports_vision": false,
+          "supports_code": true,
+          "supports_function_calling": true,
+          "min_ram_gb": 10,
+          "recommended_ram_gb": 16,
+          "gpu_layers": 36,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/IIGroup/X-Coder-RL-Qwen3-8B",
+          "hidden_size": 4096,
+          "num_layers": 36,
+          "num_kv_heads": 8,
+          "num_attention_heads": 32,
+          "sha256": "dc3a77ea9070f08181e6f314bdcda2a52d55c112a5b4e1d1f793b59b042142ae",
+          "projector_url": null,
+          "projector_filename": null,
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "X-Coder-RL-Qwen3-8B.i1-Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/mradermacher/X-Coder-RL-Qwen3-8B-i1-GGUF/resolve/main/X-Coder-RL-Qwen3-8B.i1-Q4_K_M.gguf?download=true",
+              "huggingface_repo": "mradermacher/X-Coder-RL-Qwen3-8B-i1-GGUF",
+              "sha256": "dc3a77ea9070f08181e6f314bdcda2a52d55c112a5b4e1d1f793b59b042142ae",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 10
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 10
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 10
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 10
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 83,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 82,
+              "deployability": 98,
+              "performance": 75,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        }
+      ]
+    },
+    "daily-driver-256gb": {
+      "name": "Daily Driver",
+      "drive_size": "256GB",
+      "total_size_gb": 35,
+      "description": "Everything you need for daily AI tasks - writing, coding, chat, and vision.",
+      "models": [
+        {
+          "id": "gemma-3-4b-it-mm",
+          "name": "Gemma 3:4B-IT-MM",
+          "model_family": "Gemma",
+          "organization": "Google",
+          "version": "3",
+          "description": "Gemma 3:4B-IT-Multimodal Image Recognition",
+          "url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF",
+          "download_url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf?download=true",
+          "filename": "gemma-3-4b-it-mm.gguf",
+          "huggingface_repo": null,
+          "size_mb": 2550,
+          "file_size_bytes": null,
+          "quantization": "Q4_K_M",
+          "context_length": null,
+          "architecture": null,
+          "supports_vision": true,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 4,
+          "recommended_ram_gb": 8,
+          "gpu_layers": 12,
+          "license": "Google",
+          "license_url": null,
+          "ollama_model": "gemma3:4b",
+          "base_model_url": null,
+          "hidden_size": null,
+          "num_layers": null,
+          "num_kv_heads": null,
+          "num_attention_heads": null,
+          "sha256": "04a43a22e8d2003deda5acc262f68ec1005fa76c735a9962a8c77042a74a7d19",
+          "projector_url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF/resolve/main/mmproj-F16.gguf?download=true",
+          "projector_filename": "mmproj-F16.gguf",
+          "parameters": "4B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "gemma-3-4b-it-mm.gguf",
+              "download_url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf?download=true",
+              "huggingface_repo": null,
+              "sha256": "04a43a22e8d2003deda5acc262f68ec1005fa76c735a9962a8c77042a74a7d19",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 4
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 4
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 79,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 78,
+              "deployability": 88,
+              "performance": 75,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "gemma-2-9b",
+          "name": "Gemma 2 9B",
+          "size_mb": 5324,
+          "quantization": "Q4_K_M",
+          "url": "https://huggingface.co/bartowski/gemma-2-9b-it-GGUF",
+          "license": "Gemma Terms of Use",
+          "license_url": "https://ai.google.dev/gemma/terms",
+          "copyright": "© 2024 Google",
+          "description": "Google's solid offering with good instruction following",
+          "use_cases": [
+            "general chat",
+            "creative writing",
+            "analysis"
+          ],
+          "min_ram_gb": 8,
+          "recommended_ram_gb": 12,
+          "context_length": 8192,
+          "model_family": "Gemma",
+          "version": "9B",
+          "organization": "Community (bartowski)",
+          "download_url": "https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf",
+          "filename": "gemma-2-9b-it-Q4_K_M.gguf",
+          "huggingface_repo": "bartowski/gemma-2-9b-it-GGUF",
+          "sha256": "13b2a7b4115bbd0900162edcebe476da1ba1fc24e718e8b40d32f6e300f56dfe",
+          "file_size_bytes": 5582618624,
+          "parameter_count": null,
+          "architecture": "Transformer",
+          "release_date": null,
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "languages": [
+            "en"
+          ],
+          "gpu_layers": null,
+          "parameters": "9B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "gemma-2-9b-it-Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf",
+              "huggingface_repo": "bartowski/gemma-2-9b-it-GGUF",
+              "sha256": "13b2a7b4115bbd0900162edcebe476da1ba1fc24e718e8b40d32f6e300f56dfe",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 8
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 8
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 8
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 8
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 79,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 78,
+              "deployability": 98,
+              "performance": 63,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen2.5-7b",
+          "name": "Qwen2.5 7B Instruct Q4_K_M (mradermacher)",
+          "size_mb": 4467,
+          "quantization": "Q4_K_M",
+          "url": "https://huggingface.co/mradermacher/Qwen2-7B-Instruct-GGUF",
+          "license": "Apache 2.0",
+          "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "copyright": "© 2024 Alibaba Cloud",
+          "description": "Excellent multilingual model with strong reasoning capabilities",
+          "use_cases": [
+            "multilingual chat",
+            "coding",
+            "math",
+            "analysis"
+          ],
+          "min_ram_gb": 8,
+          "recommended_ram_gb": 12,
+          "context_length": 32768,
+          "model_family": "Qwen",
+          "version": "2.5",
+          "organization": "Alibaba",
+          "download_url": "https://huggingface.co/mradermacher/Qwen2-7B-Instruct-GGUF/resolve/main/Qwen2-7B-Instruct.Q4_K_M.gguf?download=true",
+          "filename": "Qwen2-7B-Instruct.Q4_K_M.gguf",
+          "huggingface_repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+          "sha256": "d67521316cfbaa7172e297c2dd93c0ceada1c155820a348bdff6ca5c6edf7ed0",
+          "file_size_bytes": 4683071456,
+          "parameter_count": null,
+          "architecture": "Transformer",
+          "release_date": null,
+          "supports_vision": false,
+          "supports_code": true,
+          "supports_function_calling": false,
+          "languages": [
+            "en",
+            "zh",
+            "es",
+            "fr",
+            "de",
+            "ja",
+            "ko"
+          ],
+          "gpu_layers": null,
+          "parameters": "7B",
+          "ollama_model": null,
+          "base_model_url": null,
+          "hidden_size": null,
+          "num_layers": null,
+          "num_kv_heads": null,
+          "num_attention_heads": null,
+          "projector_url": null,
+          "projector_filename": null,
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Qwen2-7B-Instruct.Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/mradermacher/Qwen2-7B-Instruct-GGUF/resolve/main/Qwen2-7B-Instruct.Q4_K_M.gguf?download=true",
+              "huggingface_repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+              "sha256": "d67521316cfbaa7172e297c2dd93c0ceada1c155820a348bdff6ca5c6edf7ed0",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 8
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 8
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 8
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 8
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 82,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 80,
+              "deployability": 98,
+              "performance": 75,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen3-vl-8b-instruct-i1-gguf",
+          "name": "Qwen3-VL-8B-Instruct-i1_Q4_K_M (mradermacher)",
+          "model_family": null,
+          "organization": "mradermacher",
+          "version": null,
+          "description": "Qwen3 VL 8B i1 - Q4_K_M (mradermacher)",
+          "url": "https://huggingface.co/mradermacher/Qwen3-VL-8B-Instruct-GGUF",
+          "download_url": "https://huggingface.co/mradermacher/Qwen3-VL-8B-Instruct-GGUF/resolve/main/Qwen3-VL-8B-Instruct.Q4_K_M.gguf?download=true",
+          "filename": "Qwen3-VL-8B-Instruct.Q4_K_M.gguf",
+          "huggingface_repo": "mradermacher/Qwen3-VL-8B-Instruct-GGUF",
+          "size_mb": 4795,
+          "file_size_bytes": 5027785344,
+          "quantization": "Q4_K_M",
+          "context_length": 262144,
+          "parameters": "8B",
+          "architecture": "qwen3_vl",
+          "supports_vision": true,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 12,
+          "recommended_ram_gb": 19,
+          "gpu_layers": 36,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct",
+          "hidden_size": 4096,
+          "num_layers": 36,
+          "num_kv_heads": 8,
+          "num_attention_heads": 32,
+          "sha256": "659ea2c20fe881bba78e6c7a41dc206ab4de993b3df80f554c18b098b673792e",
+          "projector_url": "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/main/mmproj-Qwen3VL-8B-Instruct-F16.gguf?download=true",
+          "projector_filename": "mmproj-Qwen3VL-8B-Instruct-F16.gguf",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Qwen3-VL-8B-Instruct.Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/mradermacher/Qwen3-VL-8B-Instruct-GGUF/resolve/main/Qwen3-VL-8B-Instruct.Q4_K_M.gguf?download=true",
+              "huggingface_repo": "mradermacher/Qwen3-VL-8B-Instruct-GGUF",
+              "sha256": "659ea2c20fe881bba78e6c7a41dc206ab4de993b3df80f554c18b098b673792e",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 12
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 12
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 12
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 12
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 73,
+          "recommendation": "caution",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 98,
+              "performance": 75,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen3-5-0-8b-i1-gguf",
+          "name": "Qwen3.5-0.8B-i1-GGUF",
+          "model_family": null,
+          "organization": "mradermacher",
+          "version": null,
+          "description": "weighted/imatrix quants of",
+          "url": "https://huggingface.co/mradermacher/Qwen3.5-0.8B-i1-GGUF",
+          "download_url": "https://huggingface.co/mradermacher/Qwen3.5-0.8B-i1-GGUF",
+          "filename": "Qwen3.5-0.8B-i1-GGUF",
+          "huggingface_repo": "mradermacher/Qwen3.5-0.8B-i1-GGUF",
+          "size_mb": 1024,
+          "file_size_bytes": 163031,
+          "quantization": null,
+          "context_length": 262144,
+          "parameters": "0.8B",
+          "architecture": "qwen3_5",
+          "supports_vision": true,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "supports_stt": false,
+          "supports_tts": false,
+          "min_ram_gb": 6,
+          "recommended_ram_gb": 9,
+          "gpu_layers": 24,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/Qwen/Qwen3.5-0.8B",
+          "hidden_size": 1024,
+          "num_layers": 24,
+          "num_kv_heads": 2,
+          "num_attention_heads": 8,
+          "sha256": "33bf34170dc4e24ad2d735e9da84bdf6a7d3906b8e6515bcf8b46866f578b745",
+          "checksums": {
+            "main": "33bf34170dc4e24ad2d735e9da84bdf6a7d3906b8e6515bcf8b46866f578b745"
+          },
+          "projector_url": null,
+          "projector_filename": null,
+          "projector_sha256": null
+        },
+        {
+          "id": "gemma-3-4b-it-abliterated-gguf",
+          "name": "gemma-3-4b-it-abliterated (mlabonne)",
+          "model_family": null,
+          "organization": "mlabonne",
+          "version": null,
+          "description": "Gemma 3 4B Abliterated mlabonne",
+          "url": "https://huggingface.co/mlabonne/gemma-3-4b-it-abliterated-GGUF",
+          "download_url": "https://huggingface.co/mlabonne/gemma-3-4b-it-abliterated-GGUF/resolve/main/gemma-3-4b-it-abliterated.q8_0.gguf?download=true",
+          "filename": "gemma-3-4b-it-abliterated.q8_0.gguf",
+          "huggingface_repo": "mlabonne/gemma-3-4b-it-abliterated-GGUF",
+          "size_mb": 3940,
+          "file_size_bytes": 4130402176,
+          "quantization": null,
+          "context_length": null,
+          "parameters": "4B",
+          "architecture": "gemma3",
+          "supports_vision": true,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "supports_stt": false,
+          "supports_tts": false,
+          "min_ram_gb": 7,
+          "recommended_ram_gb": 8,
+          "gpu_layers": 34,
+          "license": "gemma",
+          "license_url": null,
+          "ollama_model": "gemma3:4b",
+          "base_model_url": "https://huggingface.co/google/gemma-3-4b-it",
+          "hidden_size": 2560,
+          "num_layers": 34,
+          "num_kv_heads": null,
+          "num_attention_heads": null,
+          "sha256": "2768a0446ecc0e51768f2836821dc75abafd342e234c3c7aa130ffdfe2a93c07",
+          "checksums": {
+            "main": "2768a0446ecc0e51768f2836821dc75abafd342e234c3c7aa130ffdfe2a93c07",
+            "files": {
+              "gemma-3-4b-it-abliterated.q8_0.gguf": "2768a0446ecc0e51768f2836821dc75abafd342e234c3c7aa130ffdfe2a93c07"
+            }
+          },
+          "projector_url": null,
+          "projector_filename": null,
+          "projector_sha256": null
+        }
+      ]
+    },
+    "code-specialist-256gb": {
+      "name": "Code Specialist",
+      "drive_size": "256GB",
+      "total_size_gb": 80,
+      "description": "Comprehensive coding assistant toolkit for developers.",
+      "models": [
+        {
+          "id": "deepseek-coder-33b",
+          "name": "DeepSeek Coder 33B",
+          "size_mb": 19017,
+          "quantization": "Q4_K_M",
+          "url": "https://huggingface.co/mradermacher/deepseek-coder-33b-instruct-GGUF",
+          "license": "DeepSeek License",
+          "license_url": "https://github.com/deepseek-ai/DeepSeek-Coder/blob/main/LICENSE-MODEL",
+          "copyright": "© 2024 DeepSeek",
+          "description": "Large code model with exceptional accuracy",
+          "use_cases": [
+            "enterprise coding",
+            "complex algorithms",
+            "optimization"
+          ],
+          "min_ram_gb": 30,
+          "recommended_ram_gb": 36,
+          "context_length": 16384,
+          "model_family": "DeepSeek",
+          "version": "33B",
+          "organization": "Community (bartowski)",
+          "download_url": "https://huggingface.co/mradermacher/deepseek-coder-33b-instruct-GGUF/resolve/main/deepseek-coder-33b-instruct.Q4_K_M.gguf?download=true",
+          "filename": "deepseek-coder-33b-instruct.Q4_K_M.gguf",
+          "huggingface_repo": "bartowski/deepseek-coder-33b-instruct-GGUF",
+          "sha256": "6df2e9d62957ee95612c55c9a4772395498c150c04ee35ca48153ad2aaa4197e",
+          "file_size_bytes": 19940531712,
+          "parameter_count": null,
+          "architecture": "llama",
+          "release_date": null,
+          "supports_vision": false,
+          "supports_code": true,
+          "supports_function_calling": false,
+          "languages": [
+            "en"
+          ],
+          "gpu_layers": 62,
+          "parameters": "33B",
+          "supports_stt": false,
+          "supports_tts": false,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/deepseek-ai/deepseek-coder-33b-instruct",
+          "hidden_size": 7168,
+          "num_layers": 62,
+          "num_kv_heads": 8,
+          "num_attention_heads": 56,
+          "checksums": {
+            "main": "6df2e9d62957ee95612c55c9a4772395498c150c04ee35ca48153ad2aaa4197e",
+            "files": {
+              "deepseek-coder-33b-instruct.Q4_K_M.gguf": "6df2e9d62957ee95612c55c9a4772395498c150c04ee35ca48153ad2aaa4197e"
+            }
+          },
+          "projector_url": null,
+          "projector_filename": null,
+          "projector_sha256": null,
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "deepseek-coder-33b-instruct.Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/mradermacher/deepseek-coder-33b-instruct-GGUF/resolve/main/deepseek-coder-33b-instruct.Q4_K_M.gguf?download=true",
+              "huggingface_repo": "bartowski/deepseek-coder-33b-instruct-GGUF",
+              "sha256": "6df2e9d62957ee95612c55c9a4772395498c150c04ee35ca48153ad2aaa4197e",
+              "checksums": {
+                "main": "6df2e9d62957ee95612c55c9a4772395498c150c04ee35ca48153ad2aaa4197e",
+                "files": {
+                  "deepseek-coder-33b-instruct.Q4_K_M.gguf": "6df2e9d62957ee95612c55c9a4772395498c150c04ee35ca48153ad2aaa4197e"
+                }
+              }
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "unsupported",
+              "min_ram_gb": 30
+            },
+            "pro": {
+              "availability": "supported",
+              "min_ram_gb": 30
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 30
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 30
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 70,
+          "recommendation": "caution",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 62,
+              "deployability": 98,
+              "performance": 50,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "deepseek-coder-6-7b-instruct-gguf",
+          "name": "deepseek-coder-6.7b-instruct-GGUF",
+          "model_family": null,
+          "organization": "mradermacher",
+          "version": null,
+          "description": "Trained from scratch on 2T tokens, with a composition of 87% code and 13% natural language in both English and Chinese.",
+          "url": "https://huggingface.co/mradermacher/deepseek-coder-6.7b-instruct-GGUF",
+          "download_url": "https://huggingface.co/mradermacher/deepseek-coder-6.7b-instruct-GGUF/resolve/main/deepseek-coder-6.7b-instruct.Q4_K_M.gguf?download=true",
+          "filename": "deepseek-coder-6.7b-instruct.Q4_K_M.gguf",
+          "huggingface_repo": "mradermacher/deepseek-coder-6.7b-instruct-GGUF",
+          "size_mb": 3894,
+          "file_size_bytes": 4082888448,
+          "quantization": "Q4_K_M",
+          "context_length": 16384,
+          "architecture": "llama",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 10,
+          "recommended_ram_gb": 19,
+          "gpu_layers": 32,
+          "license": "other",
+          "license_url": null,
+          "ollama_model": "deepseek-coder:6.7b",
+          "base_model_url": "https://huggingface.co/deepseek-ai/deepseek-coder-6.7b-instruct",
+          "hidden_size": 4096,
+          "num_layers": 32,
+          "num_kv_heads": 32,
+          "num_attention_heads": 32,
+          "sha256": "33065b129a3fc84995c9853ecfdcb592072ca539ca81c894b3146761a103ca00",
+          "projector_url": null,
+          "projector_filename": null,
+          "parameters": "6.7B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "deepseek-coder-6.7b-instruct.Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/mradermacher/deepseek-coder-6.7b-instruct-GGUF/resolve/main/deepseek-coder-6.7b-instruct.Q4_K_M.gguf?download=true",
+              "huggingface_repo": "mradermacher/deepseek-coder-6.7b-instruct-GGUF",
+              "sha256": "33065b129a3fc84995c9853ecfdcb592072ca539ca81c894b3146761a103ca00",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 10
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 10
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 10
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 10
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 73,
+          "recommendation": "caution",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 98,
+              "performance": 75,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen2-5-coder-7b-instruct-gguf",
+          "name": "Qwen2.5-Coder-7B-Instruct-GGUF",
+          "model_family": null,
+          "organization": "Qwen",
+          "version": null,
+          "description": "Qwen 2.5 Coder 7B Instruct (Qwen)",
+          "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+          "download_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q4_k_m-00001-of-00002.gguf?download=true",
+          "filename": "qwen2.5-coder-7b-instruct-q4_k_m-00001-of-00002.gguf",
+          "huggingface_repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+          "size_mb": 3809,
+          "file_size_bytes": 3993201376,
+          "quantization": "Q4_K_M",
+          "context_length": 32768,
+          "architecture": "qwen2",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 9,
+          "recommended_ram_gb": 12,
+          "gpu_layers": 28,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": "qwen2.5-coder:7b",
+          "base_model_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+          "hidden_size": 3584,
+          "num_layers": 28,
+          "num_kv_heads": 4,
+          "num_attention_heads": 28,
+          "sha256": null,
+          "projector_url": null,
+          "projector_filename": null,
+          "parameters": "7B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "qwen2.5-coder-7b-instruct-q4_k_m-00001-of-00002.gguf",
+              "download_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q4_k_m-00001-of-00002.gguf?download=true",
+              "huggingface_repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+              "sha256": null,
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 9
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 9
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 9
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 9
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 70,
+          "recommendation": "caution",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 88,
+              "performance": 75,
+              "reliability": 62,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen2-5-coder-7b-instruct",
+          "name": "Qwen2.5-Coder-7B-Instruct (Bartowski_Q6_K)",
+          "model_family": null,
+          "organization": "bartowski",
+          "version": null,
+          "description": "Qwen2.5 code generation, code reasoning and code fixing. (Bartowski_Q6_K)",
+          "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+          "download_url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q6_K.gguf?download=true",
+          "filename": "Qwen2.5-Coder-7B-Instruct-Q6_K.gguf",
+          "huggingface_repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+          "size_mb": 5965,
+          "file_size_bytes": 6254199584,
+          "quantization": "Q6_K",
+          "context_length": 32768,
+          "architecture": "qwen2",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 12,
+          "recommended_ram_gb": 15,
+          "gpu_layers": 28,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+          "hidden_size": 3584,
+          "num_layers": 28,
+          "num_kv_heads": 4,
+          "num_attention_heads": 28,
+          "sha256": "62197abf47f1a46b8d775244024e845e79ce722d5fafe50d00437c955e52046a",
+          "projector_url": null,
+          "projector_filename": null,
+          "parameters": "7B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Qwen2.5-Coder-7B-Instruct-Q6_K.gguf",
+              "download_url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q6_K.gguf?download=true",
+              "huggingface_repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+              "sha256": "62197abf47f1a46b8d775244024e845e79ce722d5fafe50d00437c955e52046a",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 12
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 12
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 12
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 12
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 71,
+          "recommendation": "caution",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 98,
+              "performance": 63,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen2-5-coder-1-5b-instruct-Thomas_Q6_K",
+          "name": "Qwen2.5-Coder-1.5B-Instruct (ThomasBaruzier Q6_K)",
+          "model_family": null,
+          "organization": "ThomasBaruzier",
+          "version": null,
+          "description": "Qwen2.5 Coder 1.5B Instruct (ThomasBaruzier Q6_K)",
+          "url": "https://huggingface.co/ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+          "download_url": "https://huggingface.co/ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-1.5B-Instruct-Q6_K.gguf?download=true",
+          "filename": "Qwen2.5-Coder-1.5B-Instruct-Q6_K.gguf",
+          "huggingface_repo": "ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+          "size_mb": 1214,
+          "file_size_bytes": 1272740224,
+          "quantization": "Q6_K",
+          "context_length": 32768,
+          "architecture": "qwen2",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 5,
+          "recommended_ram_gb": 8,
+          "gpu_layers": 28,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": "qwen2.5-coder:1.5b",
+          "base_model_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B",
+          "hidden_size": 1536,
+          "num_layers": 28,
+          "num_kv_heads": 2,
+          "num_attention_heads": 12,
+          "sha256": "046d20272cf563b4365ca7187cb65f2e187b792e151717bb0735eb963605547b",
+          "projector_url": null,
+          "projector_filename": null,
+          "parameters": "1.5B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Qwen2.5-Coder-1.5B-Instruct-Q6_K.gguf",
+              "download_url": "https://huggingface.co/ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-1.5B-Instruct-Q6_K.gguf?download=true",
+              "huggingface_repo": "ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+              "sha256": "046d20272cf563b4365ca7187cb65f2e187b792e151717bb0735eb963605547b",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "recommended",
+              "min_ram_gb": 5
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 5
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 5
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 5
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 75,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 98,
+              "performance": 84,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen2-5-coder-1-5b-instruct-thomas_q4_k_m",
+          "name": "Qwen2.5-Coder-1.5B-Instruct (ThomasBaruzier Q4_K_M)",
+          "model_family": null,
+          "organization": "ThomasBaruzier",
+          "version": null,
+          "description": "Qwen2.5-Coder-1.5B-Instruct (ThomasBaruzier Q4_K_M)",
+          "url": "https://huggingface.co/ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+          "download_url": "https://huggingface.co/ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf?download=true",
+          "filename": "Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+          "huggingface_repo": "ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+          "size_mb": 941,
+          "file_size_bytes": 986048896,
+          "quantization": "Q4_K_M",
+          "context_length": 32768,
+          "architecture": "qwen2",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 4,
+          "recommended_ram_gb": 7,
+          "gpu_layers": 28,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B",
+          "hidden_size": 1536,
+          "num_layers": 28,
+          "num_kv_heads": 2,
+          "num_attention_heads": 12,
+          "sha256": "47fd9fefafd5cdcfcb401898aeed7b1fec073616ce2b7a690a04114d16e51781",
+          "projector_url": null,
+          "projector_filename": null,
+          "parameters": "1.5B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+              "download_url": "https://huggingface.co/ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf?download=true",
+              "huggingface_repo": "ThomasBaruzier/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+              "sha256": "47fd9fefafd5cdcfcb401898aeed7b1fec073616ce2b7a690a04114d16e51781",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 4
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 4
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 75,
+          "recommendation": "good",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 98,
+              "performance": 84,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        },
+        {
+          "id": "qwen2-5-coder-7b-instruct-bartowski_q5_k_m",
+          "name": "Qwen2.5-Coder-7B-Instruct-Bartowski_Q5_K_M",
+          "model_family": null,
+          "organization": "bartowski",
+          "version": null,
+          "description": "Qwen2.5 Coder 7B Instruct (Bartowski Q5 KM)",
+          "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+          "download_url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q5_K_M.gguf?download=true",
+          "filename": "Qwen2.5-Coder-7B-Instruct-Q5_K_M.gguf",
+          "huggingface_repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+          "size_mb": 5193,
+          "file_size_bytes": 5444832032,
+          "quantization": "Q5_K_M",
+          "context_length": 32768,
+          "architecture": "qwen2",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "min_ram_gb": 10,
+          "recommended_ram_gb": 14,
+          "gpu_layers": 28,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": "qwen2.5-coder:7b",
+          "base_model_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+          "hidden_size": 3584,
+          "num_layers": 28,
+          "num_kv_heads": 4,
+          "num_attention_heads": 28,
+          "sha256": "98266f7c5ada4873f0a4d117e9fd61f374d1b136542a0f613cb63e4535607a89",
+          "projector_url": null,
+          "projector_filename": null,
+          "parameters": "7B",
+          "artifacts": [
+            {
+              "id": "primary",
+              "format": "gguf",
+              "filename": "Qwen2.5-Coder-7B-Instruct-Q5_K_M.gguf",
+              "download_url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q5_K_M.gguf?download=true",
+              "huggingface_repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+              "sha256": "98266f7c5ada4873f0a4d117e9fd61f374d1b136542a0f613cb63e4535607a89",
+              "checksums": null
+            }
+          ],
+          "runtimes": [
+            "ollama",
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 10
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 10
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 10
+            },
+            "datacenter": {
+              "availability": "supported",
+              "min_ram_gb": 10
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 71,
+          "recommendation": "caution",
+          "last_reviewed": "2026-03-08",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 58,
+              "deployability": 98,
+              "performance": 63,
+              "reliability": 70,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
+        }
+      ]
+    }
+  }
+}

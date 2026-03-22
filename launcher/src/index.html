@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pseudo Science Fiction AI / LLM Archive Collection</title>
+  <link rel="stylesheet" href="styles-standard.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-container">
+        <img src="../assets/PSF_Logo_White_256.png" alt="Pseudo Science Fiction Logo" class="psf-logo">
+        <div class="header-text">
+          <p>AI / LLM Archive Collection</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content">
+      <!-- Welcome Screen (shows first) -->
+      <div id="welcome-screen" class="screen active">
+        <div class="disclaimer-box">
+          <h2>LICENSE AGREEMENT</h2>
+          <div class="disclaimer-content">
+            <p>By using this software, you agree to the following:</p>
+            <p>Pseudo Science Fiction claims ownership of original product code, integrations, documentation, and packaging. Third-party components remain under their original owners and licenses.</p>
+            
+            <div style="display: flex; justify-content: center;">
+              <ul class="license-list">
+                <li>
+                  <a href="#" onclick="showLicenseModal('LICENSE.txt'); return false;">Pseudo Science Fiction End-User License Agreement</a>
+                </li>
+                <li>
+                  <a href="#" onclick="showLicenseModal('LLAMA-LICENSE.txt'); return false;">Meta Llama Community License</a>
+                  <span class="license-note">(Required for Llama Models)</span>
+                </li>
+                <li>
+                  <a href="#" onclick="showLicenseModal('MODEL-LICENSES.txt'); return false;">AI Model Licenses</a>
+                </li>
+                <li>
+                  <a href="#" onclick="showLicenseModal('ATTRIBUTION.txt'); return false;">Third-Party Attribution</a>
+                </li>
+                <li>
+                  <a href="#" onclick="showLicenseModal('THIRD-PARTY-NOTICE.txt'); return false;">Third-Party Software Notice</a>
+                </li>
+                <li>
+                  <a href="#" onclick="openDocs('docs/reference/IP_OWNERSHIP_AND_ATTRIBUTION.md'); return false;">IP Ownership & Attribution Policy</a>
+                </li>
+                <li>
+                  <a href="#" onclick="openDocs('docs/reference/ProvenanceMatrix.md'); return false;">Provenance Matrix</a>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="warning-box">
+              <p><strong>AI Warning:</strong> AI models can produce inaccurate, biased, or harmful content. This collection includes uncensored models with safety restrictions removed. You are solely responsible for all AI-generated outputs.</p>
+            </div>
+          </div>
+          <button class="btn-primary btn-disclaimer" onclick="acceptDisclaimer()">I Accept - Continue</button>
+        </div>
+      </div>
+
+      <!-- Main Menu -->
+      <div id="main-menu" class="screen">
+        <div class="menu-grid">
+          <div class="menu-card" onclick="showScreen('hardware-detect')">
+            <div class="card-icon">📊</div>
+            <h3>System Information</h3>
+            <p>Detect hardware and get model recommendations</p>
+          </div>
+
+          <div class="menu-card" onclick="showScreen('model-browser')">
+            <div class="card-icon">📚</div>
+            <h3>Browse Models</h3>
+            <p>View available language models</p>
+          </div>
+
+          <div class="menu-card" onclick="showScreen('webui-select')">
+            <div class="card-icon">🚀</div>
+            <h3>Launch Interfaces</h3>
+            <p>PSF Terminal, Open WebUI, or AnythingLLM</p>
+          </div>
+
+          <div class="menu-card" onclick="showScreen('about')">
+            <div class="card-icon">ℹ️</div>
+            <h3>About</h3>
+            <p>Documentation, licenses, and credits</p>
+          </div>
+
+          <div class="menu-card" onclick="showScreen('delete-menu')">
+            <div class="card-icon">🗑️</div>
+            <h3>Delete Data</h3>
+            <p>Remove user data or AI models</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hardware Detection Screen -->
+      <div id="hardware-detect" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>System Information</h2>
+        </div>
+        
+        <div class="hardware-info">
+          <div class="info-loading">
+            <div class="spinner"></div>
+            <p>Detecting hardware...</p>
+          </div>
+          
+          <div class="info-display" style="display: none;">
+            <div class="info-card">
+              <h3>💾 Memory</h3>
+              <p class="info-value" id="ram-info">-- GB</p>
+            </div>
+            
+            <div class="info-card">
+              <h3>⚙️ CPU</h3>
+              <p class="info-value" id="cpu-info">-- cores</p>
+            </div>
+            
+            <div class="info-card">
+              <h3>🎮 GPU</h3>
+              <p class="info-value" id="gpu-info">Not detected</p>
+            </div>
+          </div>
+          
+          <div class="recommendations">
+            <h3>📋 Recommended Models</h3>
+            <div id="recommended-models"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model Browser Screen -->
+      <div id="model-browser" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>Browse Models</h2>
+          <div class="header-buttons">
+            <button class="btn-secondary btn-small" onclick="expandAllCollections()">Expand All</button>
+            <button class="btn-secondary btn-small" onclick="collapseAllCollections()">Collapse All</button>
+          </div>
+        </div>
+        
+        <div class="model-grid" id="model-grid">
+          <!-- Models populated by JavaScript -->
+        </div>
+      </div>
+
+<!-- WebUI Selection Screen -->
+      <div id="webui-select" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>Launch Interfaces</h2>
+        </div>
+        
+        <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+          
+          <p style="color: #aaa; margin-bottom: 25px; text-align: center;">
+            Choose your preferred AI chat interface. Models are selected within each application.
+          </p>
+          
+          <!-- Interface Options -->
+          <div class="webui-options" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+            
+            <div class="webui-card" style="background: rgba(255,165,0,0.05); border: 2px solid #ffa500; border-radius: 10px; padding: 20px;">
+              <h3 style="color: #ffa500;">💻 PSF Terminal</h3>
+              <p style="color: #aaa; margin: 15px 0;">Direct Ollama command line</p>
+              <ul style="color: #aaa; font-size: 14px; list-style: none; padding: 0;">
+                <li style="margin: 8px 0;">✓ Lightweight & fast</li>
+                <li style="margin: 8px 0;">✓ Direct model access</li>
+                <li style="margin: 8px 0;">✓ No overhead</li>
+              </ul>
+              <button class="btn-primary" onclick="launchInterface('terminal')" style="margin-top: 15px; width: 100%;">
+                Launch Terminal
+              </button>
+            </div>
+            
+            <div class="webui-card" style="background: rgba(0,212,255,0.05); border: 2px solid #00d4ff; border-radius: 10px; padding: 20px;">
+              <h3 style="color: #00d4ff;">🌐 Open WebUI</h3>
+              <p style="color: #aaa; margin: 15px 0;">Full-featured web interface</p>
+              <ul style="color: #aaa; font-size: 14px; list-style: none; padding: 0;">
+                <li style="margin: 8px 0;">✓ Clean ChatGPT-like UI</li>
+                <li style="margin: 8px 0;">✓ Built-in RAG support</li>
+                <li style="margin: 8px 0;">✓ Conversation history</li>
+              </ul>
+              <button class="btn-primary" onclick="launchInterface('openwebui')" style="margin-top: 15px; width: 100%;">
+                Launch Open WebUI
+              </button>
+            </div>
+            
+            <div class="webui-card" style="background: rgba(0,255,136,0.05); border: 2px solid #00ff88; border-radius: 10px; padding: 20px;">
+              <h3 style="color: #00ff88;">🤖 AnythingLLM</h3>
+              <p style="color: #aaa; margin: 15px 0;">Enterprise-grade AI platform</p>
+              <ul style="color: #aaa; font-size: 14px; list-style: none; padding: 0;">
+                <li style="margin: 8px 0;">✓ Agent workflows</li>
+                <li style="margin: 8px 0;">✓ Team collaboration</li>
+                <li style="margin: 8px 0;">✓ Document management</li>
+              </ul>
+              <button class="btn-primary" onclick="launchInterface('anythingllm')" style="margin-top: 15px; width: 100%;">
+                Launch AnythingLLM
+              </button>
+            </div>
+            
+          </div>
+          
+        </div>
+      </div>
+
+      <!-- About Screen -->
+      <div id="about" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>About</h2>
+        </div>
+        
+        <div class="about-content">
+          <h3>Pseudo Science Fiction - Core</h3>
+          <p id="about-version">Version 1.0.0</p>
+          
+          <div class="about-section">
+            <h4>📄 Documentation</h4>
+            <button class="btn-secondary" onclick="openDocs('README.md')">Quick Start Guide</button>
+            <button class="btn-secondary" onclick="openDocs('TROUBLESHOOTING.md')">Troubleshooting</button>
+          </div>
+          
+          <div class="about-section">
+            <h4>⚖️ Licenses</h4>
+            <div id="license-buttons">
+              <!-- Dynamically populated with license buttons -->
+              <p style="color: #666;">Loading licenses...</p>
+            </div>
+          </div>
+          
+          <div class="about-section">
+            <h4>🔗 Links</h4>
+            <button class="btn-secondary" onclick="openExternal('https://pseudosf.com')">Pseudo Science Fiction Website</button>
+            <button class="btn-secondary" onclick="openExternal('https://github.com/psfoffline')">GitHub</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Menu Screen (with user data options directly here) -->
+      <div id="delete-menu" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <h2>Delete Data</h2>
+        </div>
+        
+        <div style="max-width: 900px; margin: 0 auto; display: flex; gap: 30px; flex-wrap: wrap;">
+          <!-- Left side: Delete User Data options -->
+          <div style="flex: 1; min-width: 400px;">
+            <div class="about-section" style="height: 100%;">
+              <h3 style="color: #D1D5DB; margin-bottom: 20px;">Delete User Data</h3>
+              
+              <div style="margin-bottom: 25px;">
+                <h4 style="color: #D1D5DB; font-size: 16px; margin-bottom: 10px;">🗑️ Delete Data (Keep Model Settings)</h4>
+                <p style="font-size: 0.85em; color: #aaa; margin-bottom: 12px; line-height: 1.5;">
+                  Removes: Conversations, users, uploads, cache, voice recordings, temp files<br>
+                  Keeps: Model configurations, system prompts, functions, tools
+                </p>
+                <button class="btn-secondary btn-delete-keep" onclick="deleteData('keep-settings')">Delete Data (Keep Model Settings)</button>
+              </div>
+              
+              <div>
+                <h4 style="color: #D1D5DB; font-size: 16px; margin-bottom: 10px;">ðŸš® Delete Everything</h4>
+                <p style="font-size: 0.85em; color: #aaa; margin-bottom: 12px; line-height: 1.5;">
+                  Removes: ALL data including model settings, functions, and tools<br>
+                  This is a complete factory reset of Open WebUI.
+                </p>
+                <button class="btn-secondary btn-delete-all" onclick="deleteData('everything')">Delete Everything</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right side: Delete Models card -->
+          <div style="flex: 1; min-width: 300px;">
+            <div class="menu-card" onclick="showScreen('delete-models')" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+              <div class="card-icon">❌</div>
+              <h3>Delete Models</h3>
+              <p>Browse and remove individual models</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Models Screen -->
+      <div id="delete-models" class="screen">
+        <div class="screen-header">
+          <button class="btn-back" onclick="showScreen('delete-menu')">← Back</button>
+          <h2>Delete Models</h2>
+        </div>
+        
+        <div class="about-content">
+          <div class="about-section">
+            <p style="color: #888; text-align: center; padding: 40px;">
+              Model deletion coming soon.<br><br>
+              For now, you can manually delete models from the <code>models/</code> folder.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Copyright © 2026 Pseudo Science Fiction. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <!-- Load renderer modules in order -->
+  <script src="renderer/globals.js"></script>
+  <script src="renderer/utilities.js"></script>
+  <script src="renderer/screen-navigation.js"></script>
+  <script src="renderer/license-modal.js"></script>
+  <script src="renderer/hardware-detect.js"></script>
+  <script src="renderer/model-browser.js"></script>
+  <script src="renderer/model-actions.js"></script>
+  <script src="renderer/webui-launcher.js"></script>
+  <script src="renderer/delete-data.js"></script>
+  
+  <!-- Theme Initialization (Standard Edition) -->
+  <script>
+    /**
+     * Load and apply theme from psf-settings.json on page load
+     * Standard Edition loads the theme that was baked in during compilation
+     */
+    async function loadAndApplyThemeStandard() {
+      try {
+        // Try to load from psf-settings.json via IPC
+        if (window.electronAPI && window.electronAPI.getTheme) {
+          const theme = await window.electronAPI.getTheme();
+          if (theme && theme.accent) {
+            applyThemeToPageStandard(theme);
+            console.log('[Theme] Loaded theme from settings file');
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[Theme] Could not load theme, using CSS defaults:', err.message);
+      }
+    }
+    
+    /**
+     * Apply theme to page via CSS custom properties
+     */
+    function applyThemeToPageStandard(theme) {
+      if (!theme) return;
+      
+      const root = document.documentElement;
+      const cssVarMap = {
+        accent: '--psf-accent',
+        accentLight: '--psf-accent-light',
+        accentMedium: '--psf-accent-medium',
+        accentDark: '--psf-accent-dark',
+        success: '--psf-success',
+        warning: '--psf-warning',
+        error: '--psf-error',
+        bgPrimary: '--psf-bg-primary',
+        bgSecondary: '--psf-bg-secondary',
+        border: '--psf-border',
+        textPrimary: '--psf-text-primary',
+        textSecondary: '--psf-text-secondary',
+        textMuted: '--psf-text-muted'
+      };
+      
+      for (const [key, cssVar] of Object.entries(cssVarMap)) {
+        if (theme[key]) {
+          root.style.setProperty(cssVar, theme[key]);
+        }
+      }
+
+      const logoFile = theme.logoFile || 'PSF_Logo_White_256.png';
+      document.querySelectorAll('img.psf-logo, img.logo-img').forEach((img) => {
+        img.src = `../assets/${logoFile}`;
+      });
+      
+      console.log('[Theme] Applied theme:', theme.accent);
+    }
+    
+    // Load theme on DOM ready
+    document.addEventListener('DOMContentLoaded', loadAndApplyThemeStandard);
+  </script>
+</body>
+</html>

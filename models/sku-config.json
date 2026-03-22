@@ -1,0 +1,11 @@
+{
+  "package_key": "the-vault",
+  "package_name": "The VAULT",
+  "storage_size": "4TB",
+  "storage_type": "NVMe SSD (USB-C)",
+  "catalog_file": "catalog.json",
+  "sku_id": "sku-005",
+  "version": "1.1.2",
+  "price": 449.99,
+  "sku_manifest": "sku-manifest.json"
+}

@@ -1,0 +1,79 @@
+{
+  "version": "1.0",
+  "lastModified": "2026-02-28T22:57:03.338Z",
+  "items": [
+    {
+      "id": "agent-1772319265496-rxbr59tzg",
+      "type": "agent",
+      "name": "Agent A",
+      "modelId": "gemma-3-4b-it-mm",
+      "modelName": "Gemma 3:4B-IT-MM",
+      "collectionKey": "daily-driver-256gb",
+      "filename": "gemma-3-4b-it-mm.gguf",
+      "systemPrompt": "",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "contains:puppies",
+          "target": "Agent B"
+        },
+        {
+          "match": "*",
+          "target": "end"
+        }
+      ],
+      "tools": [],
+      "enabled": true,
+      "projectorFilename": "mmproj-F16.gguf"
+    },
+    {
+      "id": "agent-1772319265783-xy6btrogd",
+      "type": "agent",
+      "name": "Agent B",
+      "modelId": "gemma-3-4b-it-mm",
+      "modelName": "Gemma 3:4B-IT-MM",
+      "collectionKey": "daily-driver-256gb",
+      "filename": "gemma-3-4b-it-mm.gguf",
+      "systemPrompt": "",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "contains:love",
+          "target": "Agent C"
+        },
+        {
+          "match": "*",
+          "target": "end"
+        }
+      ],
+      "tools": [],
+      "enabled": true,
+      "projectorFilename": "mmproj-F16.gguf"
+    },
+    {
+      "id": "agent-1772319266000-jtregyi25",
+      "type": "agent",
+      "name": "New Agent",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "systemPrompt": "",
+      "routingMode": "static",
+      "routingRules": [],
+      "tools": [],
+      "enabled": true,
+      "projectorFilename": null
+    }
+  ],
+  "endpointRegistry": {
+    "enabled": false,
+    "includeLocalAgents": true,
+    "selection": "priority",
+    "defaultTimeoutMs": 120000,
+    "maxConsecutiveFailures": 2,
+    "cooldownMs": 20000,
+    "agentRoleMap": {},
+    "roles": {}
+  }
+}

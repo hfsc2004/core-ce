@@ -1,0 +1,7 @@
+{
+  "algorithm": "ed25519",
+  "keyId": "ed25519:local-dev-signer",
+  "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAKLpoLIRNIlIwzzv9tOuTblWN80Hg+nUnoZNXp+fjssI=\n-----END PUBLIC KEY-----",
+  "signature": "z8pZs5jtWkvjFxGDL0nBmOxLbNtu49Jh/u5pkfvWpZSYe1xujYt7u4/UOmxCMZPNXUXp+hDj50u+FpwggGJFAQ==",
+  "signedAt": "2026-03-08T22:03:44.602Z"
+}

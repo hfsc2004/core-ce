@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PSF Coding Terminal</title>
+  <link rel="stylesheet" href="lib/terminal-code.css" />
+  <link rel="stylesheet" href="coding-terminal-styles.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="ct-header">
+    <div class="ct-header-left">
+      <span class="ct-logo">⌨️</span>
+      <span class="ct-title">PSF Coding Terminal</span>
+      <div class="ct-header-model-pickers">
+        <select id="model-select" class="ct-btn" style="max-width: 320px;">
+          <option value="">Coder: loading...</option>
+        </select>
+        <select id="router-model-select" class="ct-btn" style="max-width: 260px;">
+          <option value="">Router: loading...</option>
+        </select>
+      </div>
+    </div>
+    <div class="ct-header-right">
+      <span class="ct-session-group">
+        <span class="ct-session-label">Session:</span>
+        <button class="ct-btn ct-btn-small" id="btn-session-new" title="Start a fresh session">🆕 New</button>
+        <button class="ct-btn ct-btn-small" id="btn-session-save" title="Save current chat session">💾 Save</button>
+        <button class="ct-btn ct-btn-small" id="btn-session-load" title="Load a saved chat session">📂 Load</button>
+        <button class="ct-btn ct-btn-small" id="btn-session-delete" title="Delete saved sessions">🗑️ Delete</button>
+      </span>
+      <button class="ct-btn ct-btn-small" id="btn-project-root-top" title="Set Project Root">Project Root</button>
+      <button class="ct-btn ct-btn-small" id="btn-rlm-folder-top" title="Manage RLM attachments">RLM Folder</button>
+      <button class="ct-btn ct-btn-small" id="btn-stop-top" title="Stop current generation">Stop</button>
+      <button class="ct-btn ct-btn-icon" id="btn-rag" title="RAG Sources">📚</button>
+      <button class="ct-btn ct-btn-icon" id="btn-git" title="Git Status">⎇</button>
+      <button class="ct-btn ct-btn-icon" id="btn-settings" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="ct-main">
+    <!-- Left: Chat/Editor Panel -->
+    <div class="ct-panel ct-panel-left" id="panel-main">
+      <!-- Tab Bar -->
+      <div class="ct-tabs">
+        <button class="ct-tab active" data-panel="chat">Chat</button>
+        <button class="ct-tab" data-panel="editor">Editor</button>
+      </div>
+      
+      <!-- Chat View -->
+      <div class="ct-view ct-view-chat" id="view-chat">
+        <div class="ct-router-debug hidden" id="router-debug-panel">
+          <div class="ct-router-debug-title">Router Debug (last 10)</div>
+          <div class="ct-router-debug-list" id="router-debug-list"></div>
+        </div>
+        <div class="ct-messages" id="chat-display">
+          <!-- Messages will be inserted here -->
+        </div>
+        
+        <div class="ct-input-area">
+          <textarea 
+            id="user-input" 
+            placeholder="Ask about code, request changes, or describe what you need..."
+            rows="1"
+          ></textarea>
+          <button class="ct-btn ct-btn-small" id="voice-btn" title="Voice-to-text (right-click to switch provider)">🎤 Voice Off</button>
+          <button class="ct-btn ct-btn-small" id="voice-mode-btn" title="Voice mode: PTT (manual Send)">PTT</button>
+          <button class="ct-btn ct-btn-small" id="stop-btn" title="Stop generation">Stop</button>
+          <button class="ct-btn ct-btn-small" id="steer-btn" title="Inject steering update while generating">Steer</button>
+          <button class="ct-btn ct-btn-primary" id="send-btn">Send</button>
+        </div>
+      </div>
+      
+      <!-- Editor View (placeholder) -->
+      <div class="ct-view ct-view-editor hidden" id="view-editor">
+        <div class="ct-editor-toolbar">
+          <select id="editor-file-select" class="ct-editor-file-select" title="Select file"></select>
+          <button class="ct-btn ct-btn-small" id="btn-open-file">Open</button>
+          <span class="ct-filename" id="editor-filename">No file open</span>
+          <button class="ct-btn ct-btn-small" id="btn-save">Save</button>
+          <button class="ct-btn ct-btn-small" id="btn-run">Run</button>
+        </div>
+        <div class="ct-editor-container" id="editor-container">
+          <textarea id="editor-input" class="ct-editor-input" spellcheck="false" placeholder="Attach a project folder, choose a file, then edit here..."></textarea>
+        </div>
+        <div class="ct-editor-chat" id="editor-chat">
+          <textarea
+            id="editor-chat-input"
+            placeholder="Chat from Editor (Shift+Enter for newline)..."
+            rows="2"
+          ></textarea>
+          <button class="ct-btn ct-btn-small" id="editor-stop-btn" title="Stop generation">Stop</button>
+          <button class="ct-btn ct-btn-small" id="editor-steer-btn" title="Inject steering update while generating">Steer</button>
+          <button class="ct-btn ct-btn-primary" id="editor-send-btn">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Context Panel (collapsible) -->
+    <div class="ct-panel ct-panel-right" id="panel-context">
+      <div class="ct-context-tools">
+        <select id="chat-mode-select" class="ct-btn ct-context-mode-select" title="Dispatch mode">
+          <option value="auto">Mode: Auto</option>
+          <option value="inspect">Mode: Inspect</option>
+          <option value="generate">Mode: Generate</option>
+        </select>
+        <button class="ct-btn ct-btn-small" id="btn-model-refresh" title="Refresh model/router list">↻</button>
+      </div>
+
+      <!-- RAG Sources -->
+      <div class="ct-context-section" id="section-rag">
+        <div class="ct-section-header">
+          <span>📚 RAG Sources</span>
+          <div class="ct-rag-actions">
+            <button class="ct-btn ct-btn-tiny" id="btn-index-rag" title="Index project">⟳</button>
+            <button class="ct-btn ct-btn-tiny" id="btn-rag-clear" title="Clear all indexed sources">🗑</button>
+            <button class="ct-btn ct-btn-tiny" id="btn-refresh-rag" title="Refresh sources">↻</button>
+          </div>
+        </div>
+        <div class="ct-rag-bucket-row">
+          <select id="rag-bucket-select" class="ct-rag-bucket-select" title="RAG bucket"></select>
+          <button class="ct-btn ct-btn-tiny" id="btn-rag-bucket-new" title="Create/select named bucket">＋</button>
+          <button class="ct-btn ct-btn-tiny" id="btn-rag-bucket-delete" title="Delete selected bucket (must be empty)">−</button>
+        </div>
+        <div class="ct-rag-index-info hidden" id="rag-index-info"></div>
+        <div class="ct-section-content" id="rag-sources">
+          <p class="ct-placeholder">No sources indexed yet.</p>
+        </div>
+      </div>
+      
+      <!-- Git Status -->
+      <div class="ct-context-section" id="section-git">
+        <div class="ct-section-header">
+          <span>⎇ Git</span>
+          <div class="ct-rag-actions">
+            <button class="ct-btn ct-btn-tiny" id="btn-prompt-guide" title="Coding prompt guide">🧭</button>
+            <button class="ct-btn ct-btn-tiny" id="btn-git-help" title="Git command help">?</button>
+            <button class="ct-btn ct-btn-tiny" id="btn-refresh-git">↻</button>
+          </div>
+        </div>
+        <div class="ct-git-controls" id="git-controls">
+          <button class="ct-btn ct-btn-tiny" data-git-action="init">init</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="add">add</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="blame">blame</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="bisect">bisect</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="checkout">checkout</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="commit">commit</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="amend">--amend</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="diff">diff</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="pull">pull</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="push">push</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="reflog">reflog</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="remote-add">remote add</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="log">log</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="show">show</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="rebase">rebase</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="reset">reset</button>
+          <button class="ct-btn ct-btn-tiny" data-git-action="status">status</button>
+        </div>
+        <div id="git-status-wrap">
+          <div class="ct-section-content" id="git-status">
+            <p class="ct-placeholder">No repository detected.</p>
+          </div>
+          <div class="ct-git-output hidden" id="git-output"></div>
+        </div>
+      </div>
+
+      <!-- Plan Run -->
+      <div class="ct-context-section" id="section-plan-run">
+        <div class="ct-section-header">
+          <span>🧭 Plan Run</span>
+          <div class="ct-rag-actions">
+            <button class="ct-btn ct-btn-tiny" id="btn-refresh-plan-run" title="Refresh plan runs">↻</button>
+          </div>
+        </div>
+        <div class="ct-section-content ct-trace-content" id="plan-run-content">
+          <p class="ct-placeholder">No plan run yet.</p>
+        </div>
+      </div>
+
+      <!-- Model Trace -->
+      <div class="ct-context-section" id="section-model-trace">
+        <div class="ct-section-header">
+          <span>🛰 Model Trace</span>
+          <div class="ct-rag-actions">
+            <button class="ct-btn ct-btn-tiny" id="btn-refresh-trace" title="Refresh trace">↻</button>
+          </div>
+        </div>
+        <div class="ct-section-content ct-trace-content" id="model-trace-content">
+          <p class="ct-placeholder">Trace idle.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Status Bar -->
+  <footer class="ct-status-bar">
+    <span class="ct-status-item" id="status-model">Model: Ready</span>
+    <span class="ct-status-item" id="status-rag">RAG: Idle</span>
+    <span class="ct-status-item" id="status-git">Git: N/A</span>
+    <span class="ct-status-item ct-status-copyright" id="status-copyright">Copyright © 2026 Pseudo Science Fiction. All rights reserved. • Developer Edition v1.1.2</span>
+  </footer>
+
+  <div class="ct-modal hidden" id="git-help-modal">
+    <div class="ct-modal-card">
+      <div class="ct-modal-header">
+        <h3>Git Help</h3>
+        <button class="ct-btn ct-btn-tiny" id="btn-git-help-close">Close</button>
+      </div>
+      <div class="ct-modal-body">
+        <p><strong>Safe basics</strong>: <code>status</code>, <code>log</code>, <code>show</code>, <code>diff</code>, <code>blame</code></p>
+        <p><strong>Write ops</strong>: <code>add</code>, <code>commit</code>, <code>--amend</code>, <code>checkout</code>, <code>pull</code>, <code>push</code>, <code>remote add</code></p>
+        <p><strong>Risky ops</strong>: <code>reset</code>, <code>rebase</code>, <code>bisect</code> (require confirmation token).</p>
+        <p>Examples:</p>
+        <p><code>blame</code>: enter file path and optional line number</p>
+        <p><code>checkout</code>: enter branch name or commit SHA</p>
+        <p><code>remote add</code>: enter name + URL (for example <code>origin</code>)</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="ct-modal hidden" id="prompt-guide-modal">
+    <div class="ct-modal-card">
+      <div class="ct-modal-header">
+        <h3>Coding Prompt Guide</h3>
+        <button class="ct-btn ct-btn-tiny" id="btn-prompt-guide-close">Close</button>
+      </div>
+      <div class="ct-modal-body ct-doc-modal-body" id="prompt-guide-body">
+        Loading...
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="lib/marked.min.js"></script>
+  <script src="lib/highlight.min.js"></script>
+  <script src="shared-rlm-core-helpers.js"></script>
+  <script src="shared-rlm-core-runtime-state.js"></script>
+  <script src="shared-rlm-core-runtime-tools.js"></script>
+  <script src="shared-rlm-core-runtime-answer.js"></script>
+  <script src="shared-rlm-core-runtime.js"></script>
+  <script src="shared-rlm-core.js"></script>
+  <script src="terminal-renderer-attachments-dnd.js"></script>
+  <script src="terminal-renderer-attachments-manager.js"></script>
+  <script src="terminal-renderer-attachments.js"></script>
+  <script src="shared-speech-engine.js"></script>
+  <script src="shared-voice-to-text-adapters.js"></script>
+  <script src="shared-voice-to-text-controller.js"></script>
+  <script src="shared-voice-to-text.js"></script>
+  <script src="coding-terminal-renderer-bootstrap.js"></script>
+  <script src="coding-terminal-renderer-runtime-models.js"></script>
+  <script src="coding-terminal-renderer-runtime-recall-theme.js"></script>
+  <script src="coding-terminal-renderer-chat-diff.js"></script>
+  <script src="coding-terminal-renderer-chat-messages.js"></script>
+  <script src="coding-terminal-renderer-chat-stream.js"></script>
+  <script src="coding-terminal-renderer-text.js"></script>
+  <script src="coding-terminal-renderer-shell.js"></script>
+  <script src="coding-terminal-renderer-events.js"></script>
+  <script src="coding-terminal-renderer-chat.js"></script>
+  <script src="coding-terminal-renderer-rag.js"></script>
+  <script src="coding-terminal-renderer-git.js"></script>
+  <script src="coding-terminal-renderer-git-actions.js"></script>
+  <script src="coding-terminal-renderer-trace.js"></script>
+  <script src="coding-terminal-renderer-runtime.js"></script>
+  <script src="coding-terminal-renderer-project.js"></script>
+  <script src="coding-terminal-renderer-editor.js"></script>
+  <script src="coding-terminal-renderer-ui-agent-settings.js"></script>
+  <script src="coding-terminal-renderer-ui-quick-settings.js"></script>
+  <script src="coding-terminal-renderer-ui.js"></script>
+  <script src="coding-terminal-renderer-rlm.js"></script>
+  <script src="coding-terminal-renderer-sessions.js"></script>
+  <script src="coding-terminal-renderer.js"></script>
+  
+  <script>
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.CodingTerminal) {
+        window.CodingTerminal.initialize();
+      }
+    });
+  </script>
+</body>
+</html>

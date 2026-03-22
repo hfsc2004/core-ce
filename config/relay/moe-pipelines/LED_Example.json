@@ -1,0 +1,99 @@
+{
+  "version": "1.0",
+  "lastModified": "2026-02-20T16:25:04.965Z",
+  "items": [
+    {
+      "id": "gateway-1771604648682-s4ssh9mfr",
+      "type": "gateway",
+      "name": "User Gateway",
+      "position": "input",
+      "sources": {
+        "api": {
+          "enabled": false,
+          "port": 52434,
+          "endpoint": "/v1/chat"
+        },
+        "terminal": {
+          "enabled": true
+        },
+        "serial": {
+          "enabled": true,
+          "port": "/dev/ttyACM0",
+          "baudRate": 115200
+        }
+      },
+      "irg": {
+        "enabled": true,
+        "executeMode": "live",
+        "entryMode": "deterministic-first",
+        "requireLlmPlanForLive": false,
+        "live": {
+          "executor": "mpremote",
+          "timeoutMs": 60000
+        },
+        "pico": {
+          "defaultGpio": 25,
+          "defaultPeriodMs": 500,
+          "defaultIterations": 20
+        }
+      },
+      "enabled": true
+    },
+    {
+      "id": "bindings-1771604637770-pshm3njel",
+      "type": "bindings",
+      "name": "Runtime Bindings",
+      "entries": [
+        {
+          "key": "gpio.red",
+          "value": "3"
+        },
+        {
+          "key": "gpio.blue",
+          "value": "2"
+        },
+        {
+          "key": "gpio.green",
+          "value": "4"
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "channel-1771604670545-38micten0",
+      "type": "channel",
+      "direction": "bidirectional",
+      "label": "",
+      "flowCondition": "always",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "agent-1771604678241-4w04v8ug5",
+      "type": "agent",
+      "name": "New Agent",
+      "modelId": "gemma-3-4b-it-mm",
+      "modelName": "Gemma 3:4B-IT-MM",
+      "collectionKey": "daily-driver-256gb",
+      "filename": "gemma-3-4b-it-mm.gguf",
+      "systemPrompt": "",
+      "routingMode": "dynamic",
+      "routingRules": [],
+      "tools": [],
+      "enabled": true,
+      "projectorFilename": "mmproj-F16.gguf"
+    }
+  ],
+  "endpointRegistry": {
+    "enabled": false,
+    "includeLocalAgents": true,
+    "selection": "priority",
+    "defaultTimeoutMs": 120000,
+    "maxConsecutiveFailures": 2,
+    "cooldownMs": 20000,
+    "agentRoleMap": {},
+    "roles": {}
+  }
+}

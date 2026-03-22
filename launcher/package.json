@@ -1,0 +1,80 @@
+{
+  "name": "psf-robotics-archive",
+  "version": "1.1.2",
+  "description": "Pseudo Science Fiction Core Collection - Local LLM Toolkit",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
+    "test:moe-irg": "node modules/moe/moe-irg.regression.test.js",
+    "mods": "node modules/mod-manager/mod-cli.js"
+  },
+  "build": {
+    "appId": "com.psfrobotics.archive",
+    "productName": "Pseudo Science Fiction Archive",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../binaries",
+        "to": "binaries",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../models",
+        "to": "models",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../docs",
+        "to": "docs",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    }
+  },
+  "author": "Pseudo Science Fiction",
+  "license": "SEE LICENSE.txt",
+  "keywords": [],
+  "devDependencies": {
+    "electron": "^39.2.3",
+    "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.6",
+    "isomorphic-git": "^1.35.1",
+    "node-pty": "^1.0.0",
+    "vectra": "^0.4.4",
+    "yarn": "^1.22.22"
+  }
+}

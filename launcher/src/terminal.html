@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<!-- Version: 1.1.2 -->
+<!-- Copyright © 2026 Global Science Network -->
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PSF Terminal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+  <link rel="stylesheet" href="terminal-inline.css" />
+</head>
+<body>
+<!-- Header -->
+  <div id="header">
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <h2>🖥️ PSF Terminal</h2>
+      <select id="model-select" style="padding: 8px 12px; background: #16162a; color: #00d4ff; border: 1px solid #00d4ff; border-radius: 5px; font-size: 14px; min-width: 200px;">
+        <option value="">Loading models...</option>
+      </select>
+      <button id="config-btn" onclick="TerminalApp.toggleConfig()" title="Model Configuration" style="background: none; border: 1px solid #ffa500; color: #ffa500; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 16px;">
+        ⚙️
+      </button>
+      <button id="attachments-btn" title="Manage attached files" style="background: none; border: 1px solid #00d4ff; color: #00d4ff; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+        📎 Files
+      </button>
+    </div>
+    <div class="header-buttons">
+      <div class="session-group">
+        <span class="session-label">Session:</span>
+        <button class="session-btn" onclick="TerminalApp.promptSave()" title="Save conversation">💾 Save</button>
+        <button class="session-btn load" onclick="TerminalApp.promptLoad()" title="Load conversation">📂 Load</button>
+        <button class="session-btn delete" onclick="TerminalApp.promptDelete()" title="Delete a saved session">🗑️ Delete</button>
+        <span class="session-export-wrap">
+          <button id="session-export-btn" class="session-btn" title="Export full thread">⬇️ .md</button>
+          <button id="session-export-menu-btn" class="session-btn" title="Choose full-thread export format">⋯</button>
+          <span id="session-export-menu" class="session-export-menu" aria-hidden="true"></span>
+        </span>
+      </div>
+      <button id="close-btn" onclick="window.close()">✕ Close</button>
+    </div>
+  </div>
+
+<!-- Model Configuration Panel -->
+  <div id="config-panel" style="display: none; position: absolute; top: 60px; left: 20px; background: #1a1a2e; border: 2px solid #ffa500; border-radius: 10px; padding: 20px; z-index: 100; width: 350px; box-shadow: 0 10px 40px rgba(255, 165, 0, 0.3); max-height: calc(100vh - 90px); overflow-y: auto;">
+    <h3 style="color: #ffa500; margin-bottom: 15px;">⚙️ Model Configuration</h3>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Temperature (0.0 - 2.0)</label>
+      <input type="number" id="cfg-temperature" step="0.1" min="0" max="2" value="0.7" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Top P (0.0 - 1.0)</label>
+      <input type="number" id="cfg-top-p" step="0.05" min="0" max="1" value="0.9" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Top K</label>
+      <input type="number" id="cfg-top-k" step="1" min="1" max="100" value="40" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Context Length</label>
+      <input type="number" id="cfg-num-ctx" step="256" min="512" max="131072" value="4096" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Repeat Penalty (0.0 - 2.0)</label>
+      <input type="number" id="cfg-repeat-penalty" step="0.1" min="0" max="2" value="1.1" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">System Prompt</label>
+      <textarea id="cfg-system-prompt" rows="3" placeholder="Optional system prompt..." style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff; resize: vertical;"></textarea>
+    </div>
+
+    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="cfg-rlm-assisted" />
+      <label for="cfg-rlm-assisted" style="color: #aaa; font-size: 12px;">RLM Assisted Mode (planner + deterministic tools)</label>
+    </div>
+
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">RLM Profile</label>
+      <select id="cfg-rlm-profile" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+        <option value="fast">Fast</option>
+        <option value="balanced" selected>Balanced</option>
+        <option value="deep">Deep</option>
+        <option value="industrial-safe">Industrial Safe</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">RLM Quality Preset</label>
+      <select id="cfg-rlm-quality" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+        <option value="fast">Fast</option>
+        <option value="balanced" selected>Balanced</option>
+        <option value="deep">Deep</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="cfg-rlm-verbose" />
+      <label for="cfg-rlm-verbose" style="color: #aaa; font-size: 12px;">RLM Verbose Trace (show plan + tool steps)</label>
+    </div>
+
+    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="cfg-rlm-include-shared" />
+      <label for="cfg-rlm-include-shared" style="color: #aaa; font-size: 12px;">RLM Include Shared Attachments (cross-terminal shared pool)</label>
+    </div>
+
+    <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="cfg-export-llm-naming" checked />
+      <label for="cfg-export-llm-naming" style="color: #aaa; font-size: 12px;">LLM-assisted file naming (export blocks)</label>
+    </div>
+
+    <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="cfg-rlm-advanced" />
+      <label for="cfg-rlm-advanced" style="color: #aaa; font-size: 12px;">Advanced RLM Budgets</label>
+    </div>
+    <div id="cfg-rlm-budgets-wrap" style="display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
+      <div>
+        <label style="color: #aaa; font-size: 11px; display: block; margin-bottom: 3px;">Planning Steps Limit</label>
+        <input type="number" id="cfg-rlm-max-tool-calls" min="4" max="400" step="1" value="40" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+      </div>
+      <div>
+        <label style="color: #aaa; font-size: 11px; display: block; margin-bottom: 3px;">Reasoning Depth</label>
+        <input type="number" id="cfg-rlm-max-recursion-depth" min="1" max="12" step="1" value="3" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+      </div>
+      <div>
+        <label style="color: #aaa; font-size: 11px; display: block; margin-bottom: 3px;">Document Coverage Limit</label>
+        <input type="number" id="cfg-rlm-max-chunks" min="4" max="500" step="1" value="48" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+      </div>
+      <div>
+        <label style="color: #aaa; font-size: 11px; display: block; margin-bottom: 3px;">Time Limit (ms)</label>
+        <input type="number" id="cfg-rlm-max-runtime-ms" min="2000" max="300000" step="500" value="45000" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+      </div>
+      <div style="grid-column: 1 / span 2;">
+        <label style="color: #aaa; font-size: 11px; display: block; margin-bottom: 3px;">Evidence Sampling Limit</label>
+        <input type="number" id="cfg-rlm-max-evidence-hits" min="4" max="400" step="1" value="28" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
+      <button onclick="TerminalApp.applyConfig()" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #ffa500 0%, #cc8400 100%); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Apply</button>
+      <button onclick="TerminalApp.toggleConfig()" style="flex: 1; padding: 10px; background: #2d2d44; color: #aaa; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+    </div>
+  </div>
+  
+  <!-- Terminal Container -->
+  <div id="terminal-container">
+    <div id="chat-display"></div>
+    <div id="inline-thinking" aria-live="polite" aria-hidden="true">
+      <span class="inline-thinking-pulse"></span>
+      <span id="inline-thinking-label">Thinking</span>
+      <span class="inline-thinking-dots"><span></span><span></span><span></span></span>
+    </div>
+    
+    <div id="input-container">
+      <input 
+        type="text" 
+        id="user-input" 
+        placeholder="Type your message here..." 
+        autocomplete="off"
+      />
+      <button id="voice-btn" title="Voice-to-text (right-click to switch provider)">🎤 Voice Off</button>
+      <button id="voice-mode-btn" title="Voice mode: PTT (manual Send)">PTT</button>
+      <button id="send-btn">Send</button>
+      <button id="stop-btn" title="Stop current generation">Stop</button>
+    </div>
+  </div>
+  
+  
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-indicator">
+      <div class="status-dot"></div>
+      <span id="status-text">Connected to Ollama</span>
+    </div>
+    <div id="gpu-indicator" class="gpu-badge" style="padding: 5px 12px; background: rgba(255,255,255,0.1); border-radius: 4px; font-size: 12px;">
+      <span id="gpu-icon">⏳</span> <span id="gpu-text">Detecting...</span>
+    </div>
+    <span>Press Enter to send • Shift+Enter for newline • Type /help for commands</span>
+  </div>
+  <!-- Custom Prompt Modal -->
+  <div id="prompt-modal" class="modal-overlay">
+    <div class="modal-dialog" id="modal-dialog">
+      <div class="modal-title" id="modal-title">Prompt</div>
+      <div class="modal-content" id="modal-content"></div>
+      <input type="text" class="modal-input" id="modal-input" placeholder="Enter value..." />
+      <div class="modal-warning" id="modal-warning" style="display: none;"></div>
+      <div class="modal-buttons">
+        <button class="modal-btn cancel" onclick="TerminalApp.closeModal(false)">Cancel</button>
+        <button class="modal-btn confirm" id="modal-confirm-btn" onclick="TerminalApp.closeModal(true)">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load terminal logic as external module -->
+  <script src="lib/marked.min.js"></script>
+  <script src="lib/highlight.min.js"></script>
+  <script src="terminal-renderer-attachments-dnd.js"></script>
+  <script src="terminal-renderer-attachments-manager.js"></script>
+  <script src="terminal-renderer-ui-export.js"></script>
+  <script src="terminal-renderer-ui-image.js"></script>
+  <script src="terminal-renderer-ui.js"></script>
+  <script src="terminal-renderer-memory.js"></script>
+  <script src="terminal-renderer-attachments.js"></script>
+  <script src="terminal-renderer-sessions.js"></script>
+  <script src="terminal-renderer-commands-rlm.js"></script>
+  <script src="terminal-renderer-commands-models.js"></script>
+  <script src="terminal-renderer-commands-voice.js"></script>
+  <script src="terminal-renderer-commands.js"></script>
+  <script src="terminal-renderer-persistence.js"></script>
+  <script src="terminal-renderer-context-menu.js"></script>
+  <script src="terminal-renderer-stream.js"></script>
+  <script src="terminal-renderer-chatflow.js"></script>
+  <script src="terminal-renderer-bootstrap.js"></script>
+  <script src="terminal-renderer-runtime.js"></script>
+  <script src="terminal-renderer-init.js"></script>
+  <script src="shared-rlm-core-helpers.js"></script>
+  <script src="shared-rlm-core-runtime-state.js"></script>
+  <script src="shared-rlm-core-runtime-tools.js"></script>
+  <script src="shared-rlm-core-runtime-answer.js"></script>
+  <script src="shared-rlm-core-runtime.js"></script>
+  <script src="shared-rlm-core.js"></script>
+  <script src="shared-speech-engine.js"></script>
+  <script src="shared-voice-to-text-adapters.js"></script>
+  <script src="shared-voice-to-text-controller.js"></script>
+  <script src="shared-voice-to-text.js"></script>
+  <script src="terminal-renderer-rlm.js"></script>
+  <script src="terminal-renderer-preferences.js"></script>
+  <script src="terminal-renderer-defaults.js"></script>
+  <script src="terminal-renderer-init-bridge.js"></script>
+  <script src="terminal-renderer-shell.js"></script>
+  <script src="terminal-renderer-speech.js"></script>
+  <script src="terminal-renderer-io.js"></script>
+  <script src="terminal-renderer.js"></script>
+  
+  <!-- Initialization script - ONLY configuration extraction and init call -->
+  <script>
+    async function applyTerminalThemeFromSettings() {
+      try {
+        if (!window.electronAPI?.getTheme) return;
+        const theme = await window.electronAPI.getTheme();
+        if (!theme || typeof theme !== 'object') return;
+
+        const root = document.documentElement;
+        const cssVarMap = {
+          accent: '--term-accent',
+          accentLight: '--term-accent-light',
+          accentMedium: '--term-accent-medium',
+          accentDark: '--term-accent-dark',
+          success: '--term-success',
+          warning: '--term-warning',
+          error: '--term-error',
+          bgPrimary: '--term-bg-primary',
+          bgSecondary: '--term-bg-secondary',
+          border: '--term-border',
+          textPrimary: '--term-text-primary',
+          textSecondary: '--term-text-secondary',
+          textMuted: '--term-text-muted'
+        };
+
+        for (const [key, cssVar] of Object.entries(cssVarMap)) {
+          if (theme[key]) {
+            root.style.setProperty(cssVar, theme[key]);
+          }
+        }
+      } catch (err) {
+        console.warn('[Terminal HTML] Theme load failed:', err?.message || err);
+      }
+    }
+
+    // Extract configuration from query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    const terminalConfig = {
+      modelName: urlParams.get('model') || 'unknown',
+      port: parseInt(urlParams.get('port')) || 52434,  // DYNAMIC PORT
+      gpuType: urlParams.get('gpuType') || 'unknown',
+      gpuName: urlParams.get('gpuName') || 'Unknown',
+      gpuVram: urlParams.get('gpuVram') || '?',
+      gpuUuid: urlParams.get('gpuUuid') || 'none',
+      // Modelfile parameters
+      systemPrompt: urlParams.get('systemPrompt') || null,
+      temperature: urlParams.get('temperature') ? parseFloat(urlParams.get('temperature')) : null,
+      top_p: urlParams.get('top_p') ? parseFloat(urlParams.get('top_p')) : null,
+      top_k: urlParams.get('top_k') ? parseInt(urlParams.get('top_k')) : null,
+      num_ctx: urlParams.get('num_ctx') ? parseInt(urlParams.get('num_ctx')) : null,
+      num_predict: urlParams.get('num_predict') ? parseInt(urlParams.get('num_predict')) : null,
+      repeat_penalty: urlParams.get('repeat_penalty') ? parseFloat(urlParams.get('repeat_penalty')) : null,
+      seed: urlParams.get('seed') ? parseInt(urlParams.get('seed')) : null,
+      stop: urlParams.get('stop') ? JSON.parse(urlParams.get('stop')) : null
+    };
+    
+    console.log('[Terminal HTML] Config extracted:', terminalConfig);
+    
+    async function initializeTerminalApp() {
+      console.log('[Terminal HTML] Initializing terminal with global theme...');
+      await applyTerminalThemeFromSettings();
+      if (window.electronAPI?.onThemeUpdated) {
+        window.electronAPI.onThemeUpdated(() => {
+          applyTerminalThemeFromSettings();
+        });
+      }
+      if (window.TerminalApp && window.TerminalApp.initialize) {
+        window.TerminalApp.initialize(terminalConfig);
+      } else {
+        console.error('[Terminal HTML] TerminalApp not found! Module failed to load.');
+      }
+    }
+
+    // Initialize terminal when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeTerminalApp);
+    } else {
+      initializeTerminalApp();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,495 @@
+/**
+ *
+ * @version 1.1.2 - March 5, 2026
+ * @copyright 2026 Global Science Network
+ */
+/**
+ * ==========================================================================
+ * MOE COORDINATOR
+ * ==========================================================================
+ */
+
+const moeIrg = require('./moe-irg');
+const createAgentTransport = require('./moe-coordinator-agents');
+const {
+  DEFAULT_CHANNEL_POLICY,
+  buildRoutingConfigMap,
+  resolveNextAgentIndex,
+  getChannelPoliciesForAgentEdges,
+  shouldPassThroughEdge
+} = require('./moe-coordinator-routing');
+const {
+  buildEndpointRegistry,
+  resolveExecutionTarget,
+  startGateway,
+  listAvailableSerialPorts,
+  getInputGateway,
+  getAnyEnabledIrgGateway,
+  normalizeIrgEntryMode,
+  normalizeIrgModeOverride,
+  isLikelyHardwareIntent,
+  buildHardwarePlanContext
+} = require('./moe-coordinator-gateways');
+const {
+  buildAgentRlmAssistContext,
+  getRlmAttachmentSessionsForAgent,
+  collectRlmAttachmentEvidenceFromStore
+} = require('./moe-coordinator-rlm');
+const {
+  rerunLastIrgInternal,
+  runIrgContractInternal
+} = require('./moe-coordinator-irg-replay');
+
+let deploymentManager = null;
+let deterministicToolsRuntime = null;
+let attachmentStore = null;
+const gatewayRuntime = new Map();
+let lastIrgReplay = null;
+
+const REQUEST_TIMEOUT = 120000;
+
+const transport = createAgentTransport({ requestTimeout: REQUEST_TIMEOUT });
+
+function initialize(deployment, options = {}) {
+  deploymentManager = deployment;
+  deterministicToolsRuntime = options?.deterministicToolsRuntime || null;
+  attachmentStore = options?.attachmentStore || null;
+  gatewayRuntime.clear();
+  lastIrgReplay = null;
+  console.log('[MoE Coordinator] Initialized');
+}
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function rememberLastIrgExecution({ contract, gatewayConfig } = {}) {
+  if (!contract || !gatewayConfig) return;
+  lastIrgReplay = {
+    contract: deepClone(contract),
+    gatewayConfig: deepClone(gatewayConfig),
+    capturedAt: new Date().toISOString()
+  };
+}
+
+async function routeMessage(userMessage, options = {}) {
+  if (!deploymentManager || !deploymentManager.isActive()) {
+    return { success: false, error: 'No active MoE deployment' };
+  }
+
+  const agents = deploymentManager.getAgentsInOrder();
+  if (agents.length === 0) {
+    return { success: false, error: 'No agents in pipeline' };
+  }
+
+  const hardwareIntent = isLikelyHardwareIntent(userMessage);
+  const inputGateway = getInputGateway(deploymentManager);
+  const irgGateway = inputGateway || (hardwareIntent ? getAnyEnabledIrgGateway(deploymentManager) : null);
+  if (irgGateway && !gatewayRuntime.has(irgGateway.id)) {
+    gatewayRuntime.set(irgGateway.id, startGateway(irgGateway));
+  }
+
+  const irgEntryMode = normalizeIrgEntryMode(irgGateway?.irg?.entryMode);
+  const irgModeOverride = normalizeIrgModeOverride(options?.irgModeOverride);
+  let forceLlmIrgRefinement = false;
+  let deterministicDraftResult = null;
+
+  if (irgGateway && irgEntryMode === 'deterministic-first') {
+    const irgResult = await moeIrg.tryHandleGatewayRequest({
+      message: userMessage,
+      gatewayConfig: irgGateway,
+      llmPlan: '',
+      requireLlmPlan: false,
+      modeOverride: irgModeOverride
+    });
+    if (irgResult.handled) {
+      if (irgResult.needsLlmRefinement === true) {
+        forceLlmIrgRefinement = true;
+        deterministicDraftResult = irgResult;
+      } else {
+      if (irgResult.success) {
+        rememberLastIrgExecution({
+          contract: irgResult.contract || null,
+          gatewayConfig: irgGateway
+        });
+      }
+      const trace = {
+        conversationId: options.conversationId || `conv-${Date.now()}`,
+        startedAt: new Date().toISOString(),
+        steps: [{
+          agentId: 'irg-gateway',
+          agentName: irgGateway.name || 'IRG Gateway',
+          modelName: 'deterministic-irg',
+          input: String(userMessage || '').slice(0, 200),
+          output: irgResult.response,
+          durationMs: 0,
+          success: !!irgResult.success
+        }],
+        finalResponse: irgResult.response,
+        completedAt: new Date().toISOString(),
+        totalDurationMs: 0,
+        mode: 'irg-deterministic'
+      };
+      return {
+        success: !!irgResult.success,
+        response: irgResult.response,
+        trace,
+        error: irgResult.success ? undefined : (String(irgResult.response || '').trim() || 'IRG error'),
+        irg: {
+          handled: true,
+          contract: irgResult.contract || null,
+          execution: irgResult.execution || null
+        }
+      };
+      }
+    }
+  }
+
+  const deploymentStatus = deploymentManager?.getStatus?.() || null;
+  const channelPolicies = getChannelPoliciesForAgentEdges(agents.length, deploymentStatus, REQUEST_TIMEOUT);
+  const routingConfigByAgentId = buildRoutingConfigMap(deploymentStatus?.config?.items, agents);
+  const endpointRegistry = buildEndpointRegistry(deploymentStatus?.config, agents);
+  const orderedAgentIds = agents.map((agent) => agent.id);
+  const maxHops = Math.max(8, agents.length * 4);
+
+  const trace = {
+    conversationId: options.conversationId || `conv-${Date.now()}`,
+    startedAt: new Date().toISOString(),
+    steps: [],
+    finalResponse: null,
+    deterministicTools: {
+      enabled: !!deterministicToolsRuntime
+    }
+  };
+  if (forceLlmIrgRefinement && deterministicDraftResult) {
+    trace.steps.push({
+      agentId: 'irg-gateway',
+      agentName: irgGateway?.name || 'IRG Gateway',
+      modelName: 'deterministic-irg',
+      input: String(userMessage || '').slice(0, 200),
+      output: deterministicDraftResult.response,
+      durationMs: 0,
+      success: false,
+      route: {
+        mode: 'llm-refinement-required',
+        reason: Array.isArray(deterministicDraftResult?.analysis?.gaps)
+          ? deterministicDraftResult.analysis.gaps.join(', ')
+          : 'coverage-gaps'
+      }
+    });
+  }
+
+  let currentContext = userMessage;
+  let previousResponses = [];
+  let previousStepSuccess = true;
+  let currentAgentIndex = 0;
+  let previousAgentIndex = -1;
+  let hops = 0;
+
+  try {
+    while (currentAgentIndex >= 0 && currentAgentIndex < agents.length && hops < maxHops) {
+      const agent = agents[currentAgentIndex];
+      const isLast = (currentAgentIndex === agents.length - 1);
+      const edgePolicy = previousAgentIndex >= 0
+        ? (channelPolicies[previousAgentIndex] || DEFAULT_CHANNEL_POLICY)
+        : DEFAULT_CHANNEL_POLICY;
+
+      if (previousAgentIndex >= 0 && !shouldPassThroughEdge(edgePolicy, previousStepSuccess)) {
+        trace.steps.push({
+          agentId: `channel-${edgePolicy.id || previousAgentIndex}`,
+          agentName: edgePolicy.label || 'Channel Gate',
+          modelName: 'channel-control',
+          input: String(currentContext || '').slice(0, 200),
+          output: `Skipped downstream routing due to flowCondition=${edgePolicy.flowCondition}`,
+          durationMs: 0,
+          success: true
+        });
+        break;
+      }
+
+      hops += 1;
+
+      const rlmAssistContext = await buildAgentRlmAssistContext({
+        agent,
+        currentInput: currentContext,
+        routingConfigByAgentId,
+        deterministicToolsRuntime,
+        attachmentStore
+      });
+
+      const messages = transport.buildAgentMessages(
+        agent,
+        currentContext,
+        previousResponses,
+        isLast,
+        {
+          includeHardwarePlanContext:
+            currentAgentIndex === 0 &&
+            !!irgGateway &&
+            hardwareIntent,
+          hardwarePlanContext: currentAgentIndex === 0 ? buildHardwarePlanContext(irgGateway) : '',
+          rlmAssistContext
+        }
+      );
+
+      const stepStart = Date.now();
+      const resolvedExecution = resolveExecutionTarget(agent, endpointRegistry);
+      const response = await transport.callAgentWithPolicy(resolvedExecution.agent, messages, edgePolicy);
+      const stepDuration = Date.now() - stepStart;
+      if (resolvedExecution.worker && endpointRegistry?.enabled) {
+        endpointRegistry.reportResult(resolvedExecution.worker.id, {
+          success: !!response?.success,
+          latencyMs: stepDuration,
+          error: response?.error || ''
+        });
+      }
+
+      const step = {
+        agentId: agent.id,
+        agentName: agent.name,
+        modelName: agent.modelName,
+        input: String(currentContext || '').substring(0, 200),
+        output: response.content,
+        durationMs: stepDuration,
+        success: response.success,
+        attempts: response.attempts || 1,
+        execution: resolvedExecution.meta || null,
+        rlmAssistApplied: rlmAssistContext.length > 0,
+        rlmAssistContextChars: rlmAssistContext.length
+      };
+      trace.steps.push(step);
+
+      if (options.onAgentResponse) {
+        options.onAgentResponse(step, currentAgentIndex, agents.length);
+      }
+
+      if (!response.success) {
+        previousStepSuccess = false;
+        if (edgePolicy.onFailure === 'continue') {
+          const sequentialIndex = currentAgentIndex + 1 < agents.length ? currentAgentIndex + 1 : null;
+          if (!Number.isInteger(sequentialIndex)) break;
+          previousAgentIndex = currentAgentIndex;
+          currentAgentIndex = sequentialIndex;
+          continue;
+        }
+        trace.error = `Agent ${agent.name} failed: ${response.error}`;
+        return { success: false, trace, error: trace.error };
+      }
+
+      previousResponses.push({ agent: agent.name, response: response.content });
+      currentContext = response.content;
+      previousStepSuccess = true;
+
+      const routeDecision = resolveNextAgentIndex({
+        currentAgent: agent,
+        currentAgentIndex,
+        currentInput: step.input,
+        currentOutput: response.content,
+        agents,
+        orderedAgentIds,
+        routingConfigByAgentId
+      });
+      step.route = routeDecision;
+
+      if (!Number.isInteger(routeDecision.nextIndex)) break;
+      previousAgentIndex = currentAgentIndex;
+      currentAgentIndex = routeDecision.nextIndex;
+    }
+
+    if (hops >= maxHops) {
+      trace.steps.push({
+        agentId: 'routing-guard',
+        agentName: 'Routing Guard',
+        modelName: 'coordinator',
+        input: String(currentContext || '').slice(0, 200),
+        output: `Stopped after ${maxHops} hops to prevent routing loop.`,
+        durationMs: 0,
+        success: false
+      });
+      trace.error = `Routing loop guard triggered after ${maxHops} hops`;
+      return { success: false, trace, error: trace.error };
+    }
+
+    trace.finalResponse = currentContext;
+    trace.completedAt = new Date().toISOString();
+    trace.totalDurationMs = trace.steps.reduce((sum, s) => sum + s.durationMs, 0);
+
+    const shouldRunPostLlmIrg =
+      !!irgGateway &&
+      hardwareIntent;
+    if (shouldRunPostLlmIrg) {
+      const llmPlan = String(trace.finalResponse || '').trim();
+      const strictLlmPlan = irgGateway?.irg?.requireLlmPlanForLive === true || forceLlmIrgRefinement;
+      const irgResult = await moeIrg.tryHandleGatewayRequest({
+        message: String(userMessage || '').trim(),
+        gatewayConfig: irgGateway,
+        llmPlan,
+        requireLlmPlan: strictLlmPlan,
+        modeOverride: irgModeOverride
+      });
+      if (irgResult.handled) {
+        trace.steps.push({
+          agentId: 'irg-gateway',
+          agentName: irgGateway.name || 'IRG Gateway',
+          modelName: 'deterministic-irg',
+          input: String(userMessage || '').trim().slice(0, 200),
+          output: irgResult.response,
+          durationMs: 0,
+          success: !!irgResult.success
+        });
+        trace.finalResponse = irgResult.response;
+        trace.mode = forceLlmIrgRefinement
+          ? 'deterministic-first+llm-refined+irg'
+          : (irgEntryMode === 'llm-plan-first'
+            ? 'llm-plan-first+irg'
+            : 'deterministic-first+llm-plan+irg');
+        if (!irgResult.success) {
+          trace.error = String(irgResult.response || 'IRG error');
+          return {
+            success: false,
+            response: irgResult.response,
+            trace,
+            error: String(irgResult.response || 'IRG error'),
+            irg: {
+              handled: true,
+              contract: irgResult.contract || null,
+              execution: irgResult.execution || null
+            }
+          };
+        }
+        rememberLastIrgExecution({
+          contract: irgResult.contract || null,
+          gatewayConfig: irgGateway
+        });
+        return {
+          success: true,
+          response: irgResult.response,
+          trace,
+          irg: {
+            handled: true,
+            contract: irgResult.contract || null,
+            execution: irgResult.execution || null
+          }
+        };
+      }
+      const llmPlanPreview = llmPlan.length > 700 ? `${llmPlan.slice(0, 700)}...` : llmPlan;
+      const parseError =
+        'Error\n' +
+        'Reason: LLM returned a hardware plan that did not map to an allowed deterministic action schema.\n' +
+        'Expected prefix/schema: IRG_PLAN_JSON: {"action":"<allowed_action>","params":{...}} (allowed: blink_gpio, blink_color_sequence, blink_color_group, blink_pattern_sequence, blink_multi_phase, push_esp32_code)\n' +
+        `LLM output (preview):\n${llmPlanPreview}`;
+      trace.steps.push({
+        agentId: 'irg-gateway',
+        agentName: irgGateway.name || 'IRG Gateway',
+        modelName: 'deterministic-irg',
+        input: String(userMessage || '').trim().slice(0, 200),
+        output: parseError,
+        durationMs: 0,
+        success: false
+      });
+      trace.finalResponse = parseError;
+      trace.error = parseError;
+      return {
+        success: false,
+        response: parseError,
+        trace,
+        error: parseError,
+        irg: {
+          handled: false,
+          contract: null,
+          execution: null
+        }
+      };
+    }
+
+    return { success: true, response: trace.finalResponse, trace };
+  } catch (err) {
+    trace.error = err.message;
+    return { success: false, trace, error: err.message };
+  }
+}
+
+
+async function rerunLastIrg(options = {}) {
+  return rerunLastIrgInternal({
+    lastIrgReplay,
+    moeIrg,
+    normalizeIrgModeOverride,
+    rememberLastIrgExecution,
+    options
+  });
+}
+
+async function runIrgContract(contractInput, options = {}) {
+  return runIrgContractInternal({
+    contractInput,
+    options,
+    getInputGateway: () => getInputGateway(deploymentManager),
+    getAnyEnabledIrgGateway: () => getAnyEnabledIrgGateway(deploymentManager),
+    moeIrg,
+    normalizeIrgModeOverride,
+    rememberLastIrgExecution,
+    getLastIrgReplay: () => lastIrgReplay
+  });
+}
+
+async function sendToAgent(agentId, message, options = {}) {
+  const agent = deploymentManager?.getAgent(agentId);
+  if (!agent) return { success: false, error: `Agent not found: ${agentId}` };
+
+  const rlmAssistContext = await buildAgentRlmAssistContext({
+    agent,
+    currentInput: message,
+    routingConfigByAgentId: new Map([[agent.id, { rlmAssist: agent.rlmAssist === true }]]),
+    deterministicToolsRuntime,
+    attachmentStore
+  });
+
+  const messages = [];
+  if (agent.systemPrompt) messages.push({ role: 'system', content: agent.systemPrompt });
+  if (rlmAssistContext) {
+    messages.push({
+      role: 'system',
+      content:
+        `RLM assist context for this hop:\n${String(rlmAssistContext)}\n\n` +
+        `Use it as grounding context. If it conflicts with explicit user intent, follow user intent.`
+    });
+  }
+  messages.push({ role: 'user', content: message });
+
+  return transport.callAgent(agent, messages);
+}
+
+async function pingAgent(agentId) {
+  const agent = deploymentManager?.getAgent(agentId);
+  return transport.pingAgent(agent);
+}
+
+async function pingAllAgents() {
+  const agents = deploymentManager?.getAgentsInOrder() || [];
+  const results = {};
+
+  for (const agent of agents) {
+    results[agent.id] = await pingAgent(agent.id);
+    results[agent.id].name = agent.name;
+  }
+
+  return results;
+}
+
+module.exports = {
+  initialize,
+  routeMessage,
+  sendToAgent,
+  pingAgent,
+  pingAllAgents,
+  rerunLastIrg,
+  runIrgContract,
+  listAvailableSerialPorts,
+  startGateway,
+  REQUEST_TIMEOUT,
+  __test: {
+    getRlmAttachmentSessionsForAgent,
+    collectRlmAttachmentEvidenceFromStore
+  }
+};

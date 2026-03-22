@@ -1,0 +1,114 @@
+/* Theme tab styles split from settings-modal.css */
+/* @version 1.1.2 - March 5, 2026*/
+
+.theme-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.theme-preset-btn {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--psf-border, #333);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-preset-btn:hover {
+  border-color: #666;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.theme-preset-btn.active {
+  border-color: var(--psf-accent, #00d4ff);
+}
+
+.theme-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.theme-preset-name {
+  color: #fff;
+  font-size: 13px;
+}
+
+.color-picker-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+}
+
+.color-picker-input input[type="color"] {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+}
+
+.color-picker-input input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-picker-input input[type="color"]::-webkit-color-swatch {
+  border-radius: 3px;
+  border: none;
+}
+
+.color-picker-info {
+  flex: 1;
+}
+
+.color-picker-label {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.color-picker-desc {
+  color: #666;
+  font-size: 11px;
+}
+
+.color-picker-value {
+  font-family: monospace;
+  font-size: 11px;
+  color: #888;
+  background: rgba(0,0,0,0.3);
+  padding: 4px 8px;
+  border-radius: 4px;
+  min-width: 90px;
+  text-align: center;
+}
+
+.theme-preview-box {
+  background: rgba(0,0,0,0.3);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--psf-border, #333);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}

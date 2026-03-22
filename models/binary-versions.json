@@ -1,0 +1,108 @@
+{
+  "ollama": {
+    "version": "v0.13.5",
+    "downloadUrl": "https://github.com/ollama/ollama/releases/download",
+    "apiUrl": "https://api.github.com/repos/ollama/ollama/releases/latest",
+    "platforms": {
+      "windows-x64": "ollama-windows-amd64.zip",
+      "windows-arm64": "ollama-windows-arm64.zip",
+      "linux-x64": "ollama-linux-amd64.tgz",
+      "linux-arm64": "ollama-linux-arm64.tgz",
+      "macos-intel": "Ollama.dmg",
+      "macos-arm": "Ollama.dmg"
+    },
+    "localName": {
+      "windows-x64": "ollama.exe",
+      "windows-arm64": "ollama.exe",
+      "linux-x64": "ollama",
+      "linux-arm64": "ollama",
+      "macos-intel": "ollama",
+      "macos-arm": "ollama"
+    },
+    "extractRequired": true
+  },
+  "python-webui": {
+    "version": "0.5.8",
+    "type": "pip-package",
+    "package": "open-webui",
+    "buildRequired": true,
+    "buildScripts": {
+      "windows": "build-python-webui.bat",
+      "linux": "build-python-webui.sh",
+      "macos": "build-python-webui-macos.sh"
+    }
+  },
+  "anythingllm": {
+    "version": "latest",
+    "downloadUrl": "https://cdn.anythingllm.com/latest",
+    "platforms": {
+      "windows-x64": "AnythingLLMDesktop.exe",
+      "windows-arm64": "AnythingLLMDesktop-Arm64.exe",
+      "macos-intel": "AnythingLLMDesktop.dmg",
+      "macos-arm": "AnythingLLMDesktop-AppleSilicon.dmg",
+      "linux-x64": "AnythingLLMDesktop.AppImage",
+      "linux-arm64": "AnythingLLMDesktop.AppImage"
+    },
+    "installRequired": true
+  },
+  "nodejs": {
+    "version": "v22.22.0",
+    "downloadUrl": "https://nodejs.org/dist",
+    "apiUrl": "https://nodejs.org/dist/index.json",
+    "platforms": {
+      "windows-x64": "win-x64/node.exe",
+      "windows-arm64": "win-arm64/node.exe",
+      "linux-x64": "node-v{VERSION}-linux-x64.tar.xz",
+      "linux-arm64": "node-v{VERSION}-linux-arm64.tar.xz",
+      "macos-intel": "node-v{VERSION}-darwin-x64.tar.gz",
+      "macos-arm": "node-v{VERSION}-darwin-arm64.tar.gz"
+    },
+    "localName": {
+      "windows-x64": "node.exe",
+      "windows-arm64": "node.exe",
+      "linux-x64": "node",
+      "linux-arm64": "node",
+      "macos-intel": "node",
+      "macos-arm": "node"
+    },
+    "extractRequired": {
+      "windows-x64": false,
+      "windows-arm64": false,
+      "linux-x64": true,
+      "linux-arm64": true,
+      "macos-intel": true,
+      "macos-arm": true
+    }
+  },
+  "arduino-cli": {
+    "version": "v1.0.4",
+    "downloadUrl": "https://github.com/arduino/arduino-cli/releases/download",
+    "platforms": {
+      "windows-x64": "arduino-cli_1.0.4_Windows_64bit.zip",
+      "windows-arm64": "arduino-cli_1.0.4_Windows_ARM64.zip",
+      "linux-x64": "arduino-cli_1.0.4_Linux_64bit.tar.gz",
+      "linux-arm64": "arduino-cli_1.0.4_Linux_ARM64.tar.gz",
+      "macos-intel": "arduino-cli_1.0.4_macOS_64bit.tar.gz",
+      "macos-arm": "arduino-cli_1.0.4_macOS_ARM64.tar.gz"
+    },
+    "localName": {
+      "windows-x64": "arduino-cli.exe",
+      "windows-arm64": "arduino-cli.exe",
+      "linux-x64": "arduino-cli",
+      "linux-arm64": "arduino-cli",
+      "macos-intel": "arduino-cli",
+      "macos-arm": "arduino-cli"
+    },
+    "extractRequired": true
+  },
+  "git": {
+    "version": "v2.47.1",
+    "type": "portable-cli",
+    "notes": "System git preferred; bundled git used as fallback from binaries/git/<platform>/bin or cmd."
+  },
+  "llama-cpp": {
+    "version": "b4780",
+    "type": "source-build",
+    "notes": "Builds/stages llama.cpp runtime binaries (llama-server, llama-cli, llama-gguf-split) from binaries/llama.cpp/<platform>."
+  }
+}

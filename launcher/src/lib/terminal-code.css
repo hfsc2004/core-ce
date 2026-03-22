@@ -1,0 +1,340 @@
+/**
+ * PSF Terminal - Code Block Styling
+ * Complements highlight.js for markdown code rendering
+ * @version 1.0.35b
+ */
+
+/* Code block container */
+.message-content pre,
+.ct-message-content pre {
+  background: #0d0d1a;
+  border: 1px solid #2d2d44;
+  border-radius: 6px;
+  padding: 12px 14px;
+  padding-top: 38px; /* Room for action buttons */
+  overflow-x: auto;
+  margin: 10px 0;
+  position: relative;
+}
+
+/* Action row */
+.code-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+/* Code action buttons */
+.code-copy-btn,
+.code-download-btn {
+  background: #2d2d44;
+  border: 1px solid #3d3d54;
+  color: #aaa;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+.code-copy-btn:hover,
+.code-download-btn:hover {
+  background: #3d3d54;
+  color: #fff;
+  opacity: 1;
+}
+
+.code-copy-btn.copied {
+  background: #50fa7b;
+  color: #000;
+  border-color: #50fa7b;
+}
+
+/* Code text styling */
+.message-content code,
+.ct-message-content code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Inline code (not in pre block) */
+.message-content p code,
+.message-content li code,
+.ct-message-content p code,
+.ct-message-content li code {
+  background: rgba(0, 212, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #00d4ff;
+  font-size: 0.9em;
+}
+
+/* Override highlight.js background for our theme */
+.message-content pre code.hljs,
+.ct-message-content pre code.hljs {
+  background: transparent;
+  padding: 0;
+}
+
+/* Custom scrollbar for code blocks */
+.message-content pre::-webkit-scrollbar,
+.ct-message-content pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+.message-content pre::-webkit-scrollbar-track,
+.ct-message-content pre::-webkit-scrollbar-track {
+  background: #16162a;
+  border-radius: 4px;
+}
+
+.message-content pre::-webkit-scrollbar-thumb,
+.ct-message-content pre::-webkit-scrollbar-thumb {
+  background: #2d2d44;
+  border-radius: 4px;
+}
+
+.message-content pre::-webkit-scrollbar-thumb:hover,
+.ct-message-content pre::-webkit-scrollbar-thumb:hover {
+  background: #00d4ff;
+}
+
+/* Language tag (optional - shows language in corner) */
+.message-content pre[data-language]::before,
+.ct-message-content pre[data-language]::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  font-family: sans-serif;
+}
+
+/* ========================================
+   Highlight.js Theme Overrides
+   PSF Dark Theme (matches terminal aesthetic)
+   ======================================== */
+
+.hljs {
+  color: #e0e0e0;
+  background: transparent;
+}
+
+/* Keywords: if, else, function, class, return, etc. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-deletion {
+  color: #ff79c6;
+}
+
+/* Strings */
+.hljs-string,
+.hljs-doctag,
+.hljs-regexp,
+.hljs-addition {
+  color: #f1fa8c;
+}
+
+/* Numbers */
+.hljs-number,
+.hljs-literal {
+  color: #bd93f9;
+}
+
+/* Function names */
+.hljs-title.function_,
+.hljs-title.class_,
+.hljs-function {
+  color: #50fa7b;
+}
+
+/* Comments */
+.hljs-comment {
+  color: #6272a4;
+  font-style: italic;
+}
+
+/* Built-ins and types */
+.hljs-built_in,
+.hljs-type {
+  color: #8be9fd;
+}
+
+/* Variables and identifiers */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attr {
+  color: #50fa7b;
+}
+
+/* Params and arguments */
+.hljs-params {
+  color: #ffb86c;
+}
+
+/* Properties and attributes */
+.hljs-property,
+.hljs-attribute {
+  color: #50fa7b;
+}
+
+/* HTML/XML tags */
+.hljs-tag {
+  color: #ff79c6;
+}
+
+.hljs-name {
+  color: #ff79c6;
+}
+
+/* Symbols and operators */
+.hljs-symbol,
+.hljs-bullet,
+.hljs-operator {
+  color: #ff79c6;
+}
+
+/* Meta/preprocessor */
+.hljs-meta,
+.hljs-meta .hljs-keyword {
+  color: #ffb86c;
+}
+
+/* Section headers (markdown) */
+.hljs-section {
+  color: #00d4ff;
+  font-weight: bold;
+}
+
+/* Links */
+.hljs-link {
+  color: #8be9fd;
+  text-decoration: underline;
+}
+
+/* Emphasis */
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+/* ========================================
+   Markdown Element Styling
+   ======================================== */
+
+/* Headers in rendered markdown */
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.ct-message-content h1,
+.ct-message-content h2,
+.ct-message-content h3,
+.ct-message-content h4 {
+  color: #00d4ff;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.message-content h1,
+.ct-message-content h1 {
+  font-size: 1.4em;
+  border-bottom: 1px solid #2d2d44;
+  padding-bottom: 6px;
+}
+
+.message-content h2,
+.ct-message-content h2 {
+  font-size: 1.2em;
+}
+
+.message-content h3,
+.ct-message-content h3 {
+  font-size: 1.1em;
+}
+
+/* Lists */
+.message-content ul,
+.message-content ol,
+.ct-message-content ul,
+.ct-message-content ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.message-content li,
+.ct-message-content li {
+  margin: 4px 0;
+}
+
+/* Blockquotes */
+.message-content blockquote,
+.ct-message-content blockquote {
+  border-left: 3px solid #00d4ff;
+  margin: 10px 0;
+  padding: 8px 16px;
+  background: rgba(0, 212, 255, 0.05);
+  color: #aaa;
+}
+
+/* Horizontal rules */
+.message-content hr,
+.ct-message-content hr {
+  border: none;
+  border-top: 1px solid #2d2d44;
+  margin: 16px 0;
+}
+
+/* Tables */
+.message-content table,
+.ct-message-content table {
+  border-collapse: collapse;
+  margin: 10px 0;
+  width: 100%;
+}
+
+.message-content th,
+.message-content td,
+.ct-message-content th,
+.ct-message-content td {
+  border: 1px solid #2d2d44;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.message-content th,
+.ct-message-content th {
+  background: #16162a;
+  color: #00d4ff;
+}
+
+.message-content tr:nth-child(even),
+.ct-message-content tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Links */
+.message-content a,
+.ct-message-content a {
+  color: #8be9fd;
+  text-decoration: none;
+}
+
+.message-content a:hover,
+.ct-message-content a:hover {
+  text-decoration: underline;
+}
+
+/* Paragraphs */
+.message-content p,
+.ct-message-content p {
+  margin: 8px 0;
+  line-height: 1.6;
+}

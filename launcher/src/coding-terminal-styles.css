@@ -1,0 +1,307 @@
+/* @version 1.1.2 - March 5, 2026*/
+/* @copyright 2026 Global Science Network*/
+/**
+ * PSF Coding Terminal - Styles
+ * Dark theme matching PSF aesthetic
+ * @version 1.0.35b
+ */
+
+
+/* Split modules */
+@import url('./coding-terminal-styles-chat-editor.css');
+@import url('./coding-terminal-styles-context.css');
+@import url('./coding-terminal-styles-status.css');
+
+/* =============================================================================
+   Reset & Variables
+   ============================================================================= */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --ct-bg-primary: #0d0d1a;
+  --ct-bg-secondary: #16162a;
+  --ct-bg-tertiary: #1a1a2e;
+  --ct-border: #2d2d44;
+  --ct-border-light: #3d3d54;
+  
+  --ct-text-primary: #e0e0e0;
+  --ct-text-secondary: #aaa;
+  --ct-text-muted: #666;
+  
+  --ct-accent: #00d4ff;
+  --ct-accent-hover: #00b8e0;
+  --ct-success: #50fa7b;
+  --ct-warning: #ffb86c;
+  --ct-error: #ff5555;
+  
+  --ct-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --ct-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+body {
+  background: var(--ct-bg-primary);
+  color: var(--ct-text-primary);
+  font-family: var(--ct-font-sans);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* =============================================================================
+   Header
+   ============================================================================= */
+
+.ct-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--ct-bg-secondary);
+  border-bottom: 1px solid var(--ct-border);
+  height: 48px;
+}
+
+.ct-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ct-header-model-pickers {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ct-logo {
+  font-size: 20px;
+}
+
+.ct-title {
+  font-weight: 600;
+  color: var(--ct-accent);
+}
+
+.ct-model {
+  font-size: 12px;
+  color: var(--ct-text-muted);
+  background: var(--ct-bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.ct-header-right {
+  display: flex;
+  gap: 8px;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--ct-border);
+  flex-shrink: 0;
+}
+
+.ct-header-right .ct-btn-small {
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.ct-session-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 4px;
+  padding-right: 8px;
+  border-right: 1px solid var(--ct-border);
+}
+
+.ct-session-label {
+  color: var(--ct-text-secondary);
+  font-size: 11px;
+}
+
+/* =============================================================================
+   Buttons
+   ============================================================================= */
+
+.ct-btn {
+  background: var(--ct-bg-tertiary);
+  border: 1px solid var(--ct-border);
+  color: var(--ct-text-primary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.ct-btn:hover {
+  background: var(--ct-border);
+  border-color: var(--ct-border-light);
+}
+
+.ct-btn-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ct-btn-primary {
+  background: var(--ct-accent);
+  border-color: var(--ct-accent);
+  color: #000;
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+.ct-btn-primary:hover {
+  background: var(--ct-accent-hover);
+  border-color: var(--ct-accent-hover);
+}
+
+.ct-btn-small {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+#voice-mode-btn {
+  min-width: 56px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+#voice-mode-btn.vox {
+  border-color: var(--ct-accent);
+  background: color-mix(in srgb, var(--ct-accent) 18%, var(--ct-bg-tertiary));
+}
+
+.ct-btn-tiny {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  padding: 0;
+}
+
+.ct-modal-header .ct-btn-tiny {
+  width: auto;
+  min-width: 64px;
+  padding: 0 10px;
+}
+
+#btn-project-root {
+  width: auto;
+  min-width: 78px;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+#btn-project-root.project-root-required {
+  border-color: rgba(255, 184, 108, 0.9);
+  color: #ffd9a3;
+  box-shadow: 0 0 0 0 rgba(255, 184, 108, 0.45);
+  animation: projectRootPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes projectRootPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 184, 108, 0.40);
+    background: rgba(255, 184, 108, 0.08);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(255, 184, 108, 0);
+    background: rgba(255, 184, 108, 0.14);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 184, 108, 0);
+    background: rgba(255, 184, 108, 0.08);
+  }
+}
+
+/* =============================================================================
+   Main Layout
+   ============================================================================= */
+
+.ct-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.ct-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ct-panel-left {
+  flex: 1;
+  border-right: 1px solid var(--ct-border);
+}
+
+.ct-panel-right {
+  width: 280px;
+  background: var(--ct-bg-secondary);
+  overflow-y: auto;
+}
+
+.ct-context-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ct-border);
+  background: var(--ct-bg-tertiary);
+}
+
+.ct-context-mode-select {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+/* =============================================================================
+   Tabs
+   ============================================================================= */
+
+.ct-tabs {
+  display: flex;
+  background: var(--ct-bg-secondary);
+  border-bottom: 1px solid var(--ct-border);
+}
+
+.ct-tab {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  color: var(--ct-text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.ct-tab:hover {
+  color: var(--ct-text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ct-tab.active {
+  color: var(--ct-accent);
+  border-bottom-color: var(--ct-accent);
+}

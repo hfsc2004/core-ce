@@ -1,0 +1,244 @@
+/* @version 1.1.2 - March 5, 2026*/
+/* @copyright 2026 Global Science Network*/
+/* About */
+.about-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.about-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.about-section h4 {
+  color: var(--psf-accent);
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--psf-border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--psf-accent);
+}
+
+/* Footer */
+.app-footer {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px 40px;
+  border-top: 2px solid var(--psf-border);
+  text-align: center;
+}
+
+.app-footer p {
+  color: #888;
+  font-size: 14px;
+  margin: 0;
+}
+
+.app-footer #footer-company-link,
+.app-footer #footer-company-link:visited {
+  color: var(--psf-footer-link, #ffffff);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-footer #footer-company-link:hover {
+  text-decoration: underline;
+}
+
+/* Package Banner */
+.package-banner {
+  background: linear-gradient(135deg, var(--psf-accent-light) 0%, rgba(102, 126, 234, 0.2) 100%);
+  border: 2px solid var(--psf-accent);
+  border-radius: 10px;
+  padding: 20px 30px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.package-banner h3 {
+  font-size: 28px;
+  color: var(--psf-accent);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.package-banner p {
+  font-size: 16px;
+  color: var(--psf-text-secondary);
+  margin: 0;
+}
+
+/* Collection Section */
+.collection-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--psf-border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.collection-section:hover {
+  border-color: var(--psf-accent-medium);
+}
+
+.collection-header {
+  padding: 20px 25px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.collection-header:hover {
+  background: var(--psf-accent-light);
+}
+
+.collection-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.collection-title h3 {
+  font-size: 20px;
+  color: var(--psf-accent);
+  margin: 0;
+}
+
+.collection-count {
+  font-size: 14px;
+  color: var(--psf-text-muted);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.collection-toggle {
+  font-size: 24px;
+  color: var(--psf-accent);
+  transition: transform 0.3s ease;
+}
+
+.collection-toggle.expanded {
+  transform: rotate(180deg);
+}
+
+.collection-models {
+  display: none;
+  padding: 20px 25px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+.collection-models.visible {
+  display: grid;
+}
+
+.collection-description {
+  padding: 15px 25px 0 25px;
+  color: #aaa;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ============================================================================
+ * GPU MONITOR WIDGET
+ * ============================================================================
+ * Global widget displayed at bottom center when nvidia-smi monitoring is active
+ * ============================================================================ */
+
+.gpu-monitor-widget {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
+  border: 1px solid var(--psf-accent, #00d4ff);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px var(--psf-accent-medium, rgba(0, 212, 255, 0.2));
+  padding: 8px 15px;
+  font-size: 13px;
+  backdrop-filter: blur(10px);
+}
+
+.gpu-monitor-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.gpu-monitor-icon {
+  font-size: 16px;
+}
+
+#gpu-monitor-text {
+  color: #fff;
+  font-family: 'Consolas', 'Monaco', monospace;
+  letter-spacing: 0.5px;
+}
+
+.gpu-monitor-close {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 0 0 8px;
+  margin-left: 4px;
+  border-left: 1px solid rgba(255,255,255,0.1);
+}
+
+.gpu-monitor-close:hover {
+  color: var(--psf-error, #ff6b6b);
+}
+
+/* GPU stat colors */
+.gpu-stat-name {
+  color: var(--psf-accent, #00d4ff);
+  font-weight: bold;
+}
+
+.gpu-stat-memory {
+  color: #fff;
+}
+
+.gpu-stat-temp {
+  color: var(--psf-success, #00ff88);
+}
+
+.gpu-stat-temp.warm {
+  color: var(--psf-warning, #ffd400);
+}
+
+.gpu-stat-temp.hot {
+  color: var(--psf-error, #ff6b6b);
+}
+
+.gpu-stat-separator {
+  color: #666;
+  margin: 0 2px;
+}

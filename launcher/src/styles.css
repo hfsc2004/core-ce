@@ -1,0 +1,234 @@
+/* @version 1.1.2 - March 5, 2026*/
+/* @copyright 2026 Global Science Network*/
+/* ============================================================================
+ * PSF OFFLINE - GLOBAL THEME VARIABLES
+ * ============================================================================
+ * These CSS variables control the application's color scheme.
+ * Default values are cyan (#00d4ff) - they can be overridden via JavaScript
+ * when a custom theme is loaded from psf-settings.json.
+ * 
+ * Developer Edition: Theme Editor allows customization
+ * Standard Edition: Ships with baked-in colors from compile time
+ * ============================================================================ */
+
+@import url("./styles-sections.css");
+
+
+:root {
+  /* Primary accent color - used for headers, buttons, highlights */
+  --psf-accent: #00d4ff;
+  --psf-accent-light: rgba(0,212,255,0.1);
+  --psf-accent-medium: rgba(0,212,255,0.2);
+  --psf-accent-dark: #0099cc;
+  
+  /* Semantic colors */
+  --psf-success: #00ff88;
+  --psf-warning: #ffd400;
+  --psf-error: #ff6b6b;
+  
+  /* Background colors (not currently themeable, but available for future use) */
+  --psf-bg-primary: #1a1a2e;
+  --psf-bg-secondary: #16213e;
+  --psf-border: var(--psf-border);
+  
+  /* Text colors */
+  --psf-text-primary: #e0e0e0;
+  --psf-text-secondary: #aaa;
+  --psf-text-muted: #888;
+  --psf-footer-link: #ffffff;
+}
+
+/* ============================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--psf-bg-primary) 0%, var(--psf-bg-secondary) 100%);
+  color: var(--psf-text-primary);
+  overflow: hidden;
+}
+
+.container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.app-header {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 20px 40px;
+  border-bottom: 2px solid var(--psf-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.logo-container.developer-logo-container {
+  width: 100%;
+  justify-content: space-between;
+  padding: 0 60px;
+  box-sizing: border-box;
+  gap: 0;
+}
+
+.package-title {
+  flex: 1;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.package-title h2 {
+  font-size: 36px;
+  color: var(--psf-accent);
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.psf-logo {
+  height: 80px;
+  width: 80px;
+  filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.8));
+  }
+}
+
+.header-text h1 {
+  font-size: 32px;
+  color: var(--psf-accent);
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.header-text p {
+  font-size: 16px;
+  color: var(--psf-text-muted);
+  margin-top: 5px;
+  letter-spacing: 1px;
+}
+
+.header-text .core-title {
+  font-size: 72px;
+  line-height: 1;
+  letter-spacing: 2px;
+  margin: 0;
+  color: var(--psf-header-title, var(--psf-text-primary));
+  font-weight: 700;
+  opacity: 0.78;
+  filter: blur(2.2px);
+  transform: translateY(1px) scale(0.992);
+}
+
+.header-text .developer-edition-title {
+  display: block;
+  color: var(--psf-edition-tag, #ff6b6b);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 0;
+}
+
+.header-text.developer-header-text {
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+}
+
+body:not(.disclaimer-accepted) .header-text .core-title {
+  animation: coreRevealToStage2 3100ms ease-out 1 forwards;
+}
+
+body.disclaimer-accepted .header-text .core-title {
+  animation:
+    coreStage2ToClear 3100ms ease-out 1 forwards,
+    coreBreathGlow 29s ease-in-out 3100ms infinite;
+}
+
+@keyframes coreRevealToStage2 {
+  0% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(4px) scale(0.985);
+  }
+  100% {
+    opacity: 0.78;
+    filter: blur(2.2px);
+    transform: translateY(1px) scale(0.992);
+  }
+}
+
+@keyframes coreStage2ToClear {
+  0% {
+    opacity: 0.78;
+    filter: blur(2.2px);
+    transform: translateY(1px) scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes coreBreathGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 0 rgba(0, 212, 255, 0),
+      0 0 8px rgba(0, 212, 255, 0.14);
+  }
+  50% {
+    text-shadow:
+      0 0 10px rgba(0, 212, 255, 0.22),
+      0 0 18px rgba(0, 212, 255, 0.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-text .core-title {
+    animation: none;
+    opacity: 1;
+    filter: none;
+    transform: none;
+    text-shadow: 0 0 8px rgba(0, 212, 255, 0.12);
+  }
+}
+
+body.animations-disabled *,
+body.animations-disabled *::before,
+body.animations-disabled *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+body.animations-disabled .header-text .core-title {
+  opacity: 1;
+  filter: none;
+  transform: none;
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.12);
+}

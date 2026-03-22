@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!-- Version: 1.1.2 -->
+<!-- Copyright © 2026 Global Science Network -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pseudo Science Fiction - Settings</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="renderer/renderer-developer/settings-modal.css">
+  <link rel="stylesheet" href="renderer/renderer-developer/settings-modal-theme-tab.css">
+  <style>
+    body {
+      margin: 0;
+      background: var(--psf-bg-primary, #1a1a2e);
+      overflow: hidden;
+    }
+
+    .settings-window-root {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Standalone mode: render Settings as a full window, not a centered modal */
+    .settings-modal-overlay {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      background: transparent !important;
+      display: block !important;
+      padding: 0 !important;
+    }
+
+    .settings-modal {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+      transform: none !important;
+      left: 0 !important;
+      top: 0 !important;
+    }
+
+    .settings-modal-header {
+      cursor: default !important;
+    }
+
+    .settings-modal-content {
+      max-height: calc(100vh - 132px) !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-window-root"></div>
+
+  <script>
+    window.__SETTINGS_STANDALONE__ = true;
+  </script>
+  <script src="renderer/renderer-developer/text-input-fallback.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/utilities-developer.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-templates-theme.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-templates-tabs.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-templates-about.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-templates.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-theme-custom.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-theme.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-system.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-system-compliance.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-speech-core.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-speech.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-hardware.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-mods.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-core.js" charset="UTF-8"></script>
+  <script src="renderer/renderer-developer/settings-modal-api.js" charset="UTF-8"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.SettingsModal && typeof window.SettingsModal.loadAndApplyTheme === 'function') {
+        window.SettingsModal.loadAndApplyTheme();
+      }
+      if (window.SettingsModal && typeof window.SettingsModal.show === 'function') {
+        window.SettingsModal.show('huggingface');
+      }
+    });
+  </script>
+</body>
+</html>

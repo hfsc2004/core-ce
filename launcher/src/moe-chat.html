@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<!-- Version: 1.1.2 -->
+<!-- Copyright © 2026 Global Science Network -->
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PSF Relay Pipeline Chat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--psf-bg-secondary, #1a1a2e);
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--psf-bg-primary, #16162a) 0%, var(--psf-bg-secondary, #1a1a2e) 100%);
+      border-bottom: 1px solid var(--psf-accent, #4682b4);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      color: var(--psf-accent, #4682b4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(0,255,136,0.1);
+      color: #00ff88;
+      border: 1px solid #00ff88;
+    }
+
+    .status-badge.disconnected {
+      background: rgba(255,107,107,0.1);
+      color: #ff6b6b;
+      border-color: #ff6b6b;
+    }
+
+    .status-badge.processing {
+      background: rgba(255,212,0,0.1);
+      color: #ffd400;
+      border-color: #ffd400;
+      animation: statusPulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes statusPulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 212, 0, 0.12);
+        opacity: 0.92;
+      }
+      50% {
+        box-shadow: 0 0 0 6px rgba(255, 212, 0, 0.03);
+        opacity: 1;
+      }
+    }
+
+    /* KVM Controls */
+    .kvm-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+
+    .kvm-label {
+      color: #888;
+      font-size: 12px;
+    }
+
+    .kvm-select {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid var(--psf-accent, #4682b4);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 12px;
+      min-width: 200px;
+      cursor: pointer;
+    }
+
+    .kvm-select option {
+      background: #1a1a2e;
+    }
+
+    .kvm-indicator {
+      font-size: 11px;
+      color: #00ff88;
+    }
+
+    .kvm-indicator.direct {
+      color: var(--psf-accent, #4682b4);
+    }
+
+    /* Chat Messages */
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .message {
+      margin-bottom: 15px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-header {
+      font-size: 11px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .message-content {
+      color: #fff;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    /* Message Types */
+    .message.user {
+      background: var(--psf-accent-light, rgba(0,212,255,0.1));
+      border-left: 3px solid var(--psf-accent, #00d4ff);
+    }
+    .message.user .message-header { color: var(--psf-accent, #00d4ff); }
+
+    .message.agent {
+      background: var(--psf-accent-light, rgba(70,139,180,0.1));
+      border-left: 3px solid var(--psf-accent, #4682b4);
+    }
+    .message.agent .message-header { color: var(--psf-accent, #4682b4); }
+    .message.agent .message-content { color: #ccc; font-size: 13px; }
+
+    .message.direct {
+      background: rgba(138,43,226,0.2);
+      border-left: 3px solid var(--psf-accent, #4682b4);
+    }
+    .message.direct .message-header { color: var(--psf-accent, #4682b4); }
+
+    .message.final {
+      background: rgba(0,255,136,0.1);
+      border-left: 3px solid #00ff88;
+    }
+    .message.final .message-header { color: #00ff88; }
+
+    .message.error {
+      background: rgba(255,107,107,0.1);
+      border-left: 3px solid #ff6b6b;
+    }
+    .message.error .message-header { color: #ff6b6b; }
+    .message.error .message-content { color: #ff6b6b; }
+
+    .message.system {
+      background: rgba(100,100,100,0.1);
+      border-left: 3px solid #666;
+      font-style: italic;
+    }
+    .message.system .message-header { color: #888; }
+    .message.system .message-content { color: #888; }
+
+    /* Typing Indicator */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 15px;
+      color: #888;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--psf-accent, #4682b4);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* Input Area */
+    .input-container {
+      padding: 15px 20px;
+      background: var(--psf-bg-primary, #16162a);
+      border-top: 1px solid #333;
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    #chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #chat-input:focus {
+      border-color: var(--psf-accent, #4682b4);
+    }
+
+    #chat-input:disabled {
+      opacity: 0.5;
+    }
+
+    #send-btn {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, var(--psf-accent-dark, #4682b4) 0%, var(--psf-accent, #6a1bb2) 100%);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    #send-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px var(--psf-accent-medium, rgba(138,43,226,0.4));
+    }
+
+    #send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #attach-btn {
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #ddd;
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    #attach-btn:hover:not(:disabled) {
+      border-color: var(--psf-accent, #4682b4);
+      color: #fff;
+    }
+
+    #attach-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #attached-file-chip {
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 8px 10px;
+      background: rgba(70,130,180,0.18);
+      border: 1px solid rgba(70,130,180,0.5);
+      border-radius: 8px;
+      color: #bcd8f0;
+      font-size: 12px;
+      display: none;
+    }
+
+    #clear-attach-btn {
+      display: none;
+      padding: 8px 10px;
+      background: rgba(255,107,107,0.12);
+      border: 1px solid rgba(255,107,107,0.45);
+      border-radius: 8px;
+      color: #ffb7b7;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    #voice-btn {
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #d8ecff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 112px;
+    }
+
+    #voice-btn:hover {
+      border-color: var(--psf-accent, #4682b4);
+    }
+
+    #voice-btn.recording {
+      border-color: #ff6b6b;
+      box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.2);
+      color: #ffd7d7;
+    }
+
+    #voice-mode-btn {
+      padding: 12px 10px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #d8ecff;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      min-width: 58px;
+    }
+
+    #voice-mode-btn:hover {
+      border-color: var(--psf-accent, #4682b4);
+    }
+
+    #voice-mode-btn.vox {
+      border-color: var(--psf-accent, #4682b4);
+      background: var(--psf-accent-light, rgba(70,139,180,0.2));
+      color: #eef6ff;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      background: var(--psf-bg-primary, #16162a);
+      border-top: 1px solid #2d2d44;
+      padding: 8px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #666;
+      flex-shrink: 0;
+    }
+
+    .pipeline-flow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .agent-node {
+      padding: 3px 8px;
+      background: var(--psf-accent-medium, rgba(138,43,226,0.2));
+      border-radius: 4px;
+      color: var(--psf-accent, #4682b4);
+      font-size: 10px;
+    }
+
+    .arrow {
+      color: #444;
+    }
+
+    /* Clear Button */
+    .clear-btn {
+      background: none;
+      border: 1px solid #444;
+      border-radius: 4px;
+      color: #666;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .clear-btn:hover {
+      border-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+
+    .message-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .message-action-btn {
+      background: rgba(70, 130, 180, 0.18);
+      border: 1px solid rgba(70, 130, 180, 0.5);
+      border-radius: 4px;
+      color: #bcd8f0;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .message-action-btn:hover {
+      background: rgba(70, 130, 180, 0.28);
+      border-color: rgba(70, 130, 180, 0.75);
+      color: #d6ecff;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>💬 PSF Relay Pipeline Chat</h1>
+      <span id="status-badge" class="status-badge disconnected">Connecting...</span>
+    </div>
+    
+    <div class="kvm-section">
+      <span class="kvm-label">🎛️ KVM:</span>
+      <select id="kvm-select" class="kvm-select">
+        <option value="pipeline">🔗 Full Pipeline (Chain All)</option>
+      </select>
+      <span id="kvm-indicator" class="kvm-indicator">● Pipeline</span>
+    </div>
+  </div>
+
+  <div id="chat-messages" class="messages-container">
+    <div class="message system">
+      <div class="message-header">💡 System</div>
+      <div class="message-content">Connecting to pipeline...</div>
+    </div>
+  </div>
+
+  <div class="input-container">
+    <input type="text" id="chat-input" placeholder="Type a message..." disabled>
+    <button id="attach-btn" disabled title="Attach source file">📎 Attach Code</button>
+    <span id="attached-file-chip"></span>
+    <button id="clear-attach-btn" title="Clear attached file">Clear</button>
+    <button id="voice-btn" disabled title="Voice-to-text (right-click to switch provider)">🎤 Voice Off</button>
+    <button id="voice-mode-btn" disabled title="Voice mode: PTT (manual Send)">PTT</button>
+    <button id="send-btn" disabled>Send</button>
+  </div>
+
+  <div class="status-bar">
+    <div id="pipeline-flow" class="pipeline-flow">
+      <!-- Populated dynamically -->
+    </div>
+    <button class="clear-btn" onclick="MoEChat.clearHistory()">Clear History</button>
+  </div>
+
+  <script src="shared-speech-engine.js"></script>
+  <script src="shared-voice-to-text-adapters.js"></script>
+  <script src="shared-voice-to-text-controller.js"></script>
+  <script src="shared-voice-to-text.js"></script>
+  <script src="moe-chat-renderer-utils.js"></script>
+  <script src="moe-chat-renderer-esp32.js"></script>
+  <script src="moe-chat-renderer-messages.js"></script>
+  <script src="moe-chat-renderer-pipeline.js"></script>
+  <script src="moe-chat-renderer-voice-activity.js"></script>
+  <script src="moe-chat-renderer-render.js"></script>
+  <script src="moe-chat-renderer-session.js"></script>
+  <script src="moe-chat-renderer.js"></script>
+  <script>
+    // Initialize on load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => MoEChat.initialize());
+    } else {
+      MoEChat.initialize();
+    }
+  </script>
+</body>
+</html>

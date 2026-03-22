@@ -1,0 +1,26 @@
+{
+  "id": "com.psf.eval-benchmark",
+  "name": "PSF Eval Benchmark",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "apiRange": {
+    "min": 1,
+    "max": 1
+  },
+  "editionSupport": [
+    "standard",
+    "enterprise",
+    "datacenter",
+    "government"
+  ],
+  "publisher": {
+    "name": "PSF Offline",
+    "signingKeyId": "ed25519:psf-eval-benchmark-dev"
+  },
+  "entrypoint": "mod.js",
+  "capabilities": [
+    "storage.scoped",
+    "ui.panel"
+  ]
+}
+

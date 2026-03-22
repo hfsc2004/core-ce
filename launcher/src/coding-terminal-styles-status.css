@@ -1,0 +1,62 @@
+/* @version 1.1.2 - March 5, 2026*/
+/* @copyright 2026 Global Science Network*/
+/* =============================================================================
+   Status Bar
+   ============================================================================= */
+
+.ct-status-bar {
+  display: flex;
+  gap: 16px;
+  padding: 6px 12px;
+  background: var(--ct-bg-secondary);
+  border-top: 1px solid var(--ct-border);
+  font-size: 11px;
+  color: var(--ct-text-muted);
+  position: relative;
+}
+
+.ct-status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@keyframes ctThinkingPulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.55; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+@keyframes ctThinkingDots {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-1px); }
+}
+
+.ct-status-copyright {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--ct-text-secondary);
+  white-space: nowrap;
+}
+
+/* =============================================================================
+   Scrollbar
+   ============================================================================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ct-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ct-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ct-accent);

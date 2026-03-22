@@ -1,0 +1,47 @@
+[
+  {
+    "id": "source_656ayw",
+    "score": 1,
+    "metadata": {
+      "filePath": "/media/user/Third_4TB/Projects/Checkers/styles.css",
+      "startLine": 0,
+      "endLine": 38,
+      "text": "#board {\n  display: grid;\n  grid-template-columns: repeat(8, 50px);\n  grid-template-rows: repeat(8, 50px);\n  gap: 1px;\n  background-color: #8B4513;\n}\n\n.cell {\n  width: 50px;\n  height: 50px;\n}\n\n.light {\n  background-color: #F4D03F;\n}\n\n.dark {\n  background-color: #B97A26;\n}\n\n.piece {\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  position: absolute;\n  top: 0;\n  left: 0;\n}\n\n.red-piece {\n  background-color: #FF0000;\n}\n\n.white-piece {\n  background-color: #FFFFFF;\n}\n\n",
+      "category": "web",
+      "indexedAt": 1771008431851,
+      "retrieval": "indexed-source",
+      "bucketId": "project-08fe504e09fa",
+      "bucketLabel": "project:Checkers"
+    }
+  },
+  {
+    "id": "source_xq66p5",
+    "score": 1,
+    "metadata": {
+      "filePath": "/media/user/Third_4TB/Projects/Checkers/script.js",
+      "startLine": 0,
+      "endLine": 0,
+      "text": "const boardSize = 8;",
+      "category": "code",
+      "indexedAt": 1771008431846,
+      "retrieval": "indexed-source",
+      "bucketId": "project-08fe504e09fa",
+      "bucketLabel": "project:Checkers"
+    }
+  },
+  {
+    "id": "source_uo3sg6",
+    "score": 1,
+    "metadata": {
+      "filePath": "/media/user/Third_4TB/Projects/Checkers/checkers2.html",
+      "startLine": 0,
+      "endLine": 13,
+      "text": "<!DOCTYPE html>\n  <html lang=\"en-us\">\n  <head>\n  <meta charset=\"UTF16\">\n  <meta name=\"viewport\" content=\"width=device-whdth, initial-scale=1\">\n  <title>Checker Game</title>\n  <link rel=\"stylesheet\" href=\"style.css\">\n  </head>\n  <body>\n  <div id=\"bord\"></div>\n  <script src=\"scripts.js\"></script>\n  </body>\n  </html>\n",
+      "category": "web",
+      "indexedAt": 1771008431828,
+      "retrieval": "indexed-source",
+      "bucketId": "project-08fe504e09fa",
+      "bucketLabel": "project:Checkers"
+    }
+  }
+]
