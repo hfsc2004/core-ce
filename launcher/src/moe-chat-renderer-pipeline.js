@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 
 window.createMoeChatPipelineOps = function createMoeChatPipelineOps(ctx = {}) {
@@ -21,11 +21,11 @@ window.createMoeChatPipelineOps = function createMoeChatPipelineOps(ctx = {}) {
   function populateKvmDropdown() {
     const elements = getElements();
     if (!elements?.kvmSelect) return;
-    elements.kvmSelect.innerHTML = '<option value="pipeline">🔗 Full Pipeline (Chain All)</option>';
+    elements.kvmSelect.innerHTML = '<option value="pipeline">Full Pipeline (Chain All)</option>';
     getAgents().forEach((agent) => {
       const option = document.createElement('option');
       option.value = agent.id;
-      option.textContent = `🤖 ${agent.name}${agent.modelName ? ` (${agent.modelName})` : ''}`;
+      option.textContent = `${agent.name}${agent.modelName ? ` (${agent.modelName})` : ''}`;
       elements.kvmSelect.appendChild(option);
     });
   }

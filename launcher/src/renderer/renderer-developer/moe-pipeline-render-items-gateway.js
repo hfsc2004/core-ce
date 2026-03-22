@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 
 function renderGatewayRow(gateway, index) {
@@ -22,7 +22,10 @@ function renderGatewayRow(gateway, index) {
         <span onclick="event.stopPropagation(); toggleMoeExpand('${gateway.id}')" 
               style="color: ${theme.success}; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>
         ${editMode ? `<span class="drag-handle" style="color: ${theme.success}; cursor: grab;">⋮⋮</span>` : ''}
-        <span style="font-size: 18px;">📡</span>
+        <span style="color: ${theme.success}; font-weight: bold; min-width: 30px; text-align: center;">${index + 1}</span>
+        <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(63,185,80,0.15);">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3fb950" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="14" height="10" rx="2"/><line x1="4" y1="7" x2="8" y2="7"/><line x1="4" y1="10" x2="12" y2="10"/></svg>
+        </span>
         <span onclick="event.stopPropagation(); promptRenameMoeItem('${gateway.id}')" onmousedown="event.stopPropagation();"
               style="color:#fff; font-weight:bold; font-size:14px; min-width:150px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
               onmouseover="this.style.borderBottomColor='${theme.success}'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(gateway.name)}</span>
@@ -30,9 +33,9 @@ function renderGatewayRow(gateway, index) {
           ${gateway.position === 'input' ? '⬇️ Input' : '⬆️ Output'}
         </span>
         <div style="flex: 1; display: flex; gap: 8px; align-items: center;">
-          ${gateway.sources.terminal.enabled ? '<span style="background: var(--psf-accent-medium, rgba(0,212,255,0.2)); color: var(--psf-accent, #00d4ff); padding: 2px 8px; border-radius: 10px; font-size: 10px;">💻 Terminal</span>' : ''}
-          ${gateway.sources.api.enabled ? `<span style="background: ${theme.accentMedium}; color: ${theme.accent}; padding: 2px 8px; border-radius: 10px; font-size: 10px;">🌐 API :${gateway.sources.api.port}</span>` : ''}
-          ${gateway.sources.serial.enabled ? `<span style="background: rgba(255,212,0,0.2); color: ${theme.warning}; padding: 2px 8px; border-radius: 10px; font-size: 10px;">🔌 ${gateway.sources.serial.port}</span>` : ''}
+          ${gateway.sources.terminal.enabled ? '<span style="background: var(--psf-accent-medium, rgba(0,212,255,0.2)); color: var(--psf-accent, #00d4ff); padding: 2px 8px; border-radius: 10px; font-size: 10px;">Terminal</span>' : ''}
+          ${gateway.sources.api.enabled ? `<span style="background: ${theme.accentMedium}; color: ${theme.accent}; padding: 2px 8px; border-radius: 10px; font-size: 10px;">API :${gateway.sources.api.port}</span>` : ''}
+          ${gateway.sources.serial.enabled ? `<span style="background: rgba(255,212,0,0.2); color: ${theme.warning}; padding: 2px 8px; border-radius: 10px; font-size: 10px;">${gateway.sources.serial.port}</span>` : ''}
           ${enabledSources === 0 ? `<span style="color: ${theme.error}; font-size: 11px; font-style: italic;">No sources enabled</span>` : ''}
         </div>
         <label onclick="event.stopPropagation()" style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
@@ -40,7 +43,7 @@ function renderGatewayRow(gateway, index) {
           <span style="color: #888; font-size: 11px;">Enabled</span>
         </label>
         <button onclick="event.stopPropagation(); deleteMoeItem('${gateway.id}')"
-                style="padding: 4px 8px; background: transparent; border: 1px solid ${theme.error}; border-radius: 4px; color: ${theme.error}; cursor: pointer; font-size: 11px;">🗑️</button>
+                style="padding: 4px 8px; background: transparent; border: 1px solid ${theme.error}; border-radius: 4px; color: ${theme.error}; cursor: pointer; font-size: 11px;">✕</button>
       </div>
       ${isExpanded ? renderGatewayDetails(gateway) : ''}
     </div>
@@ -210,7 +213,7 @@ function renderGatewayDetails(gateway) {
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 120px;">
               <input type="checkbox" ${gateway.sources.terminal.enabled ? 'checked' : ''} 
                      onchange="toggleGatewaySource('${gateway.id}', 'terminal', this.checked)">
-              <span style="color: var(--psf-accent, #00d4ff);">💻 Terminal</span>
+              <span style="color: var(--psf-accent, #00d4ff);">Terminal</span>
             </label>
             <span style="color: #666; font-size: 11px;">Built-in chat interface</span>
           </div>
@@ -219,7 +222,7 @@ function renderGatewayDetails(gateway) {
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 120px;">
               <input type="checkbox" ${gateway.sources.api.enabled ? 'checked' : ''} 
                      onchange="toggleGatewaySource('${gateway.id}', 'api', this.checked)">
-              <span style="color: ${theme.accent};">🌐 HTTP API</span>
+              <span style="color: ${theme.accent};">HTTP API</span>
             </label>
             <input type="number" value="${gateway.sources.api.port}" 
                    onchange="updateGatewaySourceConfig('${gateway.id}', 'api', 'port', parseInt(this.value))"
@@ -232,7 +235,7 @@ function renderGatewayDetails(gateway) {
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 120px;">
               <input type="checkbox" ${gateway.sources.serial.enabled ? 'checked' : ''} 
                      onchange="toggleGatewaySource('${gateway.id}', 'serial', this.checked)">
-              <span style="color: ${theme.warning};">🔌 Serial</span>
+              <span style="color: ${theme.warning};">Serial</span>
             </label>
             <select onchange="updateGatewaySourceConfig('${gateway.id}', 'serial', 'port', this.value)"
                     style="min-width: 200px; padding: 4px 8px; background: rgba(255,255,255,0.1); border: 1px solid #555; border-radius: 4px; color: #fff;">

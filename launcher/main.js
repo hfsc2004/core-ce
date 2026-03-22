@@ -13,7 +13,7 @@
  * Simple pass-through IPC handlers are registered via ipc-handlers.js
  * 
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  * @license SEE LICENSE.txt
  * ============================================================================
  */
@@ -117,7 +117,7 @@ function createWindow() {
   const bounds = getSafeWindowBounds({
     screenRef: screen,
     width: 1400,
-    height: 1260,
+    height: 945,
     minWidth: 1024,
     minHeight: 768
   });

@@ -1,5 +1,5 @@
 REM @version 1.1.2 - March 5, 2026
-REM @copyright 2026 Global Science Network
+REM @copyright 2026 Pseudo SF
 @echo off
 REM Pseudo Science Fiction Core Collection - Python WebUI Builder (Windows)
 REM This script creates a portable Python venv with Open WebUI pre-installed

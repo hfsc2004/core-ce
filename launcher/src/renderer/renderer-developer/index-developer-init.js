@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 (function () {
   'use strict';
@@ -53,7 +53,10 @@
         if (aboutProductEl && product) aboutProductEl.textContent = product;
 
         const footerProductEl = document.getElementById('footer-product-name');
-        if (footerProductEl && product) footerProductEl.textContent = stripCompanyPrefix(product, company);
+        if (footerProductEl && product) {
+          const footerProductText = stripCompanyPrefix(product, company).replace(/Pseudo Science Fiction/gi, 'Pseudo SF');
+          footerProductEl.textContent = footerProductText;
+        }
 
         const footerCompanyNameEl = document.getElementById('footer-company-name');
         if (footerCompanyNameEl && company) footerCompanyNameEl.textContent = company;
@@ -70,7 +73,10 @@
 
         const footerSecurityEl = document.getElementById('footer-security-tag');
         if (footerSecurityEl && security) {
-          footerSecurityEl.textContent = security;
+          const footerSecurityText = /^community edition$/i.test(security)
+            ? 'Core [Community Edition]'
+            : security;
+          footerSecurityEl.textContent = footerSecurityText;
           const enforcement = String(branding.securityEnforcement || '').trim();
           if (enforcement) {
             footerSecurityEl.setAttribute('title', `Enforcement: ${enforcement}`);

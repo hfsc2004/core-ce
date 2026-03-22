@@ -190,13 +190,13 @@ function insertMissingTags(content, ext, newVersion, dateFormatted, copyrightYea
   }
 
   const blockByExt = {
-    '.js': ['/**', ' *', ` * @version ${newVersion} - ${dateFormatted}`, ` * @copyright ${year} Global Science Network`, ' */', ''].join('\n'),
-    '.css': [`/* @version ${newVersion} - ${dateFormatted}*/`, `/* @copyright ${year} Global Science Network*/`, ''].join('\n'),
-    '.py': [`# @version ${newVersion} - ${dateFormatted}`, `# @copyright ${year} Global Science Network`, ''].join('\n'),
-    '.sh': [`# @version ${newVersion} - ${dateFormatted}`, `# @copyright ${year} Global Science Network`, ''].join('\n'),
-    '.bat': [`REM @version ${newVersion} - ${dateFormatted}`, `REM @copyright ${year} Global Science Network`, ''].join('\n'),
-    '.html': [`<!-- Version: ${newVersion} -->`, `<!-- Copyright © ${year} Global Science Network -->`, ''].join('\n'),
-    '.md': [`*Version: ${newVersion}*`, `*Copyright © ${year} Global Science Network*`, ''].join('\n')
+    '.js': ['/**', ' *', ` * @version ${newVersion} - ${dateFormatted}`, ` * @copyright ${year} Pseudo SF`, ' */', ''].join('\n'),
+    '.css': [`/* @version ${newVersion} - ${dateFormatted}*/`, `/* @copyright ${year} Pseudo SF*/`, ''].join('\n'),
+    '.py': [`# @version ${newVersion} - ${dateFormatted}`, `# @copyright ${year} Pseudo SF`, ''].join('\n'),
+    '.sh': [`# @version ${newVersion} - ${dateFormatted}`, `# @copyright ${year} Pseudo SF`, ''].join('\n'),
+    '.bat': [`REM @version ${newVersion} - ${dateFormatted}`, `REM @copyright ${year} Pseudo SF`, ''].join('\n'),
+    '.html': [`<!-- Version: ${newVersion} -->`, `<!-- Copyright © ${year} Pseudo SF -->`, ''].join('\n'),
+    '.md': [`*Version: ${newVersion}*`, `*Copyright © ${year} Pseudo SF*`, ''].join('\n')
   };
 
   const block = blockByExt[ext];

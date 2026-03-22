@@ -1,5 +1,5 @@
 *Version: 1.1.2*
-*Copyright © 2026 Global Science Network*
+*Copyright © 2026 Pseudo SF*
 # Coding Terminal Prompt Guide (Living Document)
 
 Last updated: 2026-02-16  

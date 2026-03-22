@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- Version: 1.1.2 -->
-<!-- Copyright © 2026 Global Science Network -->
+<!-- Copyright © 2026 Pseudo SF -->
 <html>
 <head>
   <meta charset="UTF-8">
@@ -11,26 +11,40 @@
 <body>
 <!-- Header -->
   <div id="header">
-    <div style="display: flex; align-items: center; gap: 15px;">
-      <h2>🖥️ PSF Terminal</h2>
-      <select id="model-select" style="padding: 8px 12px; background: #16162a; color: #00d4ff; border: 1px solid #00d4ff; border-radius: 5px; font-size: 14px; min-width: 200px;">
+    <div class="terminal-header-left">
+      <h2>
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="8" width="36" height="28" rx="3"/>
+          <polyline points="12,18 19,22 12,26"/>
+          <line x1="21" y1="26" x2="32" y2="26"/>
+        </svg>
+        <span>PSF Terminal</span>
+      </h2>
+      <select id="model-select">
         <option value="">Loading models...</option>
       </select>
-      <button id="config-btn" onclick="TerminalApp.toggleConfig()" title="Model Configuration" style="background: none; border: 1px solid #ffa500; color: #ffa500; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 16px;">
-        ⚙️
+      <button id="config-btn" onclick="TerminalApp.toggleConfig()" title="Model Configuration">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <circle cx="6" cy="6" r="2"/>
+          <path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.5 2.5l.7.7M8.8 8.8l.7.7M9.5 2.5l-.7.7M3.2 8.8l-.7.7"/>
+        </svg>
+        <span>Config</span>
       </button>
-      <button id="attachments-btn" title="Manage attached files" style="background: none; border: 1px solid #00d4ff; color: #00d4ff; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 14px;">
-        📎 Files
+      <button id="attachments-btn" title="Manage attached files">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4.4 6.1l2.9-2.9a1.6 1.6 0 112.3 2.3L6 9.2a2.7 2.7 0 11-3.8-3.8l3.5-3.5"/>
+        </svg>
+        <span>Files</span>
       </button>
     </div>
     <div class="header-buttons">
       <div class="session-group">
         <span class="session-label">Session:</span>
-        <button class="session-btn" onclick="TerminalApp.promptSave()" title="Save conversation">💾 Save</button>
-        <button class="session-btn load" onclick="TerminalApp.promptLoad()" title="Load conversation">📂 Load</button>
-        <button class="session-btn delete" onclick="TerminalApp.promptDelete()" title="Delete a saved session">🗑️ Delete</button>
+        <button class="session-btn" onclick="TerminalApp.promptSave()" title="Save conversation">Save</button>
+        <button class="session-btn load" onclick="TerminalApp.promptLoad()" title="Load conversation">Load</button>
+        <button class="session-btn delete" onclick="TerminalApp.promptDelete()" title="Delete a saved session">Delete</button>
         <span class="session-export-wrap">
-          <button id="session-export-btn" class="session-btn" title="Export full thread">⬇️ .md</button>
+          <button id="session-export-btn" class="session-btn" title="Export full thread">md</button>
           <button id="session-export-menu-btn" class="session-btn" title="Choose full-thread export format">⋯</button>
           <span id="session-export-menu" class="session-export-menu" aria-hidden="true"></span>
         </span>
@@ -40,8 +54,8 @@
   </div>
 
 <!-- Model Configuration Panel -->
-  <div id="config-panel" style="display: none; position: absolute; top: 60px; left: 20px; background: #1a1a2e; border: 2px solid #ffa500; border-radius: 10px; padding: 20px; z-index: 100; width: 350px; box-shadow: 0 10px 40px rgba(255, 165, 0, 0.3); max-height: calc(100vh - 90px); overflow-y: auto;">
-    <h3 style="color: #ffa500; margin-bottom: 15px;">⚙️ Model Configuration</h3>
+  <div id="config-panel" style="display: none;">
+    <h3>Model Configuration</h3>
     
     <div style="margin-bottom: 12px;">
       <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Temperature (0.0 - 2.0)</label>
@@ -140,9 +154,9 @@
       </div>
     </div>
     
-    <div style="display: flex; gap: 10px;">
-      <button onclick="TerminalApp.applyConfig()" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #ffa500 0%, #cc8400 100%); color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Apply</button>
-      <button onclick="TerminalApp.toggleConfig()" style="flex: 1; padding: 10px; background: #2d2d44; color: #aaa; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+    <div class="config-panel-actions">
+      <button onclick="TerminalApp.applyConfig()">Apply</button>
+      <button class="config-panel-close" onclick="TerminalApp.toggleConfig()">Close</button>
     </div>
   </div>
   
@@ -162,7 +176,7 @@
         placeholder="Type your message here..." 
         autocomplete="off"
       />
-      <button id="voice-btn" title="Voice-to-text (right-click to switch provider)">🎤 Voice Off</button>
+      <button id="voice-btn" title="Voice-to-text (right-click to switch provider)">Voice Off</button>
       <button id="voice-mode-btn" title="Voice mode: PTT (manual Send)">PTT</button>
       <button id="send-btn">Send</button>
       <button id="stop-btn" title="Stop current generation">Stop</button>
@@ -176,7 +190,7 @@
       <div class="status-dot"></div>
       <span id="status-text">Connected to Ollama</span>
     </div>
-    <div id="gpu-indicator" class="gpu-badge" style="padding: 5px 12px; background: rgba(255,255,255,0.1); border-radius: 4px; font-size: 12px;">
+    <div id="gpu-indicator" class="gpu-badge">
       <span id="gpu-icon">⏳</span> <span id="gpu-text">Detecting...</span>
     </div>
     <span>Press Enter to send • Shift+Enter for newline • Type /help for commands</span>

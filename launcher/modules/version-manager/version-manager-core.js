@@ -4,7 +4,7 @@
  * 
  * @module version-manager-core
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  * @license SEE LICENSE.txt
  */
 

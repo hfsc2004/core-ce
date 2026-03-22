@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * PSF Coding Terminal - Renderer Bootstrap Module
@@ -56,11 +56,13 @@
         btnRag: document.getElementById('btn-rag'),
         btnGit: document.getElementById('btn-git'),
         btnSettings: document.getElementById('btn-settings'),
+        btnSettingsDrawerHandle: document.getElementById('btn-settings-drawer-handle'),
         btnSessionNew: document.getElementById('btn-session-new'),
         btnSessionSave: document.getElementById('btn-session-save'),
         btnSessionLoad: document.getElementById('btn-session-load'),
         btnSessionDelete: document.getElementById('btn-session-delete'),
         btnProjectRootTop: document.getElementById('btn-project-root-top'),
+        btnRagTop: document.getElementById('btn-rag-top'),
         btnRlmFolderTop: document.getElementById('btn-rlm-folder-top'),
         btnStopTop: document.getElementById('btn-stop-top'),
         btnModelRefresh: document.getElementById('btn-model-refresh'),
@@ -74,6 +76,10 @@
         btnRagBucketDelete: document.getElementById('btn-rag-bucket-delete'),
         btnRefreshPlanRun: document.getElementById('btn-refresh-plan-run'),
         btnRefreshTrace: document.getElementById('btn-refresh-trace'),
+        btnSettingsRailRag: document.getElementById('btn-settings-rail-rag'),
+        btnSettingsRailGit: document.getElementById('btn-settings-rail-git'),
+        btnSettingsRailPlan: document.getElementById('btn-settings-rail-plan'),
+        btnSettingsRailTrace: document.getElementById('btn-settings-rail-trace'),
 
         gitControls: document.getElementById('git-controls'),
         gitStatusWrap: document.getElementById('git-status-wrap'),
@@ -179,11 +185,14 @@
             handleHeaderRagClick: api.handleHeaderRagClick,
             handleHeaderGitClick: api.handleHeaderGitClick,
             handleHeaderSettingsClick: api.handleHeaderSettingsClick,
+            handleContextRailToggle: api.handleContextRailToggle,
+            handleContextRailSelect: api.handleContextRailSelect,
             handleSessionNew: api.handleSessionNew,
             handleSessionSave: api.handleSessionSave,
             handleSessionLoad: api.handleSessionLoad,
             handleSessionDelete: api.handleSessionDelete,
             handleSelectProjectRoot: api.handleSelectProjectRoot,
+            handleSelectRagBucketFromHeader: api.handleSelectRagBucketFromHeader,
             openRlmAttachmentManager: api.openRlmAttachmentManager,
             handleModelSelection: api.handleModelSelection,
             handleRouterModelSelection: api.handleRouterModelSelection,

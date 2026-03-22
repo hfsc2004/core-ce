@@ -1,0 +1,342 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@600;700&display=swap');
+
+  .r-root { background:#0e1621; font-family:'Inter',sans-serif; color:#c9d1d9; display:flex; flex-direction:column; min-height:720px; }
+  .r-titlebar { background:#0b1219; display:flex; align-items:center; justify-content:space-between; padding:0 14px; height:34px; border-bottom:1px solid rgba(88,166,255,0.1); flex-shrink:0; }
+  .r-titlebar-title { font-size:11px; color:#6e7681; letter-spacing:0.04em; }
+  .r-winbtn { width:11px; height:11px; border-radius:50%; display:inline-block; margin-left:6px; }
+  .r-header { background:#111c2a; display:flex; align-items:center; justify-content:space-between; padding:12px 24px; border-bottom:1px solid rgba(88,166,255,0.12); flex-shrink:0; }
+  .r-wordmark { font-family:'Rajdhani',sans-serif; font-size:36px; font-weight:700; color:#e6edf3; letter-spacing:0.1em; display:flex; align-items:center; }
+  .r-bracket { color:#58a6ff; font-size:44px; font-weight:300; line-height:1; }
+  .r-dots-btn { width:34px; height:34px; border:1px solid rgba(139,148,158,0.25); background:transparent; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#8b949e; font-size:16px; font-weight:700; letter-spacing:2px; padding-bottom:4px; transition:all 0.2s; }
+  .r-dots-btn:hover { border-color:rgba(88,166,255,0.5); color:#58a6ff; }
+  .r-subheader { background:#0f1a27; display:flex; align-items:center; gap:16px; padding:10px 24px; border-bottom:1px solid rgba(88,166,255,0.08); flex-shrink:0; }
+  .r-back-btn { padding:6px 14px; border:1px solid rgba(139,148,158,0.25); background:transparent; border-radius:5px; font-size:12px; color:#8b949e; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.2s; }
+  .r-back-btn:hover { border-color:rgba(88,166,255,0.4); color:#58a6ff; }
+  .r-page-title { font-size:18px; font-weight:600; color:#e6edf3; }
+  .r-page-sub { font-size:13px; color:#484f58; margin-left:auto; letter-spacing:0.04em; }
+  .r-body { flex:1; padding:20px 24px; display:flex; flex-direction:column; gap:10px; }
+
+  /* TOOLBAR */
+  .r-toolbar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px; }
+  .r-btn { display:flex; align-items:center; gap:6px; padding:7px 12px; border:1px solid; background:#161f2e; border-radius:5px; font-size:11px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.2s; white-space:nowrap; }
+  .r-btn.agent    { color:#a371f7; border-color:rgba(163,113,247,0.3); }
+  .r-btn.agent:hover    { background:rgba(163,113,247,0.08); border-color:rgba(163,113,247,0.6); }
+  .r-btn.channel  { color:#58a6ff; border-color:rgba(88,166,255,0.3); }
+  .r-btn.channel:hover  { background:rgba(88,166,255,0.08); border-color:rgba(88,166,255,0.6); }
+  .r-btn.gateway  { color:#3fb950; border-color:rgba(63,185,80,0.3); }
+  .r-btn.gateway:hover  { background:rgba(63,185,80,0.08); border-color:rgba(63,185,80,0.6); }
+  .r-btn.bindings { color:#d2991e; border-color:rgba(210,153,34,0.3); }
+  .r-btn.bindings:hover { background:rgba(210,153,34,0.08); border-color:rgba(210,153,34,0.6); }
+  .r-btn.endpoint { color:#f0883e; border-color:rgba(240,136,62,0.3); }
+  .r-btn.endpoint:hover { background:rgba(240,136,62,0.08); border-color:rgba(240,136,62,0.6); }
+  .r-btn.neutral  { color:#8b949e; border-color:rgba(139,148,158,0.2); }
+  .r-btn.neutral:hover  { color:#c9d1d9; border-color:rgba(139,148,158,0.4); background:#1a2535; }
+  .r-btn.deploy   { color:#3fb950; border-color:rgba(63,185,80,0.35); }
+  .r-btn.deploy:hover   { background:rgba(63,185,80,0.08); }
+  .r-btn.stop     { color:#f85149; border-color:rgba(248,81,73,0.35); }
+  .r-btn.stop:hover     { background:rgba(248,81,73,0.08); }
+  .r-btn.danger:hover   { color:#f85149; border-color:rgba(248,81,73,0.4); }
+  .r-divider { width:1px; background:rgba(139,148,158,0.15); margin:0 2px; align-self:stretch; }
+
+  /* NODES */
+  .r-node { border-radius:6px; overflow:hidden; }
+  .r-node-header { display:flex; align-items:center; gap:10px; padding:11px 14px; cursor:pointer; transition:filter 0.15s; }
+  .r-node-header:hover { filter:brightness(1.08); }
+
+  .r-node.gateway  { border:1px solid rgba(63,185,80,0.35); }
+  .r-node.bindings { border:1px solid rgba(210,153,34,0.35); }
+  .r-node.channel  { border:1px solid rgba(88,166,255,0.35); }
+  .r-node.agent    { border:1px solid rgba(163,113,247,0.35); }
+
+  .r-node.gateway  .r-node-header { background:rgba(63,185,80,0.1);   border-left:3px solid #3fb950; }
+  .r-node.bindings .r-node-header { background:rgba(210,153,34,0.1);  border-left:3px solid #d2991e; }
+  .r-node.channel  .r-node-header { background:rgba(88,166,255,0.1);  border-left:3px solid #58a6ff; }
+  .r-node.agent    .r-node-header { background:rgba(163,113,247,0.1); border-left:3px solid #a371f7; }
+
+  .r-node-icon-wrap { width:30px; height:30px; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .r-node.gateway  .r-node-icon-wrap { background:rgba(63,185,80,0.15); }
+  .r-node.bindings .r-node-icon-wrap { background:rgba(210,153,34,0.15); }
+  .r-node.channel  .r-node-icon-wrap { background:rgba(88,166,255,0.15); }
+  .r-node.agent    .r-node-icon-wrap { background:rgba(163,113,247,0.15); }
+
+  .r-chevron { font-size:9px; flex-shrink:0; color:#8b949e; transition:transform 0.2s; }
+  .r-chevron.open { transform:rotate(90deg); }
+  .r-node-name { font-size:13px; font-weight:600; color:#e6edf3; }
+  .r-node-meta { font-size:11px; color:#8b949e; margin-left:4px; }
+
+  .r-type-badge { font-size:9px; font-weight:600; padding:2px 7px; border-radius:3px; letter-spacing:0.1em; text-transform:uppercase; margin-left:4px; }
+  .r-node.gateway  .r-type-badge { background:rgba(63,185,80,0.15);   color:#3fb950; }
+  .r-node.bindings .r-type-badge { background:rgba(210,153,34,0.15);  color:#d2991e; }
+  .r-node.channel  .r-type-badge { background:rgba(88,166,255,0.15);  color:#58a6ff; }
+  .r-node.agent    .r-type-badge { background:rgba(163,113,247,0.15); color:#a371f7; }
+
+  .r-pills { display:flex; gap:4px; margin-left:6px; }
+  .r-pill { font-size:10px; padding:2px 7px; border-radius:3px; border:1px solid; }
+  .r-pill.input    { color:#3fb950; border-color:rgba(63,185,80,0.4); }
+  .r-pill.terminal { color:#8b949e; border-color:rgba(139,148,158,0.3); }
+  .r-pill.auto     { color:#d2991e; border-color:rgba(210,153,34,0.35); }
+  .r-pill.dynamic  { color:#58a6ff; border-color:rgba(88,166,255,0.4); }
+  .r-pill.rlm-off  { color:#f85149; border-color:rgba(248,81,73,0.35); }
+
+  .r-node-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .r-enabled { font-size:10px; color:#3fb950; display:flex; align-items:center; gap:4px; }
+  .r-enabled-dot { width:5px; height:5px; border-radius:50%; background:#3fb950; }
+  .r-del-btn { width:24px; height:24px; border:1px solid rgba(248,81,73,0.2); background:transparent; border-radius:3px; color:#f85149; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11px; opacity:0.4; transition:all 0.2s; }
+  .r-del-btn:hover { opacity:1; }
+
+  .r-node-body { background:#111c2a; padding:12px 16px 14px; border-top:1px solid rgba(139,148,158,0.08); display:none; }
+  .r-node-body.open { display:block; }
+
+  .r-field { background:#0e1621; border:1px solid rgba(139,148,158,0.2); border-radius:4px; color:#c9d1d9; font-size:11px; font-family:'Inter',sans-serif; padding:4px 8px; outline:none; }
+
+  .r-legend { display:flex; gap:14px; flex-wrap:wrap; padding:4px 0; }
+  .r-legend-item { display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58; }
+  .r-legend-pip { width:10px; height:10px; border-radius:2px; }
+
+  .r-status { background:#111c2a; border:1px solid rgba(139,148,158,0.12); border-radius:6px; padding:9px 14px; display:flex; align-items:center; justify-content:space-between; }
+  .r-idle { font-size:10px; color:#484f58; border:1px solid rgba(139,148,158,0.18); border-radius:3px; padding:2px 8px; letter-spacing:0.1em; }
+
+  .r-footer { background:#0b1219; display:flex; align-items:center; justify-content:space-between; padding:8px 24px; border-top:1px solid rgba(88,166,255,0.08); flex-shrink:0; }
+  .r-footer-copy { font-size:10px; color:#484f58; }
+  .r-footer-copy span { color:#6e7681; }
+  .r-footer-right { display:flex; align-items:center; gap:10px; }
+  .r-upgrade-btn { font-size:10px; padding:4px 12px; background:transparent; border:1px solid rgba(88,166,255,0.4); border-radius:4px; color:#58a6ff; cursor:pointer; transition:background 0.2s; }
+  .r-upgrade-btn:hover { background:rgba(88,166,255,0.1); }
+  .r-gpu { display:flex; align-items:center; gap:6px; font-size:10px; color:#8b949e; }
+  .r-gpu-bar { width:36px; height:3px; background:rgba(139,148,158,0.2); border-radius:2px; overflow:hidden; }
+  .r-gpu-fill { height:100%; width:62%; background:#58a6ff; border-radius:2px; }
+
+  input, select, textarea { outline:none; }
+</style>
+
+<div class="r-root">
+
+  <div class="r-titlebar">
+    <div><span class="r-winbtn" style="background:#ff5f57"></span><span class="r-winbtn" style="background:#febc2e"></span><span class="r-winbtn" style="background:#28c840"></span></div>
+    <div class="r-titlebar-title">Pseudo Science Fiction — Core-CE</div>
+    <div style="width:50px"></div>
+  </div>
+
+  <div class="r-header">
+    <div class="r-wordmark"><span class="r-bracket">[</span>CORE<span class="r-bracket">]</span></div>
+    <button class="r-dots-btn">···</button>
+  </div>
+
+  <div class="r-subheader">
+    <button class="r-back-btn">← Back</button>
+    <div class="r-page-title">PSF Relay</div>
+    <div class="r-page-sub">Pipeline Orchestrator</div>
+  </div>
+
+  <div class="r-body">
+
+    <!-- TOOLBAR -->
+    <div class="r-toolbar">
+      <button class="r-btn agent">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#a371f7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="5" r="2.8"/><path d="M1,12 Q1,9 6.5,9 Q12,9 12,12"/></svg>
+        + Agent
+      </button>
+      <button class="r-btn channel">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#58a6ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="6.5" x2="12" y2="6.5"/><polyline points="8,3 12,6.5 8,10"/></svg>
+        + Channel
+      </button>
+      <button class="r-btn gateway">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#3fb950" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="7" rx="1.5"/><line x1="3.5" y1="6" x2="7" y2="6"/><line x1="3.5" y1="8.5" x2="9.5" y2="8.5"/></svg>
+        + Gateway
+      </button>
+      <button class="r-btn bindings">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#d2991e" stroke-width="1.7" stroke-linecap="round"><path d="M3,6.5 C3,4.5 10,4.5 10,6.5 C10,8.5 3,8.5 3,6.5Z"/><line x1="1" y1="6.5" x2="3" y2="6.5"/><line x1="10" y1="6.5" x2="12" y2="6.5"/></svg>
+        + Bindings
+      </button>
+      <button class="r-btn endpoint">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#f0883e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="2"/><circle cx="6.5" cy="6.5" r="5.5"/><line x1="6.5" y1="1" x2="6.5" y2="4.5"/><line x1="6.5" y1="8.5" x2="6.5" y2="12"/><line x1="1" y1="6.5" x2="4.5" y2="6.5"/><line x1="8.5" y1="6.5" x2="12" y2="6.5"/></svg>
+        + Endpoint Registry
+      </button>
+      <div class="r-divider"></div>
+      <button class="r-btn neutral">Open Chat</button>
+      <button class="r-btn neutral">Save Profile</button>
+      <button class="r-btn neutral">Load Profile</button>
+      <button class="r-btn neutral danger">Delete Profile</button>
+      <button class="r-btn neutral">Reorder</button>
+      <div class="r-divider"></div>
+      <button class="r-btn deploy">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="#3fb950"><polygon points="2,1 9,5 2,9"/></svg>
+        Deploy
+      </button>
+      <button class="r-btn stop">
+        <svg width="9" height="9" viewBox="0 0 9 9" fill="#f85149"><rect x="1" y="1" width="7" height="7" rx="1"/></svg>
+        Stop
+      </button>
+    </div>
+
+    <!-- PIPELINE NODES -->
+
+    <!-- GATEWAY NODE -->
+    <div class="r-node gateway">
+      <div class="r-node-header" onclick="toggleNode('gw-body',this)">
+        <span class="r-chevron">▶</span>
+        <div class="r-node-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3fb950" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="14" height="10" rx="2"/><line x1="4" y1="7" x2="8" y2="7"/><line x1="4" y1="10" x2="12" y2="10"/></svg>
+        </div>
+        <span class="r-node-name">User Gateway</span>
+        <span class="r-type-badge">Gateway</span>
+        <div class="r-pills">
+          <span class="r-pill input">Input</span>
+          <span class="r-pill terminal">Terminal</span>
+          <span class="r-pill auto">auto</span>
+        </div>
+        <div class="r-node-right">
+          <span class="r-enabled"><span class="r-enabled-dot"></span>Enabled</span>
+          <button class="r-del-btn">✕</button>
+        </div>
+      </div>
+      <div class="r-node-body" id="gw-body">
+        <div style="font-size:10px;color:#8b949e;letter-spacing:0.06em;margin-bottom:8px;">GATEWAY POSITION</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <button class="r-btn deploy" style="font-size:11px;padding:4px 12px;">Input</button>
+          <button class="r-btn neutral" style="font-size:11px;padding:4px 12px;">Output</button>
+        </div>
+        <div style="font-size:10px;color:#8b949e;letter-spacing:0.06em;margin-bottom:8px;">INPUT SOURCES</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" checked/><span style="font-size:12px;color:#3fb950;">Terminal</span><span style="font-size:11px;color:#484f58;">Built-in chat interface</span></label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"/><span style="font-size:12px;color:#c9d1d9;">HTTP API</span><input class="r-field" value="52434" style="width:56px;"/><span style="font-size:11px;color:#484f58;">/v1/chat</span></label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" checked/><span style="font-size:12px;color:#d2991e;">Serial</span><select class="r-field"><option>Auto Detect (recommended)</option></select></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- BINDINGS NODE -->
+    <div class="r-node bindings">
+      <div class="r-node-header" onclick="toggleNode('bind-body',this)">
+        <span class="r-chevron">▶</span>
+        <div class="r-node-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d2991e" stroke-width="1.8" stroke-linecap="round"><path d="M4,8 C4,5.5 12,5.5 12,8 C12,10.5 4,10.5 4,8Z"/><line x1="1" y1="8" x2="4" y2="8"/><line x1="12" y1="8" x2="15" y2="8"/></svg>
+        </div>
+        <span class="r-node-name">Runtime Bindings</span>
+        <span class="r-type-badge">Bindings</span>
+        <span class="r-node-meta">3 bindings</span>
+        <div class="r-node-right">
+          <span class="r-enabled"><span class="r-enabled-dot"></span>Enabled</span>
+          <button class="r-del-btn">✕</button>
+        </div>
+      </div>
+      <div class="r-node-body" id="bind-body">
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;">
+          <div style="display:flex;gap:6px;align-items:center;"><input class="r-field" style="flex:1;" value="gpio.red"/><input class="r-field" style="width:48px;" value="3"/><button class="r-del-btn" style="opacity:0.35;">✕</button></div>
+          <div style="display:flex;gap:6px;align-items:center;"><input class="r-field" style="flex:1;" value="gpio.blue"/><input class="r-field" style="width:48px;" value="2"/><button class="r-del-btn" style="opacity:0.35;">✕</button></div>
+          <div style="display:flex;gap:6px;align-items:center;"><input class="r-field" style="flex:1;" value="gpio.green"/><input class="r-field" style="width:48px;" value="4"/><button class="r-del-btn" style="opacity:0.35;">✕</button></div>
+        </div>
+        <button class="r-btn neutral" style="font-size:11px;">+ Add</button>
+      </div>
+    </div>
+
+    <!-- CHANNEL NODE -->
+    <div class="r-node channel">
+      <div class="r-node-header">
+        <span class="r-chevron">▶</span>
+        <div class="r-node-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#58a6ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="8" x2="14" y2="8"/><polyline points="10,4 14,8 10,12"/></svg>
+        </div>
+        <span class="r-node-name">Channel</span>
+        <span class="r-type-badge">Channel</span>
+        <select class="r-field" style="margin-left:8px;font-size:11px;"><option>← Bi-directional</option></select>
+        <input class="r-field" placeholder="Optional label..." style="margin-left:6px;width:120px;font-size:11px;"/>
+        <div style="display:flex;gap:5px;margin-left:8px;align-items:center;font-size:10px;color:#484f58;">
+          <span>Flow <select class="r-field" style="width:58px;padding:3px 4px;font-size:10px;"><option>Always</option></select></span>
+          <span>Retry <input class="r-field" value="0" style="width:30px;"/></span>
+          <span>Timeout <input class="r-field" value="120000" style="width:54px;"/></span>
+          <span>On Fail <select class="r-field" style="width:48px;padding:3px 4px;font-size:10px;"><option>Stop</option></select></span>
+        </div>
+        <div class="r-node-right">
+          <span class="r-enabled"><span class="r-enabled-dot"></span>Enabled</span>
+          <button class="r-del-btn">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENT NODE -->
+    <div class="r-node agent">
+      <div class="r-node-header" onclick="toggleNode('agent-body',this)">
+        <span class="r-chevron">▶</span>
+        <span style="font-size:10px;color:#a371f7;font-family:'JetBrains Mono',monospace;margin-right:2px;">4</span>
+        <div class="r-node-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#a371f7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="3"/><path d="M2,15 Q2,11 8,11 Q14,11 14,15"/></svg>
+        </div>
+        <span class="r-node-name">New Agent</span>
+        <span class="r-type-badge">Agent</span>
+        <span style="color:#484f58;font-size:12px;margin:0 4px;">→</span>
+        <select class="r-field" style="min-width:180px;font-size:11px;"><option>Gemma 3:4B-IT-MM</option></select>
+        <div class="r-pills" style="margin-left:8px;">
+          <span class="r-pill dynamic">Dynamic (LLM-led)</span>
+          <span class="r-pill rlm-off">RLM OFF</span>
+          <span style="font-size:10px;color:#484f58;padding:2px 5px;border:1px solid rgba(139,148,158,0.2);border-radius:3px;">0/1</span>
+        </div>
+        <div class="r-node-right">
+          <span class="r-enabled"><span class="r-enabled-dot"></span>Enabled</span>
+          <button class="r-del-btn">✕</button>
+        </div>
+      </div>
+      <div class="r-node-body" id="agent-body">
+        <div style="font-size:10px;color:#8b949e;letter-spacing:0.06em;margin-bottom:6px;">SYSTEM PROMPT</div>
+        <textarea class="r-field" style="width:100%;height:64px;resize:none;box-sizing:border-box;font-family:'JetBrains Mono',monospace;" placeholder="Define this agent's role, personality, and instructions..."></textarea>
+        <div style="margin-top:10px;font-size:11px;color:#8b949e;padding:7px 10px;background:rgba(163,113,247,0.06);border-left:2px solid rgba(163,113,247,0.4);border-radius:0 4px 4px 0;">
+          <strong style="color:#c9d1d9;">Routing Mode:</strong> Dynamic — model chooses next hop from context.
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          <button class="r-btn neutral" style="font-size:11px;">Manage Agent Files (0)</button>
+          <button class="r-btn neutral" style="font-size:11px;">Manage Shared Files (1)</button>
+          <button class="r-btn neutral" style="font-size:11px;">↻ Refresh</button>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(139,148,158,0.08);">
+          <div style="font-size:10px;color:#8b949e;letter-spacing:0.06em;margin-bottom:6px;">TOOLS & INTEGRATIONS</div>
+          <div style="display:flex;gap:6px;">
+            <button class="r-btn neutral" style="font-size:11px;">+ FAISS (RAG)</button>
+            <button class="r-btn neutral" style="font-size:11px;">+ Vision</button>
+            <button class="r-btn neutral" style="font-size:11px;">+ Web Search</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="r-legend">
+      <div class="r-legend-item"><div class="r-legend-pip" style="background:rgba(63,185,80,0.25);border:1px solid #3fb950;"></div>Gateway — I/O Point</div>
+      <div class="r-legend-item"><div class="r-legend-pip" style="background:rgba(210,153,34,0.25);border:1px solid #d2991e;"></div>Bindings — Runtime Variables</div>
+      <div class="r-legend-item"><div class="r-legend-pip" style="background:rgba(88,166,255,0.25);border:1px solid #58a6ff;"></div>Channel — Connection</div>
+      <div class="r-legend-item"><div class="r-legend-pip" style="background:rgba(163,113,247,0.25);border:1px solid #a371f7;"></div>Agent — LLM Role</div>
+      <div class="r-legend-item"><div class="r-legend-pip" style="background:rgba(240,136,62,0.25);border:1px solid #f0883e;"></div>Endpoint Registry — Distributed Worker Routing</div>
+    </div>
+
+    <!-- DEPLOYMENT STATUS -->
+    <div class="r-status">
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#8b949e;font-weight:500;">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#484f58" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="1" width="11" height="11" rx="2"/><line x1="4" y1="5" x2="9" y2="5"/><line x1="4" y1="8" x2="7" y2="8"/></svg>
+        Deployment Status
+        <span style="font-size:11px;color:#484f58;font-weight:400;">No deployment activity yet.</span>
+      </div>
+      <span class="r-idle">IDLE</span>
+    </div>
+
+  </div>
+
+  <div class="r-footer">
+    <div class="r-footer-copy">Copyright © 2026 <span>Pseudo SF</span> v1.1.2 Core [Community Edition]</div>
+    <div class="r-footer-right">
+      <button class="r-upgrade-btn">▲ Upgrade</button>
+      <div class="r-gpu"><div class="r-gpu-bar"><div class="r-gpu-fill"></div></div>GPU Inference</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleNode(id, header) {
+  const body = document.getElementById(id);
+  const chev = header.querySelector('.r-chevron');
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  if(chev) chev.classList.toggle('open', !open);
+}
+</script>

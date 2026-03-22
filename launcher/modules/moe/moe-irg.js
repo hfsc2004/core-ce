@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * ==========================================================================
@@ -41,6 +41,23 @@ const {
   summarizeLiveExecutionOutput,
   repairContractFromIntent
 } = require('./moe-irg-analysis');
+
+function buildAmbiguousPiClarification(message) {
+  const text = String(message || '').trim();
+  const lower = text.toLowerCase();
+  const mentionsPi = /\braspberry\s*pi\b/.test(lower) || /\bpi\b/.test(lower);
+  const mentionsPico = /\bpico\b/.test(lower);
+  if (!mentionsPi || mentionsPico) return '';
+  return (
+    'Error\n' +
+    'Reason: Ambiguous target "pi". Please specify which device.\n' +
+    'Examples:\n' +
+    '- "Program raspberry pi pico to blink red 200 ms on, 100 ms off, 5 cycles."\n' +
+    '- "Program raspberry pi 4 gpio 18 using python gpiozero."\n' +
+    '- "Program raspberry pi 5 gpio 18 using python gpiozero."\n' +
+    'Note: IRG deterministic live deployment currently supports Raspberry Pi Pico and ESP32 paths.'
+  );
+}
 
 function applyEsp32ContractPolicyOverrides(policy, contract) {
   const next = {
@@ -160,6 +177,16 @@ async function executeContract(contract, gatewayConfig = {}, options = {}) {
 }
 
 async function tryHandleGatewayRequest({ message, gatewayConfig = {}, llmPlan = '', requireLlmPlan = false, modeOverride = '' } = {}) {
+  const ambiguousPiError = buildAmbiguousPiClarification(message);
+  if (ambiguousPiError) {
+    return {
+      handled: true,
+      success: false,
+      blocked: true,
+      response: ambiguousPiError
+    };
+  }
+
   const basePolicy = mergePolicy(gatewayConfig);
   const llmPlanText = String(llmPlan || '').trim();
   const bindingEntries = normalizeBindings(gatewayConfig?.bindings);

@@ -11,7 +11,7 @@ function getBrandingConfigPath(fromPath) {
 
 function getDefaultBrandingMetadata() {
   return {
-    companyName: 'Pseudo Science Fiction',
+    companyName: 'Pseudo SF',
     productName: 'Pseudo Science Fiction - Core',
     website: 'https://pseudosf.com'
   };
@@ -73,7 +73,7 @@ function deriveSecurityProfile() {
   const fipsRequested = String(process.env.PSF_FIPS_MODE || '').trim().toLowerCase() === 'true';
   const provider = detectMacProvider();
 
-  let securityTag = 'CORE-CE';
+  let securityTag = 'Community Edition';
   if (edition === 'datacenter') {
     if (model === 'mac') {
       if (provider === 'SELINUX') securityTag = 'SEC:DATACENTER-HARDENED-RHEL';
@@ -88,11 +88,11 @@ function deriveSecurityProfile() {
     else securityTag = 'SEC:GOV-STIG-BASELINE';
   } else if (edition === 'enterprise' || edition === 'standard') {
     if (model === 'mac') {
-      if (provider === 'SELINUX') securityTag = 'CORE-CE-HARDENED-RHEL';
-      else if (provider === 'APPARMOR') securityTag = 'CORE-CE-HARDENED-DEBIAN';
-      else securityTag = 'CORE-CE-HARDENED';
+      if (provider === 'SELINUX') securityTag = 'Community Edition Hardened (RHEL)';
+      else if (provider === 'APPARMOR') securityTag = 'Community Edition Hardened (Debian)';
+      else securityTag = 'Community Edition Hardened';
     } else {
-      securityTag = 'CORE-CE';
+      securityTag = 'Community Edition';
     }
   }
 

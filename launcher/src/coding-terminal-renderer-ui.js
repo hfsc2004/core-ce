@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * PSF Coding Terminal - Renderer UI Module
@@ -66,7 +66,7 @@
     }
 
     function handleHeaderSettingsClick() {
-      quickSettingsUi?.openQuickSettingsModal?.();
+      handleContextRailToggle();
     }
 
     function ensureContextVisible() {
@@ -74,11 +74,41 @@
     }
 
     function focusContextSection(kind) {
-      const target = kind === 'git' ? elements.sectionGit : elements.sectionRag;
+      const target = kind === 'git'
+        ? elements.sectionGit
+        : kind === 'plan'
+          ? document.getElementById('section-plan-run')
+          : kind === 'trace'
+            ? document.getElementById('section-model-trace')
+            : elements.sectionRag;
       if (!target) return;
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       target.classList.add('focus-pulse');
       setTimeout(() => target.classList.remove('focus-pulse'), 1000);
+    }
+
+    function handleContextRailToggle() {
+      state.contextRailCollapsed = !state.contextRailCollapsed;
+      saveUiPreferences();
+      applyContextRailUi();
+    }
+
+    function handleContextRailSelect(kind) {
+      state.contextRailCollapsed = false;
+      saveUiPreferences();
+      applyContextRailUi();
+      ensureContextVisible();
+      if (kind === 'rag') {
+        state.ragCollapsed = false;
+        saveUiPreferences();
+        applyRagCollapseUi();
+      } else if (kind === 'git') {
+        state.gitControlsCollapsed = false;
+        state.gitStatusCollapsed = false;
+        saveUiPreferences();
+        applyGitCollapseUi();
+      }
+      focusContextSection(kind);
     }
 
     function applyRouterDebugToggleUi() {
@@ -146,6 +176,13 @@
       }
     }
 
+    function applyContextRailUi() {
+      if (elements.panelContext) {
+        elements.panelContext.classList.toggle('collapsed', !!state.contextRailCollapsed);
+      }
+      document.body.classList.toggle('ct-context-collapsed', !!state.contextRailCollapsed);
+    }
+
     function loadUiPreferences() {
       try {
         const raw = localStorage.getItem('coding-terminal-ui');
@@ -168,6 +205,9 @@
         }
         if (typeof prefs.gitStatusCollapsed === 'boolean') {
           state.gitStatusCollapsed = prefs.gitStatusCollapsed;
+        }
+        if (typeof prefs.contextRailCollapsed === 'boolean') {
+          state.contextRailCollapsed = prefs.contextRailCollapsed;
         }
         if (typeof prefs.rlmAssisted === 'boolean') {
           state.rlmAssisted = prefs.rlmAssisted;
@@ -210,6 +250,7 @@
           ragCollapsed: state.ragCollapsed,
           gitControlsCollapsed: state.gitControlsCollapsed,
           gitStatusCollapsed: state.gitStatusCollapsed,
+          contextRailCollapsed: state.contextRailCollapsed,
           rlmAssisted: state.rlmAssisted,
           rlmIncludeSharedAttachments: state.rlmIncludeSharedAttachments,
           rlmProfile: state.rlmProfile,
@@ -226,11 +267,14 @@
       handleHeaderRagClick,
       handleHeaderGitClick,
       handleHeaderSettingsClick,
+      handleContextRailToggle,
+      handleContextRailSelect,
       applyRouterDebugToggleUi,
       addRouterDebugEntry,
       renderRouterDebugPanel,
       applyRagCollapseUi,
       applyGitCollapseUi,
+      applyContextRailUi,
       loadUiPreferences,
       saveUiPreferences
     };

@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 'use strict';
 
@@ -24,10 +24,10 @@ function registerMoeChatWindowHandlers(ipcMain, deps = {}) {
       const chatBounds = getSafeWindowBounds({
         screenRef: screen,
         referenceWindow: openerWindow,
-        width: 800,
-        height: 600,
-        minWidth: 500,
-        minHeight: 400,
+        width: 1200,
+        height: 900,
+        minWidth: 750,
+        minHeight: 600,
         includePosition: false
       });
       moeChatWindow = new BrowserWindow({

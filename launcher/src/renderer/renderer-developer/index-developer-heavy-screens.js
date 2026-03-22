@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * Injects heavy screen markup for Binary Manager and Compile Product.
@@ -11,7 +11,7 @@
   'use strict';
   const HEAVY_SCREENS_HTML = `<div id="binary-manager" class="screen">
         <div class="screen-header">
-          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <button class="btn-back" onclick="showScreen('model-browser')">← Back</button>
           <h2>Binary Manager</h2>
         </div>
         

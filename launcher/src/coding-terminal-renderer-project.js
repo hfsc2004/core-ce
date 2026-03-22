@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * PSF Coding Terminal - Renderer Project Module
@@ -47,7 +47,7 @@
       if (!elements.btnProjectRootTop) return;
       const pathValue = String(state.projectPath || '').trim();
       if (!pathValue) {
-        elements.btnProjectRootTop.textContent = 'Project Root';
+        elements.btnProjectRootTop.textContent = 'Project';
         elements.btnProjectRootTop.title = 'Set Project Root (required for authoritative file access)';
         elements.btnProjectRootTop.classList.add('project-root-required');
         return;
@@ -57,7 +57,7 @@
       const normalized = pathValue.replace(/\\/g, '/');
       const parts = normalized.split('/').filter(Boolean);
       const name = parts.length > 0 ? parts[parts.length - 1] : normalized;
-      elements.btnProjectRootTop.textContent = `Project Root: ${name}`;
+      elements.btnProjectRootTop.textContent = `Project: ${name}`;
       elements.btnProjectRootTop.title = `Project Root: ${pathValue}`;
     }
 

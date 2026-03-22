@@ -132,33 +132,93 @@ function renderMoePipeline() {
   // Empty pipeline but models exist
   if (moeItems.length === 0) {
     return `
-      <div style="text-align: center; padding: 60px 20px; background: ${theme.accentLight}; border: 2px dashed ${theme.accent}; border-radius: 10px;">
-        <div style="font-size: 48px; margin-bottom: 15px;">🧠</div>
-        <h3 style="color: ${theme.accent}; margin-bottom: 10px;">Build Your Agent Pipeline</h3>
-        <p style="color: #888; margin-bottom: 25px; max-width: 500px; margin-left: auto; margin-right: auto;">
-          Create a MoE/IRG pipeline by adding Agents, Channels, Gateways, and Bindings.<br>
-          Agents are LLM-powered roles. Channels connect them. Gateways handle I/O. Bindings define runtime variables.
-        </p>
-        <p style="color: ${theme.success}; font-size: 13px; margin-bottom: 20px;">
-          ✓ ${downloadedModels.length} model${downloadedModels.length !== 1 ? 's' : ''} ready for use
-        </p>
-        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-          <button onclick="addMoeGateway()" 
-                  style="padding: 12px 24px; background: rgba(0,255,136,0.2); border: 2px solid ${theme.success}; border-radius: 8px; color: ${theme.success}; cursor: pointer; font-size: 14px;">
-            📡 Add Input Gateway
-          </button>
-          <button onclick="addMoeAgent()" 
-                  style="padding: 12px 24px; background: ${theme.accentMedium}; border: 2px solid ${theme.accent}; border-radius: 8px; color: ${theme.accent}; cursor: pointer; font-size: 14px;">
-            🤖 Add First Agent
-          </button>
-          <button onclick="addMoeBindings()" 
-                  style="padding: 12px 24px; background: rgba(255,255,255,0.12); border: 2px solid #bbb; border-radius: 8px; color: #ddd; cursor: pointer; font-size: 14px;">
-            🧩 Add Bindings
-          </button>
-          <button onclick="addMoeEndpointRegistry()"
-                  style="padding: 12px 24px; background: rgba(79,70,229,0.2); border: 2px solid #818cf8; border-radius: 8px; color: #c7d2fe; cursor: pointer; font-size: 14px;">
-            🧭 Add Endpoint Registry
-          </button>
+      <div style="position:relative; min-height: 360px; border:1px dashed rgba(88,166,255,0.18); border-radius:8px; overflow:hidden; background:#0c1520; display:flex; align-items:center; justify-content:center; padding:40px 24px;">
+        <svg viewBox="0 0 800 340" fill="none" preserveAspectRatio="xMidYMid slice"
+             style="position:absolute; inset:0; width:100%; height:100%; opacity:0.18;">
+          <line x1="0" y1="80" x2="800" y2="80" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="6 4"/>
+          <line x1="0" y1="170" x2="800" y2="170" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="6 4"/>
+          <line x1="0" y1="260" x2="800" y2="260" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="6 4"/>
+
+          <line x1="120" y1="0" x2="120" y2="340" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="6 4"/>
+          <line x1="280" y1="0" x2="280" y2="340" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="6 4"/>
+          <line x1="440" y1="0" x2="440" y2="340" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="6 4"/>
+          <line x1="600" y1="0" x2="600" y2="340" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="6 4"/>
+
+          <rect x="60" y="50" width="120" height="60" rx="4" stroke="#3fb950" stroke-width="1" fill="none"/>
+          <line x1="75" y1="72" x2="125" y2="72" stroke="#3fb950" stroke-width="0.8"/>
+          <line x1="75" y1="84" x2="155" y2="84" stroke="#3fb950" stroke-width="0.8"/>
+          <text x="90" y="67" font-family="JetBrains Mono" font-size="8" fill="#3fb950">Gateway</text>
+
+          <rect x="220" y="140" width="120" height="60" rx="4" stroke="#22c5c2" stroke-width="1" fill="none"/>
+          <text x="248" y="167" font-family="JetBrains Mono" font-size="8" fill="#22c5c2">Agent</text>
+          <line x1="235" y1="175" x2="315" y2="175" stroke="#22c5c2" stroke-width="0.8"/>
+          <circle cx="252" cy="182" r="3" stroke="#22c5c2" stroke-width="0.8" fill="none"/>
+
+          <rect x="390" y="50" width="120" height="60" rx="4" stroke="#d2991e" stroke-width="1" fill="none"/>
+          <text x="415" y="67" font-family="JetBrains Mono" font-size="8" fill="#d2991e">Bindings</text>
+          <line x1="405" y1="75" x2="490" y2="75" stroke="#d2991e" stroke-width="0.8"/>
+          <line x1="405" y1="84" x2="465" y2="84" stroke="#d2991e" stroke-width="0.8"/>
+          <line x1="405" y1="93" x2="480" y2="93" stroke="#d2991e" stroke-width="0.8"/>
+
+          <rect x="550" y="140" width="120" height="60" rx="4" stroke="#f0883e" stroke-width="1" fill="none"/>
+          <text x="568" y="167" font-family="JetBrains Mono" font-size="8" fill="#f0883e">Endpoint</text>
+          <circle cx="610" cy="183" r="8" stroke="#f0883e" stroke-width="0.8" fill="none"/>
+          <circle cx="610" cy="183" r="3" stroke="#f0883e" stroke-width="0.8" fill="none"/>
+
+          <path d="M180,80 L220,80 L220,140" stroke="#58a6ff" stroke-width="0.8" fill="none"/>
+          <path d="M340,170 L390,170 L390,80" stroke="#58a6ff" stroke-width="0.8" fill="none"/>
+          <path d="M510,80 L550,80 L550,140" stroke="#58a6ff" stroke-width="0.8" fill="none"/>
+          <path d="M280,200 L390,200 L390,260 L670,260 L670,200 L670,170" stroke="#58a6ff" stroke-width="0.8" fill="none" stroke-dasharray="4 3"/>
+
+          <circle cx="220" cy="80" r="2.5" fill="#58a6ff"/>
+          <circle cx="390" cy="80" r="2.5" fill="#58a6ff"/>
+          <circle cx="550" cy="80" r="2.5" fill="#58a6ff"/>
+          <circle cx="390" cy="170" r="2.5" fill="#58a6ff"/>
+
+          <polyline points="170,77 180,80 170,83" stroke="#58a6ff" stroke-width="0.8" fill="none"/>
+          <polyline points="337,167 347,170 337,173" stroke="#58a6ff" stroke-width="0.8" fill="none"/>
+
+          <path d="M20,20 L20,35 M20,20 L35,20" stroke="#58a6ff" stroke-width="0.8"/>
+          <path d="M780,20 L780,35 M780,20 L765,20" stroke="#58a6ff" stroke-width="0.8"/>
+          <path d="M20,320 L20,305 M20,320 L35,320" stroke="#58a6ff" stroke-width="0.8"/>
+          <path d="M780,320 L780,305 M780,320 L765,320" stroke="#58a6ff" stroke-width="0.8"/>
+
+          <text x="22" y="16" font-family="JetBrains Mono" font-size="7" fill="#58a6ff">0,0</text>
+          <text x="730" y="16" font-family="JetBrains Mono" font-size="7" fill="#58a6ff">800,0</text>
+        </svg>
+
+        <div style="position:relative; z-index:2; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px;">
+          <div style="font-size:18px; font-weight:600; color:${theme.accent}; letter-spacing:0.02em;">Build Your Agent Pipeline</div>
+          <div style="font-size:12px; color:#8b949e; line-height:1.7; max-width:520px;">
+            Create a Mixture of Experts/Industrial Reflex Gateway pipeline by adding Agents, Channels, Gateways, and Bindings.<br>
+            Agents are Large Language Model-powered roles. Channels connect them. Gateways handle input and output. Bindings define runtime variables.
+          </div>
+          <div style="font-size:11px; color:${theme.success}; font-family:'JetBrains Mono',monospace;">
+            ✓ ${downloadedModels.length} model${downloadedModels.length !== 1 ? 's' : ''} ready for use
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px;">
+            <button onclick="addMoeGateway()"
+                    style="display:flex; align-items:center; gap:7px; padding:9px 18px; border:1px solid rgba(63,185,80,0.4); border-radius:6px; background:transparent; color:${theme.success}; cursor:pointer; font-size:12px; font-weight:500;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="${theme.success}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="11" height="7" rx="1.5"/><line x1="3.5" y1="6" x2="7" y2="6"/><line x1="3.5" y1="8.5" x2="9.5" y2="8.5"/></svg>
+              Add Input Gateway
+            </button>
+            <button onclick="addMoeAgent()"
+                    style="display:flex; align-items:center; gap:7px; padding:9px 18px; border:1px solid rgba(34,197,194,0.4); border-radius:6px; background:transparent; color:#22c5c2; cursor:pointer; font-size:12px; font-weight:500;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#22c5c2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="5" r="2.8"/><path d="M1,12 Q1,9 6.5,9 Q12,9 12,12"/></svg>
+              Add First Agent
+            </button>
+            <button onclick="addMoeBindings()"
+                    style="display:flex; align-items:center; gap:7px; padding:9px 18px; border:1px solid rgba(210,153,34,0.4); border-radius:6px; background:transparent; color:${theme.warning}; cursor:pointer; font-size:12px; font-weight:500;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="${theme.warning}" stroke-width="1.7" stroke-linecap="round"><path d="M3,6.5 C3,4.5 10,4.5 10,6.5 C10,8.5 3,8.5 3,6.5Z"/><line x1="1" y1="6.5" x2="3" y2="6.5"/><line x1="10" y1="6.5" x2="12" y2="6.5"/></svg>
+              Add Bindings
+            </button>
+            <button onclick="addMoeEndpointRegistry()"
+                    style="display:flex; align-items:center; gap:7px; padding:9px 18px; border:1px solid rgba(240,136,62,0.4); border-radius:6px; background:transparent; color:#f0883e; cursor:pointer; font-size:12px; font-weight:500;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#f0883e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="2"/><circle cx="6.5" cy="6.5" r="5.5"/><line x1="6.5" y1="1" x2="6.5" y2="4.5"/><line x1="6.5" y1="8.5" x2="6.5" y2="12"/><line x1="1" y1="6.5" x2="4.5" y2="6.5"/><line x1="8.5" y1="6.5" x2="12" y2="6.5"/></svg>
+              Add Endpoint Registry
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -173,20 +233,38 @@ function renderMoePipeline() {
     </div>
     
     <!-- Pipeline Legend -->
-    <div style="margin-top: 12px; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
-      <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-        <span style="color: #888; font-size: 12px;"><span style="color: ${theme.accent};">🤖 Agent</span> = LLM Role</span>
-        <span style="color: #888; font-size: 12px;"><span style="color: #ffa500;">🔗 Channel</span> = Connection</span>
-        <span style="color: #888; font-size: 12px;"><span style="color: ${theme.success};">📡 Gateway</span> = I/O Point</span>
-        <span style="color: #888; font-size: 12px;"><span style="color: #ddd;">🧩 Bindings</span> = Runtime Variables</span>
-        <span style="color: #888; font-size: 12px;"><span style="color: #a5b4fc;">🧭 Endpoint Registry</span> = Distributed Worker Routing</span>
+    <div style="margin-top: 12px; padding: 6px 2px 2px; border-radius: 8px;">
+      <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
+          <div style="width:10px; height:10px; border-radius:2px; background:rgba(63,185,80,0.25); border:1px solid #3fb950;"></div>
+          Gateway - I/O Point
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
+          <div style="width:10px; height:10px; border-radius:2px; background:rgba(210,153,34,0.25); border:1px solid #d2991e;"></div>
+          Bindings - Runtime Variables
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
+          <div style="width:10px; height:10px; border-radius:2px; background:rgba(88,166,255,0.25); border:1px solid #58a6ff;"></div>
+          Channel - Connection
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
+          <div style="width:10px; height:10px; border-radius:2px; background:rgba(56,189,248,0.25); border:1px solid #38bdf8;"></div>
+          Agent - LLM Role
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
+          <div style="width:10px; height:10px; border-radius:2px; background:rgba(240,136,62,0.25); border:1px solid #f0883e;"></div>
+          Endpoint Registry - Distributed Worker Routing
+        </div>
       </div>
     </div>
 
-    <div id="moe-deploy-status-panel" style="margin-top: 12px; padding: 10px 12px; background: rgba(0,0,0,0.22); border: 1px solid #2f3b50; border-radius: 8px;">
+    <div id="moe-deploy-status-panel" style="margin-top: 12px; padding: 9px 14px; background: #111c2a; border: 1px solid rgba(139,148,158,0.12); border-radius: 6px;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;">
-        <strong style="color:${theme.accent}; font-size:13px;">📊 Deployment Status</strong>
-        <span id="moe-deploy-status-summary" style="color:${theme.warning}; font-size:14px; font-weight:700; letter-spacing:0.2px;">Idle</span>
+        <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#8b949e; font-weight:500;">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#484f58" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="1" width="11" height="11" rx="2"></rect><line x1="4" y1="5" x2="9" y2="5"></line><line x1="4" y1="8" x2="7" y2="8"></line></svg>
+          Deployment Status
+        </div>
+        <span id="moe-deploy-status-summary" style="font-size:10px; color:#484f58; border:1px solid rgba(139,148,158,0.18); border-radius:3px; padding:2px 8px; letter-spacing:0.1em;">IDLE</span>
       </div>
       <div id="moe-deploy-status-body" style="max-height:150px; overflow:auto; color:#9fb2cc; font-size:12px; line-height:1.45;">
         <div>No deployment activity yet.</div>

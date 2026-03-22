@@ -1,5 +1,5 @@
 *Version: 1.1.2*
-*Copyright © 2026 Global Science Network*
+*Copyright © 2026 Pseudo SF*
 # Provenance Matrix
 
 Last updated: February 14, 2026
@@ -8,7 +8,7 @@ Last updated: February 14, 2026
 Track ownership provenance per path so IP claims, attribution, and release compliance stay consistent.
 
 ## Status Keys
-- `PSF` = Original work owned by Global Science Network
+- `PSF` = Original work owned by Pseudo SF
 - `Third-Party` = Owned by external party; used under external license
 - `Mixed` = Third-party base with PSF modifications
 - `Generated` = Tool-generated artifact (ownership/license follows generator/input terms)

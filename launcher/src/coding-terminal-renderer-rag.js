@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 /**
  * PSF Coding Terminal - Renderer RAG Module
@@ -37,6 +37,7 @@
           label: activeConfigBucketId ? (config?.ragBucketName || activeConfigBucketId) : (active?.label || 'Auto (Project)')
         };
         renderRagBucketSelect();
+        updateHeaderRagButton();
       } catch (err) {
         console.warn('[CodingTerminal] RAG bucket refresh error:', err.message);
       }
@@ -58,6 +59,16 @@
       elements.ragBucketSelect.value = activeId;
     }
 
+    function updateHeaderRagButton() {
+      if (!elements.btnRagTop) return;
+      const activeLabel = String(state.ragActiveBucket?.label || 'Auto').trim() || 'Auto';
+      const activeId = String(state.ragActiveBucket?.id || '').trim();
+      elements.btnRagTop.textContent = `RAG: ${activeLabel}`;
+      elements.btnRagTop.title = activeId
+        ? `Active RAG folder: ${activeLabel} (${activeId})\nClick to change`
+        : `Active RAG folder: ${activeLabel}\nClick to change`;
+    }
+
     async function handleSelectRagBucket() {
       const selectedId = String(elements.ragBucketSelect?.value || '').trim();
       try {
@@ -77,6 +88,53 @@
         console.error('[CodingTerminal] Select RAG bucket error:', err);
         api.addSystemMessage(`RAG bucket select error: ${err.message}`);
       }
+    }
+
+    async function handleSelectRagBucketFromHeader() {
+      const options = [
+        { id: '', label: 'Auto (Project Bucket)' },
+        ...((state.ragBuckets || [])
+          .filter((bucket) => bucket?.id)
+          .map((bucket) => ({
+            id: String(bucket.id),
+            label: String(bucket.label || bucket.id)
+          })))
+      ];
+      if (options.length === 0) return;
+
+      const activeId = String(state.ragActiveBucket?.id || '').trim();
+      let defaultIndex = options.findIndex((opt) => String(opt.id) === activeId);
+      if (defaultIndex < 0) defaultIndex = 0;
+      const promptLines = [
+        'Select active RAG folder:',
+        ...options.map((opt, idx) => `${idx}. ${opt.label}${opt.id ? ` (${opt.id})` : ''}`)
+      ];
+      const raw = await api.promptText(promptLines.join('\n'), String(defaultIndex));
+      if (raw == null) return;
+      const input = String(raw).trim();
+      if (!input) return;
+
+      let selected = null;
+      if (/^\d+$/.test(input)) {
+        const idx = Number(input);
+        if (idx >= 0 && idx < options.length) selected = options[idx];
+      }
+      if (!selected) {
+        const normalizedInput = input.toLowerCase();
+        selected = options.find((opt) =>
+          String(opt.id).toLowerCase() === normalizedInput
+          || String(opt.label).toLowerCase() === normalizedInput
+        ) || null;
+      }
+      if (!selected) {
+        api.addSystemMessage(`Invalid RAG folder selection: ${input}`);
+        return;
+      }
+
+      if (elements.ragBucketSelect) {
+        elements.ragBucketSelect.value = selected.id;
+      }
+      await handleSelectRagBucket();
     }
 
     async function handleCreateRagBucket() {
@@ -433,8 +491,10 @@
 
     return {
       refreshRagBuckets,
+      updateHeaderRagButton,
       renderRagBucketSelect,
       handleSelectRagBucket,
+      handleSelectRagBucketFromHeader,
       handleCreateRagBucket,
       handleDeleteRagBucket,
       refreshRagSources,

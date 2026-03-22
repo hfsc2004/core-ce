@@ -1,7 +1,7 @@
 /**
  *
  * @version 1.1.2 - March 5, 2026
- * @copyright 2026 Global Science Network
+ * @copyright 2026 Pseudo SF
  */
 
 function renderBindingsRow(bindings, index) {
@@ -22,7 +22,10 @@ function renderBindingsRow(bindings, index) {
         <span onclick="event.stopPropagation(); toggleMoeExpand('${bindings.id}')"
               style="color: #ddd; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>
         ${editMode ? `<span class="drag-handle" style="color: #ddd; cursor: grab;">⋮⋮</span>` : ''}
-        <span style="font-size: 18px;">🧩</span>
+        <span style="color: #ddd; font-weight: bold; min-width: 30px; text-align: center;">${index + 1}</span>
+        <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(210,153,34,0.15);">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d2991e" stroke-width="1.8" stroke-linecap="round"><path d="M4,8 C4,5.5 12,5.5 12,8 C12,10.5 4,10.5 4,8Z"/><line x1="1" y1="8" x2="4" y2="8"/><line x1="12" y1="8" x2="15" y2="8"/></svg>
+        </span>
         <span onclick="event.stopPropagation(); promptRenameMoeItem('${bindings.id}')" onmousedown="event.stopPropagation();"
               style="color:#fff; font-weight:bold; font-size:14px; min-width:200px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
               onmouseover="this.style.borderBottomColor='#ddd'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(bindings.name || '')}</span>
@@ -32,7 +35,7 @@ function renderBindingsRow(bindings, index) {
           <span style="color: #888; font-size: 11px;">Enabled</span>
         </label>
         <button onclick="event.stopPropagation(); deleteMoeItem('${bindings.id}')"
-                style="padding: 4px 8px; background: transparent; border: 1px solid ${theme.error}; border-radius: 4px; color: ${theme.error}; cursor: pointer; font-size: 11px;">🗑️</button>
+                style="padding: 4px 8px; background: transparent; border: 1px solid ${theme.error}; border-radius: 4px; color: ${theme.error}; cursor: pointer; font-size: 11px;">✕</button>
       </div>
       ${isExpanded ? renderBindingsDetails(bindings) : ''}
     </div>

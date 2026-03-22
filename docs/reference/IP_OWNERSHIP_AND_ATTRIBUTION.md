@@ -1,11 +1,11 @@
 *Version: 1.1.2*
-*Copyright © 2026 Global Science Network*
+*Copyright © 2026 Pseudo SF*
 # IP Ownership and Attribution Policy
 
 Last updated: February 14, 2026
 
 ## Purpose
-This document clarifies what Global Science Network (PSF) owns in this project and what remains owned by third parties.
+This document clarifies what Pseudo SF (PSF) owns in this project and what remains owned by third parties.
 
 ## Ownership Statement
 PSF claims ownership of original work product created for this software project, including:
