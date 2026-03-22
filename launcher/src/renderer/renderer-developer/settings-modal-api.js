@@ -40,6 +40,7 @@ const __toggleScmAllFilesPanel = (typeof toggleScmAllFilesPanel === 'function') 
 window.SettingsModal = {
   // Core
   show: showSettingsModal,
+  toggle: toggleSettingsModal,
   close: closeSettingsModal,
   switchTab: switchSettingsTab,
 
@@ -119,6 +120,7 @@ window.SettingsModal = {
 
 // Backward compatibility for older inline/global callers
 window.showSettingsModal = window.SettingsModal.show;
+window.toggleSettingsModal = window.SettingsModal.toggle;
 window.closeSettingsModal = window.SettingsModal.close;
 window.switchSettingsTab = window.SettingsModal.switchTab;
 window.saveHuggingFaceToken = window.SettingsModal.saveToken;
