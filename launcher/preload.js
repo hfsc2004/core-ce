@@ -248,7 +248,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getModelOrdering: () => ipcRenderer.invoke('get-model-ordering'),
   saveModelOrdering: (orderingData) => ipcRenderer.invoke('save-model-ordering', orderingData),
   
-  // MoE Pipeline APIs (Enterprise Edition)
+  // MoE Pipeline APIs (Core - Community Edition)
   deployMoEPipeline: (pipelineConfig) => ipcRenderer.invoke('moe-deploy-pipeline', pipelineConfig),
   getMoEStatus: () => ipcRenderer.invoke('moe-get-status'),
   teardownMoEPipeline: () => ipcRenderer.invoke('moe-teardown-pipeline'),

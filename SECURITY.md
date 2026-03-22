@@ -1,7 +1,7 @@
 # Security Policy
 
 ## Supported Tracks
-- Enterprise Edition (this repository): best-effort security fixes.
+- Core - Community Edition (this repository): best-effort security fixes.
 - Commercial Data Center packaging and private safety modules: handled under commercial support channels.
 
 ## Reporting a Vulnerability

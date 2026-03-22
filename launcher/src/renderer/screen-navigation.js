@@ -7,8 +7,8 @@
 // PSF OFFLINE ARCHIVE COLLECTION
 // Renderer - Screen Navigation
 // ============================================================================
-// Shared by both Standard and Developer Editions
-// Developer Edition extends this with additional screen handlers
+// Shared by both Standard and Community Editions
+// Core-CE extends this with additional screen handlers
 // ============================================================================
 
 function showScreen(screenId) {
@@ -21,7 +21,7 @@ function showScreen(screenId) {
   if (screenId === 'hardware-detect') {
     detectHardware();
   } else if (screenId === 'model-browser') {
-    // Developer Edition uses MoE-style catalog browser, Standard uses card grid
+    // Core-CE uses MoE-style catalog browser, Standard uses card grid
     if (typeof loadCatalogBrowser === 'function') {
       loadCatalogBrowser();
     } else {
@@ -34,7 +34,7 @@ function showScreen(screenId) {
       populateTerminalModels();
     }
   }
-  // Developer Edition screen handlers (if functions exist)
+  // Core-CE screen handlers (if functions exist)
   if (screenId === 'catalog-editor' && typeof loadCatalogEditor === 'function') {
     loadCatalogEditor();
   } else if (screenId === 'package-manager' && typeof loadPackageManager === 'function') {

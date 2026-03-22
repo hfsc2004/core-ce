@@ -2,7 +2,7 @@ REM @version 1.1.2 - March 5, 2026
 REM @copyright 2026 Global Science Network
 @echo off
 echo ============================================================
-echo PSF Robotics Archive Collection - Developer Edition
+echo PSF Robotics Archive Collection - Core-CE
 echo First Run Setup
 echo ============================================================
 echo.

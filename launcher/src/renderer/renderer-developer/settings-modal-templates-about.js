@@ -13,7 +13,7 @@ function getAboutTabHTML() {
     <div class="about-header">
       <h3 id="settings-about-product-name">Pseudo Science Fiction - Core</h3>
       <div class="version" id="settings-about-version">Version loading...</div>
-      <div class="edition">ENTERPRISE EDITION</div>
+      <div class="edition">CORE-CE</div>
     </div>
     
     <div class="about-section">
@@ -47,7 +47,7 @@ function getAboutTabHTML() {
       <a id="settings-about-company-link" href="https://pseudosf.com" target="_blank" rel="noopener" style="color:var(--psf-footer-link, #ffffff); text-decoration:none; font-weight:700;">
         <span id="settings-about-company-name">Pseudo Science Fiction</span>
       </a>
-      - <span id="settings-about-security-tag">ENTERPRISE OSS</span>
+      - <span id="settings-about-security-tag">CORE-CE</span>
       <span id="settings-about-proof-tag"> - PROOF:UNVERIFIED</span>
     </div>
   `;

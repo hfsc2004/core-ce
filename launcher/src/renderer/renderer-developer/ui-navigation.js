@@ -11,7 +11,7 @@ function showScreen(screenId) {
     screenId = 'main-menu';
   }
   if (screenId === 'compile-project') {
-    // Compile Product is intentionally disabled in Enterprise OSS.
+    // Compile Product is intentionally disabled in Core-CE.
     screenId = 'main-menu';
   }
   document.querySelectorAll('.screen').forEach(screen => {

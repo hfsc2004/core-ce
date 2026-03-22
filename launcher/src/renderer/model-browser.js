@@ -7,7 +7,7 @@
 // PSF OFFLINE ARCHIVE COLLECTION
 // Renderer - Model Browser
 // ============================================================================
-// Shared by both Standard and Developer Editions
+// Shared by both Standard and Community Editions
 // ============================================================================
 
 const MODEL_BROWSER_SPLIT_FILE_PATTERN = /-(\d{5})-of-(\d{5})\.gguf$/i;

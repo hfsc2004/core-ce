@@ -420,7 +420,7 @@
 | `security-layer/security-layer.js` | PSF Security Layer - Entry Point |
 | `security-layer/security-mac.js` | PSF Security Layer - MAC (Data Center/Government model) |
 | `security-layer/security-passthrough.js` | PSF Security Layer - Passthrough (Standard Edition) |
-| `security-layer/security-rbac.js` | PSF Security Layer - RBAC (Enterprise Edition) |
+| `security-layer/security-rbac.js` | PSF Security Layer - RBAC (Core - Community Edition) |
 
 ## Modules/session-manager-standard
 

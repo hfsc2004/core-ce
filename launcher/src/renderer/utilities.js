@@ -7,7 +7,7 @@
 // PSF OFFLINE ARCHIVE COLLECTION
 // Renderer - Utility Functions
 // ============================================================================
-// Shared by both Standard and Developer Editions
+// Shared by both Standard and Community Editions
 // ============================================================================
 
 function openDocs(file) {

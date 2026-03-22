@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * CATALOG BROWSER - Developer Edition Browse & Download
+ * CATALOG BROWSER - Core-CE Browse & Download
  * ============================================================================
  * 
  * Expandable/collapsible model list with Edit/Delete catalog actions and
@@ -42,7 +42,7 @@ window.catalogBrowserState = {
 // ============================================================================
 
 /**
- * Load and display the catalog browser (Developer Edition)
+ * Load and display the catalog browser (Core-CE)
  */
 async function loadCatalogBrowser() {
   const container = document.getElementById('model-grid');

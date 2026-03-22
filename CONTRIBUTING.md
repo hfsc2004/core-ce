@@ -1,7 +1,7 @@
 # Contributing
 
 ## Scope
-This repository hosts the Enterprise Edition code line for PSF Core.
+This repository hosts the Core - Community Edition code line for PSF Core.
 
 ## Before You Open a PR
 1. Create a feature/fix branch from `master`.

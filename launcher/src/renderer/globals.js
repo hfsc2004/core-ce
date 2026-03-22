@@ -7,7 +7,7 @@
 // PSF OFFLINE ARCHIVE COLLECTION
 // Renderer - Global State
 // ============================================================================
-// Shared by both Standard and Developer Editions
+// Shared by both Standard and Community Editions
 // ============================================================================
 
 // Store global state

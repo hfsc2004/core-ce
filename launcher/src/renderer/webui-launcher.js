@@ -7,7 +7,7 @@
 // PSF OFFLINE ARCHIVE COLLECTION
 // Renderer - WebUI Launcher
 // ============================================================================
-// Shared by both Standard and Developer Editions
+// Shared by both Standard and Community Editions
 // ============================================================================
 
 /**
@@ -57,7 +57,7 @@ async function launchInterface(type) {
 }
 
 /**
- * Legacy function for Developer Edition compatibility
+ * Legacy function for Core-CE compatibility
  */
 async function launchWebUI(type) {
   try {

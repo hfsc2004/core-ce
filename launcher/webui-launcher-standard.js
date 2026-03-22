@@ -7,7 +7,7 @@
  * webui-launcher-standard.js
  * 
  * Standalone Open WebUI launcher for Standard Edition.
- * Contains proven launch logic extracted from Developer Edition's webui-manager-linux-x64.js
+ * Contains proven launch logic extracted from Core-CE's webui-manager-linux-x64.js
  * 
  * This module is self-contained with no external PSF module dependencies.
  */

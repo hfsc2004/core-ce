@@ -27,18 +27,18 @@ The PSF Offline Archive Collection is a commercial Electron-based desktop applic
 - **Platforms**: Windows, macOS, Linux
 - **Architectures**: x64, ARM64
 - **Features**: Ollama integration, GPU acceleration, Open WebUI, AnythingLLM
-- **Editions**: Enterprise Edition (factory tools) and Standard Edition (consumer products)
-- **NEW!**: Added Mixture of Experts to Enterprise Edition
+- **Editions**: Core - Community Edition (factory tools) and Standard Edition (consumer products)
+- **NEW!**: Added Mixture of Experts to Core - Community Edition
 
 ### Key Architectural Principles
 
-1. **Edition Compartmentalization**: Standard Edition (index.html + renderer/*.js) is completely separate from Enterprise Edition (index-enterprise.html + renderer-enterprise/*.js)
+1. **Edition Compartmentalization**: Standard Edition (index.html + renderer/*.js) is completely separate from Core - Community Edition (index-enterprise.html + renderer-enterprise/*.js)
 2. **Platform Dispatcher Pattern**: Core modules use dispatcher files that route to platform-specific implementations
 3. **Session Manager Authority**: `session-manager.js` is the sole authority for Ollama/WebUI/AnythingLLM session lifecycle
 4. **Port Pool Isolation**: Each service type has dedicated port ranges with dynamic allocation
 5. **IPC Separation**: Main process and renderer communicate exclusively via the preload bridge
 6. **IPC Handler Registry**: `ipc-handlers.js` centralizes 90% of IPC handlers (pass-through pattern)
-7. **Compile Manager**: Builds Standard Edition products from Enterprise Edition source (copies renderer/*.js, NOT renderer-enterprise/)
+7. **Compile Manager**: Builds Standard Edition products from Core - Community Edition source (copies renderer/*.js, NOT renderer-enterprise/)
 
 ---
 
@@ -106,7 +106,7 @@ The PSF Offline Archive Collection is a commercial Electron-based desktop applic
 ┌────────────────────────────────────────────│──┴───────────────────────────────────┘  │
 │                           RENDERER PROCESS └─────────────────────────────────────────┘
 │  ┌───────────────────────────────────────────────────────────────────────────────────────────┐
-│  │                   index-enterprise.html (Enterprise Edition)                                │
+│  │                   index-enterprise.html (Core - Community Edition)                                │
 │  │  ┌───────────────────────────────────────────────────────────────────────────────────────┐│
 │  │  │                         SCREENS (12)                                                  ││
 │  │  │  welcome-screen │ main-menu │ hardware-detect │ model-browser                         ││
@@ -364,7 +364,7 @@ const handlers = {
 
 ### index-enterprise.html (651 lines)
 
-Enterprise Edition HTML - loads 19 modular JavaScript files:
+Core - Community Edition HTML - loads 19 modular JavaScript files:
 
 ```html
 <!-- Script load order (critical) -->
@@ -387,7 +387,7 @@ Enterprise Edition HTML - loads 19 modular JavaScript files:
 <script src="renderer/renderer-enterprise/blob-mapper-ui.js"></script>
 ```
 
-### Enterprise Edition Renderer Module Responsibilities (18 files)
+### Core - Community Edition Renderer Module Responsibilities (18 files)
 
 | Module | Purpose |
 |--------|---------|
@@ -415,13 +415,13 @@ Enterprise Edition HTML - loads 19 modular JavaScript files:
 | File | Purpose |
 |------|---------|
 | `loading.html` | Loading splash screen for WebUI startup |
-| `model-editor.html` | Modal window for add/edit models (Enterprise Edition) |
+| `model-editor.html` | Modal window for add/edit models (Core - Community Edition) |
 | `terminal.html` | Ollama Terminal with xterm.js |
 | `model-editor-renderer.js` | Model editor form logic |
 | `terminal-renderer.js` | Terminal xterm.js integration |
-| `styles.css` | Enterprise Edition stylesheet |
+| `styles.css` | Core - Community Edition stylesheet |
 | `styles-standard.css` | Standard Edition stylesheet |
-| `filter-buttons.css` | Filter button styles (Enterprise Edition) |
+| `filter-buttons.css` | Filter button styles (Core - Community Edition) |
 
 ### Standard Edition Renderer Modules (9 files)
 
@@ -532,9 +532,9 @@ installation-manager-windows-arm64.js 5K Windows ARM64
 ```
 
 #### Compile Manager
-Builds **Standard Edition** products from Enterprise Edition source.
+Builds **Standard Edition** products from Core - Community Edition source.
 Copies: `index.html` + `styles-standard.css` + `renderer/*.js`
-Does NOT copy: Enterprise Edition files (index-enterprise.html, renderer-enterprise/)
+Does NOT copy: Core - Community Edition files (index-enterprise.html, renderer-enterprise/)
 
 ```
 compile-manager.js             1.5K   Dispatcher
@@ -768,7 +768,7 @@ Per-model configuration using Ollama's native Modelfile format, with registry in
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Browse & Download Models (Enterprise Edition)
+## Browse & Download Models (Core - Community Edition)
 
 ### Navigation Flow
 ```
@@ -936,15 +936,15 @@ package.json                  2K     NPM configuration
 
 ### UI HTML/CSS (7 files)
 ```
-index-enterprise.html          33K    Enterprise Edition (651 lines)
+index-enterprise.html          33K    Core - Community Edition (651 lines)
 index.html                    12K    Standard Edition UI
-index-enterprise.html          31K    Enterprise Edition UI
+index-enterprise.html          31K    Core - Community Edition UI
 loading.html                  2K     Loading splash
-model-editor.html             16K    Model editor modal (Enterprise Edition)
+model-editor.html             16K    Model editor modal (Core - Community Edition)
 terminal.html                 8K     Ollama terminal
-styles.css                    9.5K   Enterprise Edition stylesheet
+styles.css                    9.5K   Core - Community Edition stylesheet
 styles-standard.css           12K    Standard Edition stylesheet
-filter-buttons.css            1K     Filter button styles (Enterprise Edition)
+filter-buttons.css            1K     Filter button styles (Core - Community Edition)
 ```
 
 ### Renderer-Standard (9 files)
@@ -1087,7 +1087,7 @@ PSF.png                       8.5K
 | Electron Core | 3 | main.js, preload.js, package.json |
 | UI HTML/CSS | 8 | HTML pages + stylesheets |
 | Renderer-Standard | 9 | Standard Edition modules |
-| Renderer-Enterprise | 18 | Enterprise Edition modules |
+| Renderer-Enterprise | 18 | Core - Community Edition modules |
 | Additional Renderer | 2 | model-editor, terminal |
 | Dispatcher Modules | 56 | 7 x 8 platform implementations |
 | Binary Manager | 4 | Download coordination |

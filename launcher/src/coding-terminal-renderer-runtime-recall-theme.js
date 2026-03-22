@@ -140,7 +140,7 @@
       }
       if (elements.statusCopyright) {
         const versionTag = version ? `v${version}` : 'vUnknown';
-        elements.statusCopyright.textContent = `Copyright © ${year} Pseudo Science Fiction. All rights reserved. • Developer Edition ${versionTag}`;
+        elements.statusCopyright.textContent = `Copyright © ${year} Pseudo Science Fiction. All rights reserved. • Core-CE ${versionTag}`;
       }
     }
 

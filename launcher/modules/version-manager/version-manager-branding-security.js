@@ -73,7 +73,7 @@ function deriveSecurityProfile() {
   const fipsRequested = String(process.env.PSF_FIPS_MODE || '').trim().toLowerCase() === 'true';
   const provider = detectMacProvider();
 
-  let securityTag = 'ENTERPRISE OSS';
+  let securityTag = 'CORE-CE';
   if (edition === 'datacenter') {
     if (model === 'mac') {
       if (provider === 'SELINUX') securityTag = 'SEC:DATACENTER-HARDENED-RHEL';
@@ -88,11 +88,11 @@ function deriveSecurityProfile() {
     else securityTag = 'SEC:GOV-STIG-BASELINE';
   } else if (edition === 'enterprise' || edition === 'standard') {
     if (model === 'mac') {
-      if (provider === 'SELINUX') securityTag = 'SEC:ENTERPRISE-HARDENED-RHEL';
-      else if (provider === 'APPARMOR') securityTag = 'SEC:ENTERPRISE-HARDENED-DEBIAN';
-      else securityTag = 'SEC:ENTERPRISE-HARDENED';
+      if (provider === 'SELINUX') securityTag = 'CORE-CE-HARDENED-RHEL';
+      else if (provider === 'APPARMOR') securityTag = 'CORE-CE-HARDENED-DEBIAN';
+      else securityTag = 'CORE-CE-HARDENED';
     } else {
-      securityTag = 'ENTERPRISE OSS';
+      securityTag = 'CORE-CE';
     }
   }
 
