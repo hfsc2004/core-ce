@@ -1,5 +1,5 @@
 /**
- * PSF Security Layer - RBAC (Enterprise Edition)
+ * PSF Security Layer - RBAC (Core - Community Edition)
  * Role-Based Access Control for enterprise deployments
  * 
  * @module security-rbac
@@ -74,7 +74,7 @@ async function initialize() {
     }
   }
   
-  console.log('[Security:RBAC] Enterprise Edition initialized');
+  console.log('[Security:RBAC] Core - Community Edition initialized');
 }
 
 /**

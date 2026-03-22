@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>PSF Core (Enterprise Edition)</h1>
+  <h1>PSF Core (Community Edition)</h1>
   <img src="launcher/assets/PSF_Logo_SM.jpg" alt="PSF Core Logo" width="220">
 </div>
 
@@ -19,7 +19,7 @@ Supported hardware spans the full range of practical deployment: microcontroller
 
 Start by flashing a tri-color LED on a Pico with a breadboard. Scale to driving an ESP32 robot truck wirelessly from a number pad. The architecture handles both without changing your mental model.
 
-This repository hosts the **PSF Core Enterprise Edition** codebase for enterprise deployment, operations, and extension.
+This repository hosts the **PSF Core Community Edition** codebase for community deployment, operations, and extension.
 
 ## Screenshots + Quick Walkthrough
 
@@ -83,9 +83,9 @@ Instruction: Verify structured file block output (`###FILE:*`) to keep multi-fil
 - Commercial/private boundaries: see [`EDITION_LICENSE_MATRIX.md`](./docs/reference/EDITION_LICENSE_MATRIX.md)
 
 ## Edition Naming
-- Enterprise OSS: `Core v<version> ENTERPRISE OSS`
-- Enterprise Subscription: `Core v<version> ENTERPRISE SUBSCRIPTION`
-- Secure Enterprise profile: `Core v<version> SEC:ENTERPRISE`
+- Core-CE: `Core v<version> CORE-CE`
+- Community Subscription: `Core v<version> COMMUNITY SUBSCRIPTION`
+- Secure Community profile: `Core v<version> CORE-CE`
 
 Canonical naming and licensing policy is maintained in [`EDITION_LICENSE_MATRIX.md`](./docs/reference/EDITION_LICENSE_MATRIX.md).
 
@@ -97,7 +97,7 @@ Canonical naming and licensing policy is maintained in [`EDITION_LICENSE_MATRIX.
 - `install/` - one-time bootstrap scripts for OS-specific prerequisites
 - `robot/` - robot/relay firmware examples and pipeline profiles
 
-## Quick Start (Enterprise Edition)
+## Quick Start (Core - Community Edition)
 1. Run the one-time OS bootstrap from the `install/` directory.
 Linux/macOS:
 ```bash

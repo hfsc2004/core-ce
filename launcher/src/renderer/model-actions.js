@@ -7,7 +7,7 @@
 // PSF OFFLINE ARCHIVE COLLECTION
 // Renderer - Model Actions
 // ============================================================================
-// Shared by both Standard and Developer Editions
+// Shared by both Standard and Community Editions
 // ============================================================================
 
 // Regex pattern for split GGUF files (matches: model-00001-of-00005.gguf)

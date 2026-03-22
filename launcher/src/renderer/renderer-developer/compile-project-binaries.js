@@ -16,7 +16,7 @@
       try {
         console.log('[Compile Project] Checking compiled binary status...');
         if (!window.electronAPI || !window.electronAPI.getCompiledBinaryStatus) {
-          statusContainer.innerHTML = '<span style="color: #ff6b6b;">API not available (restart Developer Edition)</span>';
+          statusContainer.innerHTML = '<span style="color: #ff6b6b;">API not available (restart Core-CE)</span>';
           return;
         }
 

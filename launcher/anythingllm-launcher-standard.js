@@ -7,7 +7,7 @@
  * anythingllm-launcher-standard.js
  *
  * Standalone AnythingLLM launcher for Standard Edition.
- * Contains proven launch logic extracted from Developer Edition's anythingllm-manager-linux-x64.js
+ * Contains proven launch logic extracted from Core-CE's anythingllm-manager-linux-x64.js
  *
  * This module is self-contained with no external PSF module dependencies.
  */

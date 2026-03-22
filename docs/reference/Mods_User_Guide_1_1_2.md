@@ -9,7 +9,7 @@ Signature algorithm reference: Ed25519 (RFC 8032)
 https://datatracker.ietf.org/doc/html/rfc8032
 
 ## Before You Start
-1. Launch PSF Offline (Enterprise Edition).
+1. Launch PSF Offline (Core - Community Edition).
 2. Open `Settings`.
 3. Go to the `Mods` tab.
 

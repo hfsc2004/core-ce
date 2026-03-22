@@ -7,7 +7,7 @@
 // PSF OFFLINE ARCHIVE COLLECTION
 // Renderer - Hardware Detection
 // ============================================================================
-// Shared by both Standard and Developer Editions
+// Shared by both Standard and Community Editions
 // ============================================================================
 
 async function detectHardware() {

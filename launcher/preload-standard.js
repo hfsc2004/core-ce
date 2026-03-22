@@ -2,7 +2,7 @@
  * Pseudo Science Fiction - Standard Edition Preload Script
  * 
  * Exposes only the essential APIs needed for compiled Standard Edition products.
- * This is a subset of the full Developer Edition preload.js.
+ * This is a subset of the full Core-CE preload.js.
  * 
  * @version 1.1.2 - March 5, 2026
  */

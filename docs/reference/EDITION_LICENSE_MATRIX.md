@@ -1,26 +1,26 @@
 # Edition License Matrix
 
 ## Overview
-This repository is the PSF Core Enterprise OSS source line.
+This repository is the PSF Core Core-CE source line.
 
 ## Edition Labels and Display Strings
 Use these labels consistently in UI, packaging, docs, and telemetry.
 
-1. Enterprise OSS (free/open)
-- Display: `Core v<version> ENTERPRISE OSS`
-- Example: `Core v1.1.2 ENTERPRISE OSS`
+1. Core-CE (free/open)
+- Display: `Core v<version> CORE-CE`
+- Example: `Core v1.1.2 CORE-CE`
 - License: Apache-2.0
 - Purpose: open enterprise baseline, community use, self-hosted operation.
 
-2. Enterprise Subscription (commercial)
-- Display: `Core v<version> ENTERPRISE SUBSCRIPTION`
-- Example: `Core v1.1.2 ENTERPRISE SUBSCRIPTION`
+2. Community Subscription (commercial)
+- Display: `Core v<version> COMMUNITY SUBSCRIPTION`
+- Example: `Core v1.1.2 COMMUNITY SUBSCRIPTION`
 - License: Commercial EULA
 - Purpose: supported enterprise distribution, SLA/support channels, commercial features.
 
 3. Secure Enterprise Profile (hardened/compliance)
-- Display: `Core v<version> SEC:ENTERPRISE`
-- Example: `Core v1.1.2 SEC:ENTERPRISE`
+- Display: `Core v<version> CORE-CE`
+- Example: `Core v1.1.2 CORE-CE`
 - License: Commercial EULA + policy/compliance controls
 - Purpose: hardened profile for compliance-oriented deployments.
 
@@ -30,11 +30,11 @@ Use these labels consistently in UI, packaging, docs, and telemetry.
 - Keep `version`, `edition`, and `security profile` parseable as separate fields.
 
 ## Licensing Split
-1. Core / Enterprise OSS (this repo)
+1. Core / Core-CE (this repo)
 - License: Apache License 2.0
 - Purpose: open development platform, interfaces, tooling, and community-facing runtime pieces.
 
-2. Enterprise Subscription and secure commercial variants (separate distribution)
+2. Community Subscription and secure commercial variants (separate distribution)
 - License: Commercial EULA (separate terms)
 - Purpose: support-bound packaging, hardening automation, operational controls, and enterprise support artifacts.
 

@@ -137,7 +137,7 @@ async function copyAppFiles(fromPath, destAppDir, destSrcDir, destAssetsDir, pro
 }
 
 /**
- * Copy node_modules from Developer Edition to Standard Edition output
+ * Copy node_modules from Core-CE to Standard Edition output
  * 
  * This bundles the Electron runtime + native dependencies (better-sqlite3, node-pty)
  * directly into the product so no npm install is needed on the user's machine.

@@ -11,7 +11,7 @@
  *   - Identifier renaming (removes meaningful names)
  * 
  * Applied during "Compile Product" to Standard Edition files only.
- * Developer Edition remains unobfuscated for debugging.
+ * Core-CE remains unobfuscated for debugging.
  * 
  * Future considerations:
  *   - bytenode: Compile JS to V8 bytecode (even harder to reverse)
