@@ -3,13 +3,13 @@
  * @version 1.1.2 - March 5, 2026
  * @copyright 2026 Global Science Network
  */
-// PACKAGE MANAGER
+// GROUP MANAGER
 // ============================================================================
 
 // Listen for refresh events from model editor window
 if (window.electronAPI && window.electronAPI.onRefreshPackageManager) {
   window.electronAPI.onRefreshPackageManager(() => {
-    console.log('[Package Manager] Received refresh event from model editor');
+    console.log('[Group Manager] Received refresh event from model editor');
     loadPackageManager();
   });
 }
@@ -25,7 +25,7 @@ const {
 
 async function loadPackageManager() {
   const container = document.getElementById('package-manager-content');
-  container.innerHTML = '<div class="info-loading"><div class="spinner"></div><p>Loading packages...</p></div>';
+  container.innerHTML = '<div class="info-loading"><div class="spinner"></div><p>Loading groups...</p></div>';
   
   try {
     const [catalog, skuManifest] = await Promise.all([
@@ -37,8 +37,8 @@ async function loadPackageManager() {
     
     displayPackageManager(catalog);
   } catch (err) {
-    console.error('Failed to load packages:', err);
-    container.innerHTML = '<p style="color: #ff6b6b;">Failed to load packages. Check console for details.</p>';
+    console.error('Failed to load groups:', err);
+    container.innerHTML = '<p style="color: #ff6b6b;">Failed to load groups. Check console for details.</p>';
   }
 }
 
@@ -55,14 +55,14 @@ function displayPackageManager(catalog) {
   let html = `
     <div style="max-width: 1400px; margin: 0 auto;">
       <div style="background: var(--psf-accent-light, rgba(0,212,255,0.1)); border: 2px solid var(--psf-accent, #00d4ff); border-radius: 10px; padding: 20px; margin-bottom: 30px;">
-        <h3 style="color: var(--psf-accent, #00d4ff); margin-bottom: 10px;">📊 Package Statistics</h3>
+        <h3 style="color: var(--psf-accent, #00d4ff); margin-bottom: 10px;">📊 Group Statistics</h3>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 15px;">
           <div>
-            <p style="color: #aaa; font-size: 14px;">Total Collections</p>
+            <p style="color: #aaa; font-size: 14px;">Total Groups</p>
             <p style="color: var(--psf-accent, #00d4ff); font-size: 24px; font-weight: bold;">${collectionKeys.length}</p>
           </div>
           <div>
-            <p style="color: #aaa; font-size: 14px;">SKU Packages</p>
+            <p style="color: #aaa; font-size: 14px;">SKU Groups</p>
             <p style="color: var(--psf-accent, #00d4ff); font-size: 24px; font-weight: bold;">${skuCount}</p>
           </div>
           <div>
@@ -73,7 +73,7 @@ function displayPackageManager(catalog) {
       </div>
       
       <div style="margin-bottom: 20px;">
-        <input type="text" id="package-search" placeholder="🔍 Search collections..." 
+        <input type="text" id="package-search" placeholder="🔍 Search groups..." 
                onkeyup="filterPackages()" 
                style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid var(--psf-border, #0f3460); border-radius: 5px; color: #fff; font-size: 16px;">
       </div>
@@ -107,7 +107,7 @@ function createPackageRow(collectionKey, collection, skuDefinitions) {
           <div style="flex: 1;">
             <h4 style="color: var(--psf-accent, #00d4ff); margin-bottom: 5px;">${collection.name}</h4>
             <p style="color: #888; font-size: 14px; margin-bottom: 5px;">
-              Collection ID: ${collectionKey} • Drive Size: ${collection.drive_size || 'N/A'} • Models: ${modelCount}
+              Group ID: ${collectionKey} • Drive Size: ${collection.drive_size || 'N/A'} • Models: ${modelCount}
             </p>
             <p style="color: #aaa; font-size: 13px; margin-bottom: 10px;">${collection.description || 'No description'}</p>
             <div style="margin-top: 10px;">
@@ -176,7 +176,7 @@ function displayCatalogEditor(catalog) {
             <p style="color: var(--psf-accent, #00d4ff); font-size: 24px; font-weight: bold;">${allModels.length}</p>
           </div>
           <div>
-            <p style="color: #aaa; font-size: 14px;">Collections</p>
+            <p style="color: #aaa; font-size: 14px;">Groups</p>
             <p style="color: var(--psf-accent, #00d4ff); font-size: 24px; font-weight: bold;">${Object.keys(catalog.collections).length}</p>
           </div>
           <div>
@@ -210,7 +210,7 @@ function createModelRow(model) {
         <div style="flex: 1;">
           <h4 style="color: var(--psf-accent, #00d4ff); margin-bottom: 5px;">${model.name}</h4>
           <p style="color: #888; font-size: 14px; margin-bottom: 5px;">
-            ${sizeGB} GB • ${model.quantization || 'N/A'} • Collection: ${model.collectionName}
+            ${sizeGB} GB • ${model.quantization || 'N/A'} • Group: ${model.collectionName}
           </p>
           <p style="color: #aaa; font-size: 13px;">${model.description || 'No description'}</p>
         </div>
@@ -368,7 +368,7 @@ async function editModel(modelId, collectionKey) {
   const catalog = window.catalogData;
   const collection = catalog.collections[collectionKey];
   if (!collection) {
-    alert('Collection not found');
+    alert('Group not found');
     return;
   }
   

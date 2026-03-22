@@ -104,7 +104,7 @@
       <!-- Hardware Detection Screen -->
       <div id="hardware-detect" class="screen">
         <div class="screen-header">
-          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <button class="btn-back" onclick="showScreen('model-browser')">← Back</button>
           <h2>System Information</h2>
         </div>
         
@@ -155,10 +155,10 @@
       <!-- Catalog Editor Screen -->
       <div id="catalog-editor" class="screen">
         <div class="screen-header">
-          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
+          <button class="btn-back" onclick="showScreen('model-browser')">← Back</button>
           <h2>Catalog Editor</h2>
           <!-- Tool buttons -->
-          <button class="btn-secondary" onclick="showScreen('package-manager')">📦 Package Manager</button>
+          <button class="btn-secondary" onclick="showScreen('package-manager')">🗂️ Group Manager</button>
           <button class="btn-secondary" onclick="applyCatalogChanges()">✅ Apply Changes</button>
           <!-- Model operations -->
           <button class="btn-secondary" onclick="showImportDialog()">📥 Import Models</button>
@@ -173,18 +173,18 @@
         </div>
       </div>
 
-      <!-- Package Manager Screen -->
+      <!-- Group Manager Screen -->
       <div id="package-manager" class="screen">
         <div class="screen-header">
           <button class="btn-back" onclick="showScreen('catalog-editor')">← Back</button>
-          <h2>Package Manager</h2>
-          <button class="btn-primary" onclick="showAddCollectionForm()">+ Add New Collection</button>
+          <h2>Group Manager</h2>
+          <button class="btn-primary" onclick="showAddCollectionForm()">+ Add New Group</button>
         </div>
         
         <div id="package-manager-content">
           <div class="info-loading">
             <div class="spinner"></div>
-            <p>Loading packages...</p>
+            <p>Loading groups...</p>
           </div>
         </div>
       </div>

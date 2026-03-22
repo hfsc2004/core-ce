@@ -44,9 +44,8 @@
       "storage": "256GB",
       "price": 49.99,
       "collections": [
-        "quick-start-128gb",
-        "daily-driver-256gb",
-        "code-specialist-256gb"
+        "starter-fast",
+        "coding-agents"
       ]
     },
     "sku-002": {
@@ -59,11 +58,9 @@
       "storage": "512GB",
       "price": 89.99,
       "collections": [
-        "generalist-512gb",
-        "developer-512gb",
-        "researcher-512gb",
-        "uncensored-512gb",
-        "lightweight-max-512gb"
+        "general-chat",
+        "vision-multimodal",
+        "voice-audio"
       ]
     },
     "sku-003": {
@@ -76,9 +73,9 @@
       "storage": "1TB",
       "price": 149.99,
       "collections": [
-        "complete-archive-1tb",
-        "power-user-1tb",
-        "no-guardrails-1tb"
+        "research-lab",
+        "vision-multimodal",
+        "coding-agents"
       ]
     },
     "sku-004": {
