@@ -26,6 +26,9 @@ async function showSettingsModal(initialTab = 'huggingface') {
   const inlineSlideMode = !window.__SETTINGS_STANDALONE__ && Boolean(document.getElementById('main-content'));
   if (overlay && inlineSlideMode) {
     overlay.classList.add('settings-inline-slide');
+    const headerEl = document.querySelector('.app-header');
+    const headerBottom = headerEl ? Math.max(0, Math.round(headerEl.getBoundingClientRect().bottom)) : 0;
+    overlay.style.setProperty('--settings-inline-top', `${headerBottom}px`);
     requestAnimationFrame(() => overlay.classList.add('open'));
   }
   
@@ -40,6 +43,18 @@ async function showSettingsModal(initialTab = 'huggingface') {
   if (initialTab === 'system') {
     loadSystemInfo();
   }
+}
+
+/**
+ * Toggle settings modal open/closed
+ */
+function toggleSettingsModal(initialTab = 'huggingface') {
+  const overlay = document.getElementById('settings-modal-overlay');
+  if (overlay) {
+    closeSettingsModal();
+    return;
+  }
+  return showSettingsModal(initialTab);
 }
 
 /**

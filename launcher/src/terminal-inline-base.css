@@ -100,6 +100,30 @@ body {
   white-space: nowrap;
 }
 
+#header h2 .terminal-core-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin-right: 4px;
+  color: #e6edf3;
+  font-family: "Rajdhani", "Inter", "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+#header h2 .terminal-core-word {
+  font-size: 18px;
+}
+
+#header h2 .terminal-core-bracket {
+  color: var(--term-accent);
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1;
+}
+
 #header h2 svg {
   color: var(--term-accent);
   flex-shrink: 0;

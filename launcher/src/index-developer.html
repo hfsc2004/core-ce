@@ -30,7 +30,7 @@
       </div>
       
       <!-- Settings Button -->
-      <button id="header-settings-btn" class="header-settings-btn" onclick="window.SettingsModal?.show?.('huggingface')" title="Settings" style="display: flex;">
+      <button id="header-settings-btn" class="header-settings-btn" onclick="window.SettingsModal?.toggle?.('huggingface')" title="Settings" style="display: flex;">
         ···
       </button>
     </header>
@@ -157,7 +157,17 @@
       <div id="model-browser" class="screen">
         <div class="screen-header">
           <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
-          <h2>Browse & Download Models</h2>
+          <h2 style="display:flex; align-items:center; gap:8px;">
+            <svg width="44" height="44" style="width:44px; height:44px; flex:0 0 44px;" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="30" width="32" height="8" rx="2"></rect>
+              <line x1="22" y1="6" x2="22" y2="26"></line>
+              <polyline points="13,18 22,27 31,18"></polyline>
+              <circle cx="12" cy="34" r="1.5" fill="currentColor" stroke="none"></circle>
+              <circle cx="22" cy="34" r="1.5" fill="currentColor" stroke="none"></circle>
+              <circle cx="32" cy="34" r="1.5" fill="currentColor" stroke="none"></circle>
+            </svg>
+            <span>Browse & Download Models</span>
+          </h2>
           <button class="btn-secondary" onclick="showScreen('catalog-editor')">🛠️ Catalog Editor</button>
           <button class="btn-secondary" onclick="showScreen('binary-manager')">📦 Binary Manager</button>
         </div>
