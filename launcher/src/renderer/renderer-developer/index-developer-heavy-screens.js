@@ -193,7 +193,35 @@
                   <button class="btn-secondary" onclick="deleteBinary('arduino-cli')" style="background: #ff6b6b; border-color: #ff6b6b;">🗑️ Delete</button>
                 </div>
               </div>
-              <div id="arduino-cli-status" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; font-size: 12px; font-family: monospace; display: none;"></div>
+            <div id="arduino-cli-status" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; font-size: 12px; font-family: monospace; display: none;"></div>
+            </div>
+
+            <!-- ESP32 Flash Tool (esptool venv) -->
+            <div style="background: rgba(255, 193, 7, 0.08); border: 2px solid var(--psf-border, #0f3460); border-radius: 10px; padding: 20px; margin: 20px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h4 style="color: #ffd54f; margin-bottom: 10px;">🧰 ESP32 Flash Tool (esptool)</h4>
+                  <p style="color: #aaa; font-size: 14px; margin: 5px 0;">
+                    Optional managed Python venv for reliable <code>erase_flash</code> and low-level ESP32 flashing.
+                  </p>
+                  <p style="color: #888; font-size: 12px; margin: 5px 0;">
+                    Installs to: <code>binaries/esptool/&lt;platform&gt;/venv</code>
+                  </p>
+                  <p style="color: #666; font-size: 11px; margin: 5px 0;">
+                    IRG prefers this managed esptool path when present.
+                  </p>
+                  <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                    <span style="color: #666; font-size: 12px;">Version:</span>
+                    <span id="esptool-version" style="color: #ffd54f; font-family: monospace; font-size: 14px; font-weight: bold;">Loading...</span>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button class="btn-secondary" onclick="checkBinary('esptool')">Check</button>
+                  <button class="btn-primary" onclick="downloadBinary('esptool')">Download</button>
+                  <button class="btn-secondary" onclick="deleteBinary('esptool')" style="background: #ff6b6b; border-color: #ff6b6b;">🗑️ Delete</button>
+                </div>
+              </div>
+              <div id="esptool-status" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; font-size: 12px; font-family: monospace; display: none;"></div>
             </div>
 
             <!-- llama.cpp (Runtime Backend) -->

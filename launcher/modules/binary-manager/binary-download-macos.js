@@ -451,9 +451,17 @@ async function downloadArduinoCli() {
   };
 }
 
+async function downloadEsptool() {
+  return {
+    success: false,
+    message: 'esptool managed venv install is not yet implemented for macOS in Binary Manager. Install esptool manually for now.'
+  };
+}
+
 module.exports = {
   downloadOllama,
   extractOllamaFromZip,
   downloadNodeJS,
-  downloadArduinoCli
+  downloadArduinoCli,
+  downloadEsptool
 };

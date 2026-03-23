@@ -10,10 +10,12 @@
 const { downloadOllama, extractOllamaTarball } = require('./binary-download-linux-ollama');
 const { downloadNodeJS } = require('./binary-download-linux-node');
 const { downloadArduinoCli } = require('./binary-download-linux-arduino');
+const { downloadEsptool } = require('./binary-download-linux-esptool');
 
 module.exports = {
   downloadOllama,
   extractOllamaTarball,
   downloadNodeJS,
-  downloadArduinoCli
+  downloadArduinoCli,
+  downloadEsptool
 };

@@ -251,6 +251,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // MoE Pipeline APIs (Core - Community Edition)
   deployMoEPipeline: (pipelineConfig) => ipcRenderer.invoke('moe-deploy-pipeline', pipelineConfig),
   getMoEStatus: () => ipcRenderer.invoke('moe-get-status'),
+  onMoEIrgProgress: (callback) => subscribeIpc('moe-irg-progress', callback),
   teardownMoEPipeline: () => ipcRenderer.invoke('moe-teardown-pipeline'),
   saveMoEPipeline: (pipelineConfig) => ipcRenderer.invoke('moe-save-pipeline', pipelineConfig),
   loadMoEPipeline: () => ipcRenderer.invoke('moe-load-pipeline'),

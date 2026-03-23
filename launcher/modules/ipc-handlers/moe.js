@@ -26,8 +26,24 @@ function createMoEHandlers() {
       ctx.sessionManager.routeMoEMessage(message, options),
     'moe-rerun-last-irg': async (ctx, event, options) =>
       ctx.sessionManager.rerunLastMoEIrg(options),
-    'moe-run-irg-contract': async (ctx, event, contract, options) =>
-      ctx.sessionManager.runMoEIrgContract(contract, options),
+    'moe-run-irg-contract': async (ctx, event, contract, options) => {
+      const progressTag = String(options?.progressTag || '').trim();
+      const progressCallback = (payload = {}) => {
+        try {
+          event.sender.send('moe-irg-progress', {
+            ...payload,
+            progressTag: String(payload?.progressTag || progressTag || '').trim()
+          });
+        } catch {
+          // ignore renderer send errors
+        }
+      };
+      return ctx.sessionManager.runMoEIrgContract(contract, {
+        ...(options || {}),
+        progressTag,
+        progressCallback
+      });
+    },
     'moe-send-to-agent': async (ctx, event, agentId, message, options) =>
       ctx.sessionManager.sendToMoEAgent(agentId, message, options),
     'moe-ping-agents': async (ctx) => ctx.sessionManager.pingMoEAgents(),

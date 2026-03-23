@@ -16,6 +16,12 @@ function stripAnsi(value) {
 function applyEsp32NetworkOverridesToSketch(sketchText, policy = {}) {
   const text = String(sketchText || '');
   if (!text) return text;
+  // Camera firmware is fully parameterized at generation time from
+  // wifiCamera* fields. Do not mutate it again here, otherwise generic
+  // wifi* overrides can clobber camera SSID/password/static-IP values.
+  if (text.includes('// PSF Relay ESP32 Camera Firmware')) {
+    return text;
+  }
   const esp32 = policy?.esp32 || {};
 
   const wifiSsid = String(esp32.wifiSsid || '');
@@ -343,8 +349,20 @@ function runCommandAsync(bin, args = [], options = {}) {
       resolve({ status: null, stdout, stderr, error: `Timed out after ${timeoutMs}ms` });
     }, timeoutMs);
 
-    child.stdout?.on('data', (chunk) => { stdout += String(chunk || ''); });
-    child.stderr?.on('data', (chunk) => { stderr += String(chunk || ''); });
+    child.stdout?.on('data', (chunk) => {
+      const text = String(chunk || '');
+      stdout += text;
+      if (typeof options?.onStdout === 'function') {
+        try { options.onStdout(text); } catch { }
+      }
+    });
+    child.stderr?.on('data', (chunk) => {
+      const text = String(chunk || '');
+      stderr += text;
+      if (typeof options?.onStderr === 'function') {
+        try { options.onStderr(text); } catch { }
+      }
+    });
     child.on('error', (err) => {
       if (finished) return;
       finished = true;

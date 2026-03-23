@@ -20,6 +20,10 @@ async function loadBinaryVersions() {
       const node = document.getElementById('arduino-cli-version');
       if (node) node.textContent = versions['arduino-cli'].version;
     }
+    if (versions && versions.esptool) {
+      const node = document.getElementById('esptool-version');
+      if (node) node.textContent = versions.esptool.version;
+    }
     if (versions && versions.git) {
       document.getElementById('git-version').textContent = versions.git.version;
     }

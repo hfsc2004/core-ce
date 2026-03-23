@@ -121,28 +121,28 @@ function formatContractBlock(contract) {
 function summarizeLiveExecutionOutput(execution = {}) {
   const lines = [];
   const compile = String(execution?.output?.compile || '').trim();
+  const preflight = String(execution?.output?.preflight || '').trim();
+  const erase = String(execution?.output?.erase || '').trim();
   const upload = String(execution?.output?.upload || '').trim();
   const httpOut = String(execution?.output?.http || '').trim();
+  const stdout = String(execution?.output?.stdout || '').trim();
+  const stderr = String(execution?.output?.stderr || '').trim();
   const resolvedPort = String(execution?.serial?.resolvedPort || '').trim();
   const fqbn = String(execution?.metadata?.fqbn || '').trim();
   const endpoint = String(execution?.metadata?.endpoint || '').trim();
   const httpStatus = Number(execution?.metadata?.httpStatus);
 
-  const clip = (text, maxChars = 1800) => {
-    if (!text) return '';
-    if (text.length <= maxChars) return text;
-    const head = text.slice(0, Math.floor(maxChars * 0.66));
-    const tail = text.slice(-Math.floor(maxChars * 0.34));
-    return `${head}\n...[truncated middle]...\n${tail}`;
-  };
-
   if (resolvedPort) lines.push(`Serial: ${resolvedPort}`);
   if (fqbn) lines.push(`FQBN: ${fqbn}`);
   if (endpoint) lines.push(`Endpoint: ${endpoint}`);
   if (Number.isInteger(httpStatus)) lines.push(`HTTP Status: ${httpStatus}`);
-  if (compile) lines.push(`Compile Output:\n${clip(compile)}`);
-  if (upload) lines.push(`Upload Output:\n${clip(upload)}`);
-  if (httpOut) lines.push(`HTTP Output:\n${clip(httpOut)}`);
+  if (compile) lines.push(`Compile Output:\n${compile}`);
+  if (preflight) lines.push(`Preflight Output:\n${preflight}`);
+  if (erase) lines.push(`Erase Output:\n${erase}`);
+  if (upload) lines.push(`Upload Output:\n${upload}`);
+  if (httpOut) lines.push(`HTTP Output:\n${httpOut}`);
+  if (stdout) lines.push(`Stdout:\n${stdout}`);
+  if (stderr) lines.push(`Stderr:\n${stderr}`);
   return lines.join('\n');
 }
 

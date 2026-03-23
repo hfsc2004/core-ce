@@ -166,7 +166,9 @@ async function executeContract(contract, gatewayConfig = {}, options = {}) {
     script,
     expectedSerial,
     gatewayConfig: effectiveGatewayConfig,
-    policy
+    policy,
+    progressCallback: typeof options?.progressCallback === 'function' ? options.progressCallback : null,
+    progressTag: String(options?.progressTag || '').trim()
   });
 
   return {
@@ -176,7 +178,15 @@ async function executeContract(contract, gatewayConfig = {}, options = {}) {
   };
 }
 
-async function tryHandleGatewayRequest({ message, gatewayConfig = {}, llmPlan = '', requireLlmPlan = false, modeOverride = '' } = {}) {
+async function tryHandleGatewayRequest({
+  message,
+  gatewayConfig = {},
+  llmPlan = '',
+  requireLlmPlan = false,
+  modeOverride = '',
+  progressCallback = null,
+  progressTag = ''
+} = {}) {
   const ambiguousPiError = buildAmbiguousPiClarification(message);
   if (ambiguousPiError) {
     return {
@@ -312,7 +322,12 @@ async function tryHandleGatewayRequest({ message, gatewayConfig = {}, llmPlan = 
     deterministicAnalysis.warning = 'llm_plan_missing_fallback_deterministic';
   }
 
-  const execution = await executeContract(effectiveContract, gatewayConfig, { policy });
+  const execution = await executeContract(effectiveContract, gatewayConfig, {
+    policy,
+    progressCallback: typeof progressCallback === 'function' ? progressCallback : null,
+    progressTag: String(progressTag || '').trim()
+  });
+  const executionDiagnostics = summarizeLiveExecutionOutput(execution);
   if (!execution.success) {
     const contractSummary = {
       target: effectiveContract?.target || null,
@@ -320,7 +335,6 @@ async function tryHandleGatewayRequest({ message, gatewayConfig = {}, llmPlan = 
       hasCode: Boolean(String(effectiveContract?.params?.code || '').trim()),
       codeLength: String(effectiveContract?.params?.code || '').length || 0
     };
-    const diagnostics = summarizeLiveExecutionOutput(execution);
     return {
       handled: true,
       success: false,
@@ -328,7 +342,7 @@ async function tryHandleGatewayRequest({ message, gatewayConfig = {}, llmPlan = 
         `Error\n` +
         `Reason: ${execution.reason}\n` +
         `Contract Summary: ${JSON.stringify(contractSummary)}` +
-        (diagnostics ? `\n${diagnostics}` : '')
+        (executionDiagnostics ? `\n${executionDiagnostics}` : '')
     };
   }
 
@@ -405,6 +419,9 @@ async function tryHandleGatewayRequest({ message, gatewayConfig = {}, llmPlan = 
       : '') +
     (execution.mode === 'live' && !isEsp32Wifi
       ? `\nSerial: ${execution?.serial?.resolvedPort || 'n/a'}`
+      : '') +
+    (executionDiagnostics
+      ? `\n\nExecution Output:\n${executionDiagnostics}`
       : '');
 
   return {

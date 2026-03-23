@@ -261,7 +261,7 @@ function renderGatewayDetails(gateway) {
       <div style="margin-bottom: 15px;">
         <label style="color: #888; font-size: 12px; display: block; margin-bottom: 8px;">IRG Runtime</label>
         <div style="display: flex; flex-direction: column; gap: 10px;">
-          <div style="display:flex; align-items:center; gap:12px; padding:10px; background: rgba(0,255,136,0.05); border-radius:6px;">
+          <div style="display:flex; align-items:center; gap:12px; row-gap:8px; flex-wrap:wrap; padding:10px; background: rgba(0,255,136,0.05); border-radius:6px;">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
               <input type="checkbox" ${irg.enabled !== false ? 'checked' : ''} onchange="updateGatewayIrgEnabled('${gateway.id}', this.checked)">
               <span style="color:${theme.success};">Enable IRG</span>
@@ -286,6 +286,7 @@ function renderGatewayDetails(gateway) {
               <option value="on-gaps" ${irgFallbackMode === 'on-gaps' ? 'selected' : ''}>On Gaps</option>
               <option value="on-gaps-or-low-confidence" ${irgFallbackMode === 'on-gaps-or-low-confidence' ? 'selected' : ''}>On Gaps or Low Confidence</option>
             </select>
+            <span style="flex-basis:100%; height:0;"></span>
             <label style="color:#888; font-size:11px;">Confidence</label>
             <input type="number" min="0" max="1" step="0.05" value="${irgConfidenceThreshold.toFixed(2)}"
                    onchange="updateGatewayIrgConfidenceThreshold('${gateway.id}', this.value)"

@@ -35,6 +35,13 @@ function getMoeTheme() {
   };
 }
 
+function escapeMoeLogHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 // ============================================================================
 // MODEL HELPERS
 // ============================================================================
@@ -110,6 +117,32 @@ function renderMoePipeline() {
   const allModels = showAllModels ? getAllModelsForDropdown() : null;
   const modelsForDropdown = showAllModels ? allModels : downloadedModels;
   const theme = getMoeTheme();
+  const deploySummary = String(window.modelOrderingState?.moeDeployStatusSummary || 'IDLE').trim() || 'IDLE';
+  const deployLogs = Array.isArray(window.modelOrderingState?.moeDeployLogLines)
+    ? window.modelOrderingState.moeDeployLogLines
+    : [];
+  const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
+  const frameBorderColor = deployFrameState === 'active'
+    ? '#22c55e'
+    : (deployFrameState === 'stopping' || deployFrameState === 'error' ? '#ef4444' : '#6b7280');
+  const frameShadow = deployFrameState === 'active'
+    ? '0 0 0 1px rgba(34,197,94,0.55), 0 0 18px rgba(34,197,94,0.28)'
+    : (deployFrameState === 'stopping' || deployFrameState === 'error'
+      ? '0 0 0 1px rgba(239,68,68,0.55), 0 0 18px rgba(239,68,68,0.26)'
+      : 'none');
+  const deployLogHtml = deployLogs.length > 0
+    ? deployLogs.map((entry) => {
+      const level = String(entry?.level || 'info').toLowerCase();
+      const color = level === 'error'
+        ? '#ff9b9b'
+        : level === 'warn'
+          ? '#ffd38a'
+          : level === 'success'
+            ? '#8dffbd'
+            : '#9fb2cc';
+      return `<div style="color:${color};">[${escapeMoeLogHtml(entry?.stamp || '')}] ${escapeMoeLogHtml(entry?.message || '')}</div>`;
+    }).join('')
+    : '<div>No deployment activity yet.</div>';
   
   // Empty state - no pipeline items AND no downloaded models
   if (moeItems.length === 0 && downloadedModels.length === 0) {
@@ -225,15 +258,17 @@ function renderMoePipeline() {
   }
   
   return `
-    <div style="display: flex; flex-direction: column; gap: 4px;"
-         id="moe-pipeline-list"
-         ondragover="handleMoeDragOver(event)"
-         ondrop="handleMoeDrop(event)">
-      ${moeItems.map((item, index) => renderMoeItem(item, index, modelsForDropdown)).join('')}
-    </div>
-    
-    <!-- Pipeline Legend -->
-    <div style="margin-top: 12px; padding: 6px 2px 2px; border-radius: 8px;">
+    <div id="moe-pipeline-frame"
+         style="border:1px solid ${frameBorderColor}; box-shadow:${frameShadow}; border-radius:10px; padding:10px 12px 12px; transition:border-color 220ms ease, box-shadow 220ms ease;">
+      <div style="display: flex; flex-direction: column; gap: 4px;"
+           id="moe-pipeline-list"
+           ondragover="handleMoeDragOver(event)"
+           ondrop="handleMoeDrop(event)">
+        ${moeItems.map((item, index) => renderMoeItem(item, index, modelsForDropdown)).join('')}
+      </div>
+
+      <!-- Pipeline Legend -->
+      <div style="margin-top: 12px; padding: 6px 2px 2px; border-radius: 8px;">
       <div style="display: flex; gap: 14px; flex-wrap: wrap;">
         <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
           <div style="width:10px; height:10px; border-radius:2px; background:rgba(63,185,80,0.25); border:1px solid #3fb950;"></div>
@@ -256,18 +291,19 @@ function renderMoePipeline() {
           Endpoint Registry - Distributed Worker Routing
         </div>
       </div>
-    </div>
+      </div>
 
-    <div id="moe-deploy-status-panel" style="margin-top: 12px; padding: 9px 14px; background: #111c2a; border: 1px solid rgba(139,148,158,0.12); border-radius: 6px;">
+      <div id="moe-deploy-status-panel" style="margin-top: 12px; padding: 9px 14px; background: #111c2a; border: 1px solid rgba(139,148,158,0.12); border-radius: 6px;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;">
         <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#8b949e; font-weight:500;">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#484f58" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="1" width="11" height="11" rx="2"></rect><line x1="4" y1="5" x2="9" y2="5"></line><line x1="4" y1="8" x2="7" y2="8"></line></svg>
           Deployment Status
         </div>
-        <span id="moe-deploy-status-summary" style="font-size:10px; color:#484f58; border:1px solid rgba(139,148,158,0.18); border-radius:3px; padding:2px 8px; letter-spacing:0.1em;">IDLE</span>
+        <span id="moe-deploy-status-summary" style="font-size:10px; color:#484f58; border:1px solid rgba(139,148,158,0.18); border-radius:3px; padding:2px 8px; letter-spacing:0.1em;">${escapeMoeLogHtml(deploySummary)}</span>
       </div>
       <div id="moe-deploy-status-body" style="max-height:150px; overflow:auto; color:#9fb2cc; font-size:12px; line-height:1.45;">
-        <div>No deployment activity yet.</div>
+        ${deployLogHtml}
+      </div>
       </div>
     </div>
   `;

@@ -1,0 +1,5 @@
+// WARNING!!! Make sure that you have selected Board ---> ESP32S3 Dev Module
+//            USB CDC On Boot ---> Enabled
+//            Flash Size ---> 8MB(64Mb)
+//            Partition Scheme ---> 8M with spiffs (3MB APP/1.5MB SPIFFS)
+//            PSRAM ---> OPI PSRAM

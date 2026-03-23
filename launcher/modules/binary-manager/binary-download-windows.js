@@ -387,9 +387,17 @@ async function downloadArduinoCli() {
   };
 }
 
+async function downloadEsptool() {
+  return {
+    success: false,
+    message: 'esptool managed venv install is not yet implemented for Windows in Binary Manager. Install esptool manually for now.'
+  };
+}
+
 module.exports = {
   downloadOllama,
   extractOllamaZip,
   downloadNodeJS,
-  downloadArduinoCli
+  downloadArduinoCli,
+  downloadEsptool
 };
