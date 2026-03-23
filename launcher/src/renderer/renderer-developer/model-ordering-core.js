@@ -28,6 +28,105 @@ function getMoeTheme() {
 
 window.getMoeTheme = getMoeTheme;
 
+function bindMoeCustomSelectGlobalClose() {
+  if (window.__moeSelectGlobalBound) return;
+  window.__moeSelectGlobalBound = true;
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target && target.closest && target.closest('.moe-custom-select')) return;
+    document.querySelectorAll('.moe-custom-select.open').forEach((node) => node.classList.remove('open'));
+  });
+}
+
+function enhanceMoeSelects(container = document) {
+  bindMoeCustomSelectGlobalClose();
+  const selects = Array.from(container.querySelectorAll('.moe-item select'));
+  selects.forEach((selectEl) => {
+    if (!(selectEl instanceof HTMLSelectElement)) return;
+    if (selectEl.multiple || Number(selectEl.size || 0) > 1) return;
+    if (selectEl.dataset.moeCustomized === '1') return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'moe-custom-select';
+    if (selectEl.disabled) wrapper.classList.add('disabled');
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'moe-custom-select-trigger';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.disabled = !!selectEl.disabled;
+
+    const list = document.createElement('div');
+    list.className = 'moe-custom-select-list';
+    list.setAttribute('role', 'listbox');
+
+    const renderOptions = () => {
+      list.innerHTML = '';
+      const options = Array.from(selectEl.options || []);
+      const current = String(selectEl.value ?? '');
+      const selectedOption = options.find((opt) => String(opt.value) === current) || options[0] || null;
+      trigger.textContent = selectedOption ? selectedOption.textContent : '';
+
+      options.forEach((opt) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'moe-custom-select-option';
+        if (opt.disabled) item.classList.add('disabled');
+        if (String(opt.value) === current) item.classList.add('selected');
+        item.textContent = opt.textContent || '';
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', String(String(opt.value) === current));
+        item.disabled = !!opt.disabled;
+        item.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (opt.disabled) return;
+          selectEl.value = opt.value;
+          trigger.textContent = opt.textContent || '';
+          wrapper.classList.remove('open');
+          trigger.setAttribute('aria-expanded', 'false');
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        list.appendChild(item);
+      });
+    };
+
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (trigger.disabled) return;
+      const opening = !wrapper.classList.contains('open');
+      document.querySelectorAll('.moe-custom-select.open').forEach((node) => {
+        if (node !== wrapper) node.classList.remove('open');
+      });
+      wrapper.classList.toggle('open', opening);
+      trigger.setAttribute('aria-expanded', String(opening));
+      if (opening) renderOptions();
+    });
+
+    // Keep custom control in sync if value/options are changed programmatically.
+    selectEl.addEventListener('change', () => {
+      renderOptions();
+    });
+
+    // Preserve layout width intent from original select.
+    const width = selectEl.style.width || '';
+    const minWidth = selectEl.style.minWidth || '';
+    const maxWidth = selectEl.style.maxWidth || '';
+    if (width) wrapper.style.width = width;
+    if (minWidth) wrapper.style.minWidth = minWidth;
+    if (maxWidth) wrapper.style.maxWidth = maxWidth;
+
+    selectEl.classList.add('moe-native-select-hidden');
+    selectEl.dataset.moeCustomized = '1';
+    selectEl.insertAdjacentElement('afterend', wrapper);
+    wrapper.appendChild(trigger);
+    wrapper.appendChild(list);
+    renderOptions();
+  });
+}
+
+window.enhanceMoeSelects = enhanceMoeSelects;
+
 function renderModelOrdering() {
   const container = document.getElementById('model-ordering-content');
   if (!container) return;
@@ -187,6 +286,9 @@ function renderModelOrdering() {
   }
   if (typeof window.initializeMoeChatInput === 'function') {
     try { window.initializeMoeChatInput(); } catch (_) { /* no-op */ }
+  }
+  if (typeof window.enhanceMoeSelects === 'function') {
+    try { window.enhanceMoeSelects(container); } catch (_) { /* no-op */ }
   }
 }
 

@@ -19,7 +19,8 @@ function addMoeAgent() {
     window.ensureAgentRlmAttachmentSession(agent);
   }
   window.modelOrderingState.moeItems.push(agent);
-  window.modelOrderingState.expandedMoeItem = agent.id;
+  ensureExpandedMoeItemsState();
+  ensureMoeItemExpanded(agent.id);
   console.log('[MoE] Added agent:', agent.id);
   renderModelOrdering();
 }
@@ -34,7 +35,8 @@ function addMoeChannel() {
 function addMoeGateway() {
   const gateway = window.createGateway('User Gateway');
   window.modelOrderingState.moeItems.push(gateway);
-  window.modelOrderingState.expandedMoeItem = gateway.id;
+  ensureExpandedMoeItemsState();
+  ensureMoeItemExpanded(gateway.id);
   console.log('[MoE] Added gateway:', gateway.id);
   renderModelOrdering();
 }
@@ -42,7 +44,8 @@ function addMoeGateway() {
 function addMoeBindings() {
   const bindings = window.createBindings('Runtime Bindings');
   window.modelOrderingState.moeItems.push(bindings);
-  window.modelOrderingState.expandedMoeItem = bindings.id;
+  ensureExpandedMoeItemsState();
+  ensureMoeItemExpanded(bindings.id);
   console.log('[MoE] Added bindings:', bindings.id);
   renderModelOrdering();
 }
@@ -51,15 +54,35 @@ function addMoeEndpointRegistry() {
   const items = window.modelOrderingState.moeItems || [];
   const existing = items.find((item) => item.type === 'endpoint_registry');
   if (existing) {
-    window.modelOrderingState.expandedMoeItem = existing.id;
+    ensureExpandedMoeItemsState();
+    ensureMoeItemExpanded(existing.id);
     renderModelOrdering();
     return;
   }
   const registry = window.createEndpointRegistryItem();
   items.push(registry);
-  window.modelOrderingState.expandedMoeItem = registry.id;
+  ensureExpandedMoeItemsState();
+  ensureMoeItemExpanded(registry.id);
   console.log('[MoE] Added endpoint registry item:', registry.id);
   renderModelOrdering();
+}
+
+function ensureExpandedMoeItemsState() {
+  if (!Array.isArray(window.modelOrderingState.expandedMoeItems)) {
+    window.modelOrderingState.expandedMoeItems = [];
+  }
+  const legacyExpanded = window.modelOrderingState.expandedMoeItem;
+  if (legacyExpanded && !window.modelOrderingState.expandedMoeItems.includes(legacyExpanded)) {
+    window.modelOrderingState.expandedMoeItems.push(legacyExpanded);
+  }
+}
+
+function ensureMoeItemExpanded(itemId) {
+  const expanded = window.modelOrderingState.expandedMoeItems;
+  if (!expanded.includes(itemId)) {
+    expanded.push(itemId);
+  }
+  window.modelOrderingState.expandedMoeItem = itemId;
 }
 
 // ============================================================================
@@ -71,8 +94,11 @@ function deleteMoeItem(itemId) {
   const index = items.findIndex(i => i.id === itemId);
   if (index !== -1) {
     items.splice(index, 1);
+    ensureExpandedMoeItemsState();
+    window.modelOrderingState.expandedMoeItems = window.modelOrderingState.expandedMoeItems.filter((id) => id !== itemId);
     if (window.modelOrderingState.expandedMoeItem === itemId) {
-      window.modelOrderingState.expandedMoeItem = null;
+      const remaining = window.modelOrderingState.expandedMoeItems;
+      window.modelOrderingState.expandedMoeItem = remaining.length ? remaining[remaining.length - 1] : null;
     }
     console.log('[MoE] Deleted item:', itemId);
     renderModelOrdering();
@@ -80,10 +106,16 @@ function deleteMoeItem(itemId) {
 }
 
 function toggleMoeExpand(itemId) {
-  if (window.modelOrderingState.expandedMoeItem === itemId) {
-    window.modelOrderingState.expandedMoeItem = null;
+  ensureExpandedMoeItemsState();
+  const expanded = window.modelOrderingState.expandedMoeItems;
+  if (expanded.includes(itemId)) {
+    window.modelOrderingState.expandedMoeItems = expanded.filter((id) => id !== itemId);
+    if (window.modelOrderingState.expandedMoeItem === itemId) {
+      const remaining = window.modelOrderingState.expandedMoeItems;
+      window.modelOrderingState.expandedMoeItem = remaining.length ? remaining[remaining.length - 1] : null;
+    }
   } else {
-    window.modelOrderingState.expandedMoeItem = itemId;
+    ensureMoeItemExpanded(itemId);
     const item = window.modelOrderingState.moeItems.find((i) => i.id === itemId);
     if (item?.type === 'gateway' && typeof refreshMoeSerialPorts === 'function') {
       Promise.resolve(refreshMoeSerialPorts(itemId, { silent: true })).catch((err) => {
