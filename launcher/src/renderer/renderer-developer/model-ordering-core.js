@@ -35,6 +35,17 @@ function renderModelOrdering() {
   const { scopeMode, selectedModels, editMode } = window.modelOrderingState;
   const theme = getMoeTheme();
   const isPipelineMode = scopeMode === 'pipeline';
+  const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
+  const pipelineStatusText = deployFrameState === 'active'
+    ? '[RUNNING]'
+    : ((deployFrameState === 'stopping' || deployFrameState === 'stopped' || deployFrameState === 'error')
+      ? '[STOPPED]'
+      : '[IDLE]');
+  const pipelineStatusColor = deployFrameState === 'active'
+    ? '#22c55e'
+    : ((deployFrameState === 'stopping' || deployFrameState === 'stopped' || deployFrameState === 'error')
+      ? '#ef4444'
+      : '#6b7280');
 
   container.innerHTML = `
     <div style="max-width: 1200px; position: relative; left: 50%; transform: translateX(-50%) scale(1.5); transform-origin: top center; width: calc(100% / 1.5);">
@@ -129,6 +140,10 @@ function renderModelOrdering() {
                         style="padding: 7px 12px; min-height: 32px; background: transparent; border: 1px solid ${theme.warning}; border-radius: 5px; color: ${theme.warning}; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap;">
                   Reorder
                 </button>
+                <span id="moe-pipeline-status-indicator"
+                      style="padding: 7px 4px; min-height: 32px; display: inline-flex; align-items: center; color: ${pipelineStatusColor}; font-size: 14px; font-weight: 700; white-space: nowrap;">
+                  ${pipelineStatusText}
+                </span>
               ` : `
                 <button onclick="toggleEditMode()"
                         style="padding: 8px 15px; background: rgba(255,212,0,0.2); border: 1px solid ${theme.warning}; border-radius: 5px; color: ${theme.warning}; cursor: pointer;">

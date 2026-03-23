@@ -12,7 +12,7 @@ const { spawn } = require('child_process');
 function emitBinaryStage(progressCallback, payload = {}) {
   if (typeof progressCallback !== 'function') return;
   progressCallback({
-    filename: 'arduino-cli',
+    filename: String(payload.filename || 'arduino-cli'),
     stage: payload.stage || 'working',
     progress: Number.isFinite(payload.progress) ? payload.progress : 0,
     message: payload.message || '',

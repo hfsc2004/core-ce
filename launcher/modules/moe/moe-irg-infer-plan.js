@@ -141,6 +141,11 @@ function normalizePlanContract(candidate, policy) {
     const fqbn = String(params?.fqbn || '').trim();
     const serialPort = String(params?.serialPort ?? params?.port ?? '').trim();
     const sketchName = String(params?.sketchName || '').trim();
+    const cameraBoardProfile = String(params?.cameraBoardProfile || '').trim().toLowerCase();
+    const uploadMode = String(params?.uploadMode || '').trim().toLowerCase();
+    const chip = String(params?.chip || '').trim().toLowerCase();
+    const strictNoFallback = params?.strictNoFallback === true;
+    const eraseFlashBeforeUpload = params?.eraseFlashBeforeUpload === true;
     const compileTimeoutMs = Number(params?.compileTimeoutMs);
     const uploadTimeoutMs = Number(params?.uploadTimeoutMs);
     const normalizedParams = {
@@ -151,6 +156,11 @@ function normalizePlanContract(candidate, policy) {
     if (fqbn) normalizedParams.fqbn = fqbn;
     if (serialPort) normalizedParams.serialPort = serialPort;
     if (sketchName) normalizedParams.sketchName = sketchName;
+    if (cameraBoardProfile) normalizedParams.cameraBoardProfile = cameraBoardProfile;
+    if (uploadMode) normalizedParams.uploadMode = uploadMode;
+    if (chip) normalizedParams.chip = chip;
+    if (strictNoFallback) normalizedParams.strictNoFallback = true;
+    if (eraseFlashBeforeUpload) normalizedParams.eraseFlashBeforeUpload = true;
     if (Number.isFinite(compileTimeoutMs) && compileTimeoutMs >= 10000) {
       normalizedParams.compileTimeoutMs = Math.min(600000, Math.trunc(compileTimeoutMs));
     }

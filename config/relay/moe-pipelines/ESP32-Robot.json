@@ -1,0 +1,220 @@
+{
+  "version": "1.0",
+  "lastModified": "2026-03-23T14:47:05.259Z",
+  "items": [
+    {
+      "enabled": true,
+      "position": "input",
+      "sources": {
+        "api": {
+          "enabled": false,
+          "port": 52434,
+          "endpoint": "/v1/chat"
+        },
+        "terminal": {
+          "enabled": true
+        },
+        "serial": {
+          "enabled": false,
+          "port": "auto",
+          "baudRate": 115200
+        }
+      },
+      "irg": {
+        "enabled": true,
+        "executeMode": "live",
+        "entryMode": "deterministic-first",
+        "autoExecuteLive": true,
+        "requireLlmPlanForLive": false,
+        "live": {
+          "executor": "mpremote",
+          "timeoutMs": 60000
+        },
+        "pico": {
+          "defaultGpio": 25,
+          "defaultPeriodMs": 500,
+          "defaultIterations": 20
+        },
+        "deterministicFallbackMode": "on-gaps-or-low-confidence",
+        "deterministicConfidenceThreshold": 0.9,
+        "targets": [
+          "raspberry-pi-pico",
+          "esp32"
+        ],
+        "esp32": {
+          "fqbn": "esp32:esp32:esp32",
+          "sketchName": "psf_irg_esp32",
+          "compileTimeoutMs": 180000,
+          "uploadTimeoutMs": 120000,
+          "monitorBaudRate": 115200,
+          "wifiHost": "172.20.0.15",
+          "wifiPort": 8080,
+          "wifiTimeoutMs": 5000,
+          "wifiStaticEnabled": true,
+          "wifiStaticIp": "172.20.0.15",
+          "wifiStaticCidr": 24,
+          "wifiStaticGatewayEnabled": false,
+          "wifiStaticGateway": "",
+          "wifiSsid": "No_Access",
+          "wifiPassword": "Paintjet~0987654321~",
+          "wifiDriveSpeed": 170,
+          "wifiDriveSwapSides": false,
+          "wifiDriveInvertLeft": false,
+          "wifiDriveInvertRight": false,
+          "wifiNumControlsEnabled": true,
+          "wifiAiDriveEnabled": false,
+          "wifiAiDriveAgentId": "",
+          "wifiAiDriveObjective": "Explore safely and avoid obstacles.",
+          "wifiAiDriveTickMs": 420,
+          "wifiDriveMapForward": "turn_left",
+          "wifiDriveMapReverse": "turn_right",
+          "wifiDriveMapLeft": "rev",
+          "wifiDriveMapRight": "fwd",
+          "wifiObstacleFrontThreshold": 1500,
+          "wifiCameraEnabled": false,
+          "wifiCameraHost": "",
+          "wifiCameraPort": 81,
+          "wifiCameraStreamPath": "/stream",
+          "wifiCameraSnapshotPath": "/capture",
+          "wifiCameraFlashStatusPath": "/health",
+          "wifiCameraFqbn": "esp32:esp32:esp32cam",
+          "wifiCameraBoardProfile": "ai-thinker-esp32cam"
+        }
+      },
+      "id": "gateway-1772317178175-4ne79m9r7",
+      "type": "gateway",
+      "name": "User Gateway"
+    },
+    {
+      "enabled": true,
+      "direction": "bidirectional",
+      "flowCondition": "always",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "label": "",
+      "id": "channel-1772317192183-f1xetvqn8",
+      "type": "channel"
+    },
+    {
+      "enabled": true,
+      "modelId": "gemma-3-4b-it-mm",
+      "modelName": "Gemma 3:4B-IT-MM",
+      "systemPrompt": "",
+      "routingMode": "dynamic",
+      "routingRules": [],
+      "rlmAssist": false,
+      "rlmAttachmentSessionId": "moe-agent-agent-1772317192895-7hvwsdiob",
+      "tools": [],
+      "id": "agent-1772317192895-7hvwsdiob",
+      "type": "agent",
+      "name": "New Agent",
+      "collectionKey": "daily-driver-256gb",
+      "filename": "gemma-3-4b-it-mm.gguf",
+      "projectorFilename": "mmproj-F16.gguf",
+      "rlmAttachmentBucketId": "relay-agent-agent-1772317192895-7hvwsdiob",
+      "rlmSharedAttachmentBucketId": "relay-shared-default",
+      "rlmSharedAttachmentSessionId": "moe-shared"
+    },
+    {
+      "enabled": true,
+      "position": "input",
+      "sources": {
+        "api": {
+          "enabled": false,
+          "port": 52434,
+          "endpoint": "/v1/chat"
+        },
+        "terminal": {
+          "enabled": true
+        },
+        "serial": {
+          "enabled": true,
+          "port": "/dev/ttyACM0",
+          "baudRate": 115200
+        }
+      },
+      "irg": {
+        "enabled": true,
+        "executeMode": "live",
+        "entryMode": "deterministic-first",
+        "deterministicFallbackMode": "on-gaps-or-low-confidence",
+        "deterministicConfidenceThreshold": 0.9,
+        "autoExecuteLive": true,
+        "requireLlmPlanForLive": false,
+        "live": {
+          "executor": "mpremote",
+          "timeoutMs": 60000
+        },
+        "pico": {
+          "defaultGpio": 25,
+          "defaultPeriodMs": 500,
+          "defaultIterations": 20
+        },
+        "esp32": {
+          "fqbn": "esp32:esp32:esp32",
+          "sketchName": "psf_irg_esp32",
+          "compileTimeoutMs": 180000,
+          "uploadTimeoutMs": 120000,
+          "monitorBaudRate": 115200,
+          "wifiSsid": "",
+          "wifiPassword": "",
+          "wifiHost": "",
+          "wifiPort": 8080,
+          "wifiTimeoutMs": 5000,
+          "wifiDriveSpeed": 170,
+          "wifiDriveSwapSides": false,
+          "wifiDriveInvertLeft": false,
+          "wifiDriveInvertRight": false,
+          "wifiNumControlsEnabled": false,
+          "wifiAiDriveEnabled": false,
+          "wifiAiDriveAgentId": "",
+          "wifiAiDriveObjective": "Explore safely and avoid obstacles.",
+          "wifiAiDriveTickMs": 420,
+          "wifiDriveMapForward": "turn_left",
+          "wifiDriveMapReverse": "turn_right",
+          "wifiDriveMapLeft": "rev",
+          "wifiDriveMapRight": "fwd",
+          "wifiObstacleFrontThreshold": 1500,
+          "wifiCameraEnabled": true,
+          "wifiCameraHost": "172.20.0.16",
+          "wifiCameraPort": 81,
+          "wifiCameraStreamPath": "/stream",
+          "wifiCameraSnapshotPath": "/capture",
+          "wifiCameraFlashStatusPath": "/health",
+          "wifiCameraFqbn": "esp32:esp32:esp32s3",
+          "wifiCameraBoardProfile": "elegoo-esp32s3-camera-v1",
+          "wifiStaticEnabled": false,
+          "wifiStaticIp": "",
+          "wifiStaticCidr": 24,
+          "wifiStaticGatewayEnabled": false,
+          "wifiStaticGateway": "",
+          "wifiCameraSsid": "No_Access",
+          "wifiCameraPassword": "Paintjet~0987654321~",
+          "wifiCameraStaticEnabled": true,
+          "wifiCameraStaticIp": "172.20.0.16",
+          "wifiCameraStaticCidr": 24,
+          "wifiCameraStaticGatewayEnabled": false,
+          "wifiCameraStaticGateway": ""
+        },
+        "targets": [
+          "raspberry-pi-pico",
+          "esp32"
+        ]
+      },
+      "id": "gateway-1773804676746-tbg08ynrl",
+      "type": "gateway",
+      "name": "User Gateway"
+    }
+  ],
+  "endpointRegistry": {
+    "enabled": false,
+    "includeLocalAgents": true,
+    "selection": "priority",
+    "defaultTimeoutMs": 120000,
+    "maxConsecutiveFailures": 2,
+    "cooldownMs": 20000,
+    "agentRoleMap": {},
+    "roles": {}
+  }
+}

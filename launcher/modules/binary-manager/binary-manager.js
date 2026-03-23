@@ -76,6 +76,7 @@ async function deleteBinaries(fromPath, type) {
       'python-webui': path.join(binariesDir, 'python-webui'),
       nodejs: path.join(binariesDir, 'nodejs'),
       'arduino-cli': path.join(binariesDir, 'arduino-cli'),
+      esptool: path.join(binariesDir, 'esptool'),
       git: path.join(binariesDir, 'git'),
       'llama-cpp': path.join(binariesDir, 'llama.cpp')
     };
@@ -168,6 +169,20 @@ function buildExpectedFiles(type, binariesDir) {
     };
   }
 
+  if (type === 'esptool') {
+    return {
+      root: 'esptool',
+      platforms: {
+        'windows-x64': ['venv/Scripts/esptool.exe'],
+        'windows-arm64': ['venv/Scripts/esptool.exe'],
+        'linux-x64': ['venv/bin/esptool'],
+        'linux-arm64': ['venv/bin/esptool'],
+        'macos-intel': ['venv/bin/esptool'],
+        'macos-arm': ['venv/bin/esptool']
+      }
+    };
+  }
+
   return null;
 }
 
@@ -236,6 +251,10 @@ async function downloadNodeJS(fromPath, progressCallback = null) {
 
 async function downloadArduinoCli(fromPath, progressCallback = null) {
   return dispatchDownload('downloadArduinoCli', fromPath, progressCallback);
+}
+
+async function downloadEsptool(fromPath, progressCallback = null) {
+  return dispatchDownload('downloadEsptool', fromPath, progressCallback);
 }
 
 async function downloadGit(fromPath, progressCallback = null) {
@@ -322,6 +341,7 @@ module.exports = {
   downloadOllama,
   downloadNodeJS,
   downloadArduinoCli,
+  downloadEsptool,
   downloadGit,
   downloadLlamaCpp,
   runLlamaCppBuildPreflight,

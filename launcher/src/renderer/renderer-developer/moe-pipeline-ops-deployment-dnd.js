@@ -16,6 +16,68 @@
 let moeDeploySummaryAnimTimer = null;
 let moeDeployHeartbeatTimer = null;
 let moeDeployBusySinceMs = 0;
+const MOE_DEPLOY_LOG_MAX = 1200;
+
+function ensureMoeDeployLogState() {
+  if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return null;
+  if (!Array.isArray(window.modelOrderingState.moeDeployLogLines)) {
+    window.modelOrderingState.moeDeployLogLines = [];
+  }
+  if (typeof window.modelOrderingState.moeDeployStatusSummary !== 'string') {
+    window.modelOrderingState.moeDeployStatusSummary = 'IDLE';
+  }
+  if (typeof window.modelOrderingState.moeDeployFrameState !== 'string') {
+    window.modelOrderingState.moeDeployFrameState = 'idle';
+  }
+  return window.modelOrderingState;
+}
+
+function applyMoePipelineStatusIndicatorToDom(stateName = 'idle') {
+  const el = document.getElementById('moe-pipeline-status-indicator');
+  if (!el) return;
+  const state = String(stateName || 'idle').toLowerCase();
+  if (state === 'active') {
+    el.textContent = '[RUNNING]';
+    el.style.color = '#22c55e';
+    el.style.textShadow = '0 0 6px rgba(34,197,94,0.32)';
+    return;
+  }
+  if (state === 'stopping' || state === 'stopped' || state === 'error') {
+    el.textContent = '[STOPPED]';
+    el.style.color = '#ef4444';
+    el.style.textShadow = 'none';
+    return;
+  }
+  el.textContent = '[IDLE]';
+  el.style.color = '#6b7280';
+  el.style.textShadow = 'none';
+}
+
+function applyMoePipelineFrameStateToDom(stateName = 'idle') {
+  const frame = document.getElementById('moe-pipeline-frame');
+  const state = String(stateName || 'idle').toLowerCase();
+  applyMoePipelineStatusIndicatorToDom(state);
+  if (!frame) return;
+  if (state === 'active') {
+    frame.style.borderColor = '#22c55e';
+    frame.style.boxShadow = '0 0 0 1px rgba(34,197,94,0.55), 0 0 18px rgba(34,197,94,0.28)';
+    return;
+  }
+  if (state === 'stopping' || state === 'stopped' || state === 'error') {
+    frame.style.borderColor = '#ef4444';
+    frame.style.boxShadow = '0 0 0 1px rgba(239,68,68,0.55), 0 0 18px rgba(239,68,68,0.26)';
+    return;
+  }
+  frame.style.borderColor = '#6b7280';
+  frame.style.boxShadow = 'none';
+}
+
+function setMoePipelineFrameState(stateName = 'idle') {
+  const state = ensureMoeDeployLogState();
+  const normalized = String(stateName || 'idle').toLowerCase();
+  if (state) state.moeDeployFrameState = normalized;
+  applyMoePipelineFrameStateToDom(normalized);
+}
 
 async function deployMoePipeline() {
   const items = Array.isArray(window.modelOrderingState?.moeItems)
@@ -82,6 +144,7 @@ async function deployMoePipeline() {
       stopMoeDeployHeartbeat();
       stopMoeDeployStatusAnimation();
       setMoeDeployBusyUi(false);
+      setMoePipelineFrameState('active');
       console.log('[MoE] Pipeline deployed:', result);
       const startedAgents = Object.values(result.agents || {});
       appendMoeDeployStatusLine(`Deployment ready: ${result.deploymentId}`, 'success');
@@ -103,12 +166,7 @@ async function deployMoePipeline() {
         statusSpan.textContent = '(Ready)';
         statusSpan.style.color = '#00ff88';
       }
-      try {
-        await openMoeChatWindowFromPipeline();
-        appendMoeDeployStatusLine('Chat window opened.', 'info');
-      } catch (openErr) {
-        appendMoeDeployStatusLine(`Chat window failed to open: ${openErr?.message || openErr}`, 'error');
-      }
+      appendMoeDeployStatusLine('Deployment complete. Click "Open Chat" when ready.', 'info');
     } else {
       throw new Error(result.message || 'Deployment failed');
     }
@@ -116,6 +174,7 @@ async function deployMoePipeline() {
     stopMoeDeployHeartbeat();
     stopMoeDeployStatusAnimation();
     setMoeDeployBusyUi(false);
+    setMoePipelineFrameState('error');
     console.error('[MoE] Deployment failed:', err);
     appendMoeDeployStatusLine(`Deployment failed: ${err.message}`, 'error');
     setMoeDeployStatusSummary('Error');
@@ -161,6 +220,7 @@ async function teardownMoePipeline() {
       stopMoeDeployHeartbeat();
       stopMoeDeployStatusAnimation();
       setMoeDeployBusyUi(false);
+      setMoePipelineFrameState('stopped');
       console.log('[MoE] Pipeline torn down:', result);
       appendMoeDeployStatusLine(`Pipeline stopped. Closed ${result.closedAgents} agent(s).`, 'success');
       setMoeDeployStatusSummary('Stopped');
@@ -174,6 +234,7 @@ async function teardownMoePipeline() {
       stopMoeDeployHeartbeat();
       stopMoeDeployStatusAnimation();
       setMoeDeployBusyUi(false);
+      setMoePipelineFrameState('stopped');
       appendMoeDeployStatusLine(`Teardown completed with errors: ${(result.errors || []).join('; ')}`, 'warn');
       setMoeDeployStatusSummary('Stopped with warnings');
     }
@@ -181,6 +242,7 @@ async function teardownMoePipeline() {
     stopMoeDeployHeartbeat();
     stopMoeDeployStatusAnimation();
     setMoeDeployBusyUi(false);
+    setMoePipelineFrameState('error');
     console.error('[MoE] Teardown failed:', err);
     appendMoeDeployStatusLine(`Teardown failed: ${err.message}`, 'error');
     setMoeDeployStatusSummary('Error');
@@ -194,8 +256,10 @@ async function getMoePipelineStatus() {
     if (!status) {
       appendMoeDeployStatusLine('No active MoE deployment.', 'info');
       setMoeDeployStatusSummary('Idle');
+      setMoePipelineFrameState('stopped');
       return;
     }
+    setMoePipelineFrameState('active');
     setMoeDeployStatusSummary(`Ready • ${status.agentCount || 0} agent(s)`);
     appendMoeDeployStatusLine(`Deployment ID: ${status.id || 'n/a'}`, 'info');
     appendMoeDeployStatusLine(`Started: ${status.startedAt || 'n/a'}`, 'info');
@@ -262,6 +326,8 @@ function handleMoeDrop(event) {
 }
 
 function setMoeDeployStatusSummary(text) {
+  const state = ensureMoeDeployLogState();
+  if (state) state.moeDeployStatusSummary = String(text || '');
   const summary = document.getElementById('moe-deploy-status-summary');
   if (summary) summary.textContent = String(text || '');
 }
@@ -307,6 +373,14 @@ function stopMoeDeployHeartbeat() {
 function setMoeDeployBusyUi(isBusy, mode = 'deploy') {
   const deployBtn = document.getElementById('moe-deploy-btn');
   const stopBtn = document.getElementById('moe-stop-btn');
+  if (isBusy && mode === 'deploy') {
+    setMoePipelineFrameState('active');
+  } else if (isBusy && mode === 'stop') {
+    setMoePipelineFrameState('stopping');
+  } else {
+    const current = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
+    applyMoePipelineFrameStateToDom(current);
+  }
   if (deployBtn) {
     deployBtn.disabled = !!isBusy;
     deployBtn.style.opacity = isBusy ? '0.7' : '1';
@@ -322,19 +396,33 @@ function setMoeDeployBusyUi(isBusy, mode = 'deploy') {
 }
 
 function appendMoeDeployStatusLine(message, level = 'info') {
+  const stamp = new Date().toLocaleTimeString();
+  const safeMessage = String(message || '');
+  const safeLevel = String(level || 'info');
+  const state = ensureMoeDeployLogState();
+  if (state) {
+    state.moeDeployLogLines.push({
+      stamp,
+      message: safeMessage,
+      level: safeLevel
+    });
+    if (state.moeDeployLogLines.length > MOE_DEPLOY_LOG_MAX) {
+      state.moeDeployLogLines.splice(0, state.moeDeployLogLines.length - MOE_DEPLOY_LOG_MAX);
+    }
+  }
+
   const body = document.getElementById('moe-deploy-status-body');
   if (!body) return;
-  const stamp = new Date().toLocaleTimeString();
   const line = document.createElement('div');
-  const color = level === 'error'
+  const color = safeLevel === 'error'
     ? '#ff9b9b'
-    : level === 'warn'
+    : safeLevel === 'warn'
       ? '#ffd38a'
-      : level === 'success'
+      : safeLevel === 'success'
         ? '#8dffbd'
         : '#9fb2cc';
   line.style.color = color;
-  line.textContent = `[${stamp}] ${String(message || '')}`;
+  line.textContent = `[${stamp}] ${safeMessage}`;
   if (body.textContent.includes('No deployment activity yet.')) {
     body.innerHTML = '';
   }
@@ -358,6 +446,9 @@ window.handleMoeDragOver = handleMoeDragOver;
 window.handleMoeDrop = handleMoeDrop;
 
 function bindMoeDeployButtons() {
+  const initialState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
+  applyMoePipelineFrameStateToDom(initialState);
+  setMoeDeployBusyUi(false);
   const deployBtn = document.getElementById('moe-deploy-btn');
   if (deployBtn && deployBtn.dataset.boundClick !== '1') {
     deployBtn.addEventListener('click', () => {

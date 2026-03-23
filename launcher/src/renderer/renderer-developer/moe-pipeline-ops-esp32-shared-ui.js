@@ -18,3 +18,29 @@ function esp32LogStatus(message, level = 'info') {
 
 window.esp32Render = esp32Render;
 window.esp32LogStatus = esp32LogStatus;
+
+if (!window.__psfMoeIrgProgressBound && window.electronAPI?.onMoEIrgProgress) {
+  window.__psfMoeIrgProgressBound = true;
+  window.electronAPI.onMoEIrgProgress((payload = {}) => {
+    const level = String(payload?.level || '').trim().toLowerCase();
+    const stage = String(payload?.stage || '').trim().toLowerCase();
+    const stream = String(payload?.stream || '').trim().toLowerCase();
+    const text = String(
+      payload?.line
+      || payload?.chunk
+      || payload?.message
+      || ''
+    );
+    if (!text) return;
+    const prefix = stage ? `[IRG:${stage}] ` : '[IRG] ';
+    const mappedLevel = level === 'error' || stream === 'stderr'
+      ? 'error'
+      : (level === 'warn' ? 'warn' : 'info');
+    const lines = text.replace(/\r/g, '').split('\n');
+    for (const raw of lines) {
+      const line = String(raw || '').trimEnd();
+      if (!line) continue;
+      esp32LogStatus(`${prefix}${line}`, mappedLevel);
+    }
+  });
+}

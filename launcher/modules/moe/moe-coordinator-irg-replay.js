@@ -27,7 +27,9 @@ async function rerunLastIrgInternal({ lastIrgReplay, moeIrg, normalizeIrgModeOve
     gatewayConfig,
     llmPlan: `IRG_PLAN_JSON: ${JSON.stringify(planPayload)}`,
     requireLlmPlan: false,
-    modeOverride
+    modeOverride,
+    progressCallback: typeof options?.progressCallback === 'function' ? options.progressCallback : null,
+    progressTag: String(options?.progressTag || '').trim()
   });
   if (!irgResult.handled) {
     return {
@@ -106,7 +108,9 @@ async function runIrgContractInternal({ contractInput, options = {}, getInputGat
     gatewayConfig,
     llmPlan: `IRG_PLAN_JSON: ${JSON.stringify(planPayload)}`,
     requireLlmPlan: false,
-    modeOverride
+    modeOverride,
+    progressCallback: typeof options?.progressCallback === 'function' ? options.progressCallback : null,
+    progressTag: String(options?.progressTag || '').trim()
   });
   if (!irgResult.handled) {
     return {

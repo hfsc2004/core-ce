@@ -145,6 +145,9 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       if (type === 'arduino-cli') {
         return await binaryManager.downloadArduinoCli(appDir, (progress) => event.sender.send('download-progress', progress));
       }
+      if (type === 'esptool') {
+        return await binaryManager.downloadEsptool(appDir, (progress) => event.sender.send('download-progress', progress));
+      }
       if (type === 'git') {
         return await binaryManager.downloadGit(appDir, (progress) => event.sender.send('download-progress', progress));
       }

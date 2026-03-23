@@ -67,6 +67,9 @@ if (!window.modelOrderingState) {
       signature: '',
       loading: false
     },
+    moeDeployStatusSummary: 'IDLE',
+    moeDeployLogLines: [],
+    moeDeployFrameState: 'idle',
     
     // MoE Model Filter
     showAllModels: false

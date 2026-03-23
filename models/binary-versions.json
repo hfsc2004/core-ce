@@ -95,6 +95,12 @@
     },
     "extractRequired": true
   },
+  "esptool": {
+    "version": "latest",
+    "type": "python-venv",
+    "package": "esptool",
+    "notes": "Managed venv install used by PSF Relay for erase_flash and low-level ESP32 flashing."
+  },
   "git": {
     "version": "v2.47.1",
     "type": "portable-cli",
