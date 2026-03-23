@@ -5,8 +5,9 @@
  */
 
 function renderAgentRow(agent, index, modelsForDropdown) {
-  const { editMode, expandedMoeItem, showAllModels } = window.modelOrderingState;
-  const isExpanded = expandedMoeItem === agent.id;
+  const { editMode, expandedMoeItem, expandedMoeItems, showAllModels } = window.modelOrderingState;
+  const expanded = Array.isArray(expandedMoeItems) ? expandedMoeItems : [];
+  const isExpanded = expanded.includes(agent.id) || expandedMoeItem === agent.id;
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
   const counts = (window.modelOrderingState?.moeAttachmentCounts?.byAgentId || {})[agent.id] || {};
@@ -29,7 +30,7 @@ function renderAgentRow(agent, index, modelsForDropdown) {
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="3"/><path d="M2,15 Q2,11 8,11 Q14,11 14,15"/></svg>
         </span>
         <span onclick="event.stopPropagation(); promptRenameMoeItem('${agent.id}')" onmousedown="event.stopPropagation();"
-              style="color:#fff; font-weight:bold; font-size:14px; min-width:120px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
+              style="color:#fff; font-weight:bold; font-size:12px; min-width:120px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
               onmouseover="this.style.borderBottomColor='${theme.accent}'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(agent.name)}</span>
         <div style="flex: 1; display: flex; align-items: center; justify-content: flex-start; gap: 8px;">
           <span style="color: #888;">→</span>

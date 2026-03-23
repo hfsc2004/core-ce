@@ -5,8 +5,9 @@
  */
 
 function renderChannelRow(channel, index) {
-  const { editMode, expandedMoeItem } = window.modelOrderingState;
-  const isExpanded = expandedMoeItem === channel.id;
+  const { editMode, expandedMoeItem, expandedMoeItems } = window.modelOrderingState;
+  const expanded = Array.isArray(expandedMoeItems) ? expandedMoeItems : [];
+  const isExpanded = expanded.includes(channel.id) || expandedMoeItem === channel.id;
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
   const flowCondition = channel.flowCondition || 'always';
@@ -28,7 +29,7 @@ function renderChannelRow(channel, index) {
         <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(88,166,255,0.15);">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#58a6ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="8" x2="14" y2="8"/><polyline points="10,4 14,8 10,12"/></svg>
         </span>
-        <span style="color:#fff; font-weight:bold; font-size:14px; min-width:80px;">Channel</span>
+        <span style="color:#fff; font-weight:bold; font-size:12px; min-width:80px; padding:4px; border-bottom:1px solid transparent;">Channel</span>
         <select onchange="updateChannelDirection('${channel.id}', this.value)" onclick="event.stopPropagation()"
                 style="padding: 4px 10px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
           <option value="bidirectional" ${channel.direction === 'bidirectional' ? 'selected' : ''}>↔ Bi-directional</option>

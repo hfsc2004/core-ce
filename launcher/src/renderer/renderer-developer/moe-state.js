@@ -34,6 +34,7 @@ window.modelOrderingState = {
   moeItems: [],
   selectedMoeItem: null,
   expandedMoeItem: null,
+  expandedMoeItems: [],
   serialDevices: [],
   serialDevicesUpdatedAt: null,
   endpointRegistry: {

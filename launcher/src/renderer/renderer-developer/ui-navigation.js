@@ -10,10 +10,6 @@ function showScreen(screenId) {
   if (screenId === 'version-manager') {
     screenId = 'main-menu';
   }
-  if (screenId === 'compile-project') {
-    // Compile Product is intentionally disabled in Core-CE.
-    screenId = 'main-menu';
-  }
   document.querySelectorAll('.screen').forEach(screen => {
     screen.classList.remove('active');
   });
@@ -30,8 +26,6 @@ function showScreen(screenId) {
     loadCatalogEditor();
   } else if (screenId === 'package-manager') {
     loadPackageManager();
-  } else if (screenId === 'compile-project') {
-    loadCompileProject();
   } else if (screenId === 'model-ordering') {
     loadModelOrdering();
   } else if (screenId === 'about') {

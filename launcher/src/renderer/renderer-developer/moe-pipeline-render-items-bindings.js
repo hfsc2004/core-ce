@@ -5,8 +5,9 @@
  */
 
 function renderBindingsRow(bindings, index) {
-  const { editMode, expandedMoeItem } = window.modelOrderingState;
-  const isExpanded = expandedMoeItem === bindings.id;
+  const { editMode, expandedMoeItem, expandedMoeItems } = window.modelOrderingState;
+  const expanded = Array.isArray(expandedMoeItems) ? expandedMoeItems : [];
+  const isExpanded = expanded.includes(bindings.id) || expandedMoeItem === bindings.id;
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
   const entries = Array.isArray(bindings.entries) ? bindings.entries : [];
@@ -27,7 +28,7 @@ function renderBindingsRow(bindings, index) {
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d2991e" stroke-width="1.8" stroke-linecap="round"><path d="M4,8 C4,5.5 12,5.5 12,8 C12,10.5 4,10.5 4,8Z"/><line x1="1" y1="8" x2="4" y2="8"/><line x1="12" y1="8" x2="15" y2="8"/></svg>
         </span>
         <span onclick="event.stopPropagation(); promptRenameMoeItem('${bindings.id}')" onmousedown="event.stopPropagation();"
-              style="color:#fff; font-weight:bold; font-size:14px; min-width:200px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
+              style="color:#fff; font-weight:bold; font-size:12px; min-width:200px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
               onmouseover="this.style.borderBottomColor='#ddd'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(bindings.name || '')}</span>
         <div style="flex:1; color:#999; font-size:12px;">${entries.length} binding${entries.length !== 1 ? 's' : ''}</div>
         <label onclick="event.stopPropagation()" style="display: flex; align-items: center; gap: 5px; cursor: pointer;">

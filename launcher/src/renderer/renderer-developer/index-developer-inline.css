@@ -6,6 +6,111 @@ select option {
   color: #fff;
 }
 
+.moe-item label {
+  font-size: 12px !important;
+}
+
+.moe-native-select-hidden {
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  border: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.moe-custom-select {
+  position: relative;
+  display: inline-block;
+  min-width: 120px;
+}
+
+.moe-custom-select-trigger {
+  width: 100%;
+  padding: 4px 26px 4px 8px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.moe-custom-select-trigger::after {
+  content: '▾';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9fb2cc;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.moe-custom-select.open .moe-custom-select-trigger {
+  border-color: var(--psf-accent, #00d4ff);
+  box-shadow: 0 0 0 1px rgba(0,212,255,0.35);
+}
+
+.moe-custom-select-list {
+  display: none;
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow: auto;
+  background: #151f2d;
+  border: 1px solid #2f4157;
+  border-radius: 6px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.45);
+  padding: 4px;
+}
+
+.moe-custom-select.open .moe-custom-select-list {
+  display: block;
+}
+
+.moe-custom-select-option {
+  width: 100%;
+  padding: 7px 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: #dbe7ff;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.moe-custom-select-option:hover {
+  background: rgba(88,166,255,0.16);
+}
+
+.moe-custom-select-option.selected {
+  background: rgba(0,212,255,0.18);
+  color: #9fe8ff;
+}
+
+.moe-custom-select-option.disabled,
+.moe-custom-select.disabled .moe-custom-select-trigger {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .header-settings-btn {
   position: static;
   width: 34px;
@@ -57,6 +162,57 @@ select option {
 #model-ordering-actions-bar button svg {
   width: 1.5em !important;
   height: 1.5em !important;
+}
+
+#binary-manager .binary-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+#binary-manager .binary-action-btn.btn-primary {
+  border: 1px solid var(--psf-accent, #00d4ff) !important;
+  color: #9fe8ff !important;
+}
+
+#binary-manager .binary-action-btn.btn-secondary {
+  border: 1px solid rgba(139, 148, 158, 0.45) !important;
+  color: #c9d1d9 !important;
+}
+
+#binary-manager .binary-action-btn:hover {
+  background: rgba(88, 166, 255, 0.12) !important;
+}
+
+#binary-manager .binary-product-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5em;
+  line-height: 1.2;
+  min-height: 28px;
+  text-align: left;
+}
+
+#binary-manager .binary-product-title svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  stroke-width: 2;
+}
+
+#binary-manager .binary-manager-content .info-card > div > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+#binary-manager .binary-manager-content .info-card > div > div:last-child {
+  margin-left: 18px;
+  align-self: flex-start;
 }
 
 #moe-pipeline-status-indicator {

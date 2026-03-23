@@ -5,8 +5,9 @@
  */
 
 function renderGatewayRow(gateway, index) {
-  const { editMode, expandedMoeItem } = window.modelOrderingState;
-  const isExpanded = expandedMoeItem === gateway.id;
+  const { editMode, expandedMoeItem, expandedMoeItems } = window.modelOrderingState;
+  const expanded = Array.isArray(expandedMoeItems) ? expandedMoeItems : [];
+  const isExpanded = expanded.includes(gateway.id) || expandedMoeItem === gateway.id;
   const expandIcon = isExpanded ? '▼' : '▶';
   const enabledSources = Object.values(gateway.sources).filter(s => s.enabled).length;
   const theme = getMoeTheme();
@@ -27,7 +28,7 @@ function renderGatewayRow(gateway, index) {
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3fb950" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="14" height="10" rx="2"/><line x1="4" y1="7" x2="8" y2="7"/><line x1="4" y1="10" x2="12" y2="10"/></svg>
         </span>
         <span onclick="event.stopPropagation(); promptRenameMoeItem('${gateway.id}')" onmousedown="event.stopPropagation();"
-              style="color:#fff; font-weight:bold; font-size:14px; min-width:150px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
+              style="color:#fff; font-weight:bold; font-size:12px; min-width:150px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
               onmouseover="this.style.borderBottomColor='${theme.success}'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(gateway.name)}</span>
         <span style="background: rgba(0,255,136,0.2); color: ${theme.success}; padding: 3px 10px; border-radius: 10px; font-size: 11px;">
           ${gateway.position === 'input' ? '⬇️ Input' : '⬆️ Output'}
@@ -223,18 +224,18 @@ function renderGatewayDetails(gateway) {
   const serialOptions = buildSerialPortOptions(serialPorts, selectedSerialPort);
   
   return `
-    <div onclick="event.stopPropagation()" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid ${theme.success}33;">
+    <div onclick="event.stopPropagation()" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid ${theme.success}33; font-size: 12px;">
       <div style="margin-bottom: 15px;">
         <label style="color: #888; font-size: 12px; display: block; margin-bottom: 5px;">Gateway Position</label>
         <div style="display: flex; gap: 10px;">
           <button onclick="updateGatewayPosition('${gateway.id}', 'input')"
                   style="padding: 8px 20px; background: ${gateway.position === 'input' ? 'rgba(0,255,136,0.3)' : 'rgba(255,255,255,0.05)'}; 
                          border: 1px solid ${gateway.position === 'input' ? theme.success : '#555'}; border-radius: 6px; 
-                         color: ${gateway.position === 'input' ? theme.success : '#888'}; cursor: pointer;">⬇️ Input</button>
+                         color: ${gateway.position === 'input' ? theme.success : '#888'}; cursor: pointer; font-size: 12px;">⬇️ Input</button>
           <button onclick="updateGatewayPosition('${gateway.id}', 'output')"
                   style="padding: 8px 20px; background: ${gateway.position === 'output' ? 'rgba(0,255,136,0.3)' : 'rgba(255,255,255,0.05)'}; 
                          border: 1px solid ${gateway.position === 'output' ? theme.success : '#555'}; border-radius: 6px; 
-                         color: ${gateway.position === 'output' ? theme.success : '#888'}; cursor: pointer;">⬆️ Output</button>
+                         color: ${gateway.position === 'output' ? theme.success : '#888'}; cursor: pointer; font-size: 12px;">⬆️ Output</button>
         </div>
       </div>
       
@@ -246,7 +247,7 @@ function renderGatewayDetails(gateway) {
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 120px;">
               <input type="checkbox" ${gateway.sources.terminal.enabled ? 'checked' : ''} 
                      onchange="toggleGatewaySource('${gateway.id}', 'terminal', this.checked)">
-              <span style="color: var(--psf-accent, #00d4ff);">Terminal</span>
+              <span style="color: var(--psf-accent, #00d4ff); font-size: 12px;">Terminal</span>
             </label>
             <span style="color: #666; font-size: 11px;">Built-in chat interface</span>
           </div>
@@ -255,7 +256,7 @@ function renderGatewayDetails(gateway) {
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 120px;">
               <input type="checkbox" ${gateway.sources.api.enabled ? 'checked' : ''} 
                      onchange="toggleGatewaySource('${gateway.id}', 'api', this.checked)">
-              <span style="color: ${theme.accent};">HTTP API</span>
+              <span style="color: ${theme.accent}; font-size: 12px;">HTTP API</span>
             </label>
             <input type="number" value="${gateway.sources.api.port}" 
                    onchange="updateGatewaySourceConfig('${gateway.id}', 'api', 'port', parseInt(this.value))"
@@ -268,10 +269,10 @@ function renderGatewayDetails(gateway) {
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 120px;">
               <input type="checkbox" ${gateway.sources.serial.enabled ? 'checked' : ''} 
                      onchange="toggleGatewaySource('${gateway.id}', 'serial', this.checked)">
-              <span style="color: ${theme.warning};">Serial</span>
+              <span style="color: ${theme.warning}; font-size: 12px;">Serial</span>
             </label>
             <select onchange="updateGatewaySourceConfig('${gateway.id}', 'serial', 'port', this.value)"
-                    style="min-width: 200px; padding: 4px 8px; background: rgba(255,255,255,0.1); border: 1px solid #555; border-radius: 4px; color: #fff;">
+                    style="width: clamp(200px, 34vw, 560px); min-width: 200px; padding: 4px 8px; background: rgba(255,255,255,0.1); border: 1px solid #555; border-radius: 4px; color: #fff; font-size: 11px;">
               ${serialOptions}
             </select>
             <input type="number" value="${gateway.sources.serial.baudRate}" 
@@ -301,20 +302,20 @@ function renderGatewayDetails(gateway) {
             </label>
             <label style="color:#888; font-size:11px;">Entry</label>
             <select onchange="updateGatewayIrgEntryMode('${gateway.id}', this.value)"
-                    style="padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
+                    style="padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff; font-size: 11px;">
               <option value="deterministic-first" ${String(irg.entryMode || 'deterministic-first').toLowerCase() === 'deterministic-first' ? 'selected' : ''}>Deterministic First</option>
               <option value="llm-plan-first" ${String(irg.entryMode || 'deterministic-first').toLowerCase() === 'llm-plan-first' ? 'selected' : ''}>LLM Plan First</option>
             </select>
             <label style="color:#888; font-size:11px;">Mode</label>
             <select onchange="updateGatewayIrgMode('${gateway.id}', this.value)"
-                    style="padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
+                    style="padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff; font-size: 11px;">
               <option value="simulate" ${String(irg.executeMode || 'live').toLowerCase() === 'simulate' ? 'selected' : ''}>simulate</option>
               <option value="live" ${String(irg.executeMode || 'live').toLowerCase() === 'live' ? 'selected' : ''}>live</option>
               <option value="disabled" ${String(irg.executeMode || 'live').toLowerCase() === 'disabled' ? 'selected' : ''}>disabled</option>
             </select>
             <label style="color:#888; font-size:11px;">Fallback</label>
             <select onchange="updateGatewayIrgFallbackMode('${gateway.id}', this.value)"
-                    style="padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
+                    style="padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff; font-size: 11px;">
               <option value="off" ${irgFallbackMode === 'off' ? 'selected' : ''}>Off</option>
               <option value="on-gaps" ${irgFallbackMode === 'on-gaps' ? 'selected' : ''}>On Gaps</option>
               <option value="on-gaps-or-low-confidence" ${irgFallbackMode === 'on-gaps-or-low-confidence' ? 'selected' : ''}>On Gaps or Low Confidence</option>
@@ -399,7 +400,7 @@ function renderGatewayDetails(gateway) {
             </button>
             <label style="color:#888; font-size:11px;">Found</label>
             <select onchange="selectGatewayEsp32ScannedSsid('${gateway.id}', this.value)"
-                    style="min-width:220px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
+                    style="min-width:220px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff; font-size: 11px;">
               <option value="">${esp32ScanNetworks.length > 0 ? 'Select SSID from scan...' : 'No scan results yet'}</option>
               ${esp32ScanOptions}
             </select>
@@ -479,7 +480,7 @@ function renderGatewayDetails(gateway) {
                     onclick="event.stopPropagation();">Popout Drive</button>
             <label style="color:#888; font-size:11px;">AI Agent</label>
             <select onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiAiDriveAgentId', this.value)"
-                    style="min-width:220px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
+                    style="min-width:220px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff; font-size: 11px;">
               <option value="">Select deployed agent...</option>
               ${esp32AiAgentOptions}
             </select>
@@ -593,7 +594,7 @@ function renderGatewayDetails(gateway) {
                    style="min-width:100px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
             <label style="color:#888; font-size:11px;">Board</label>
             <select onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraBoardProfile', this.value)"
-                    style="min-width:200px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
+                    style="min-width:200px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff; font-size: 11px;">
               <option value="ai-thinker-esp32cam" ${esp32CameraBoardProfile === 'ai-thinker-esp32cam' ? 'selected' : ''}>AI Thinker ESP32-CAM</option>
               <option value="elegoo-esp32s3-camera-v1" ${esp32CameraBoardProfile === 'elegoo-esp32s3-camera-v1' ? 'selected' : ''}>Elegoo ESP32S3-Camera V1.0</option>
             </select>
