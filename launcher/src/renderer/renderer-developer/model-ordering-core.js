@@ -37,10 +37,10 @@ function renderModelOrdering() {
   const isPipelineMode = scopeMode === 'pipeline';
   const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
   const pipelineStatusDisplay = deployFrameState === 'active'
-    ? '<span style="color:#22c55e;">[RUNNING]</span>'
+    ? '<span class="moe-status-line" style="color:#22c55e;">[RUNNING]</span><span class="moe-status-tail moe-status-tail-running" aria-hidden="true"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>'
     : ((deployFrameState === 'stopping' || deployFrameState === 'stopped' || deployFrameState === 'error')
-      ? '<span style="color:#ef4444;">[STOPPED]</span>'
-      : '<span style="color:#38bdf8;">[</span><span style="color:#6b7280;">IDLE</span><span style="color:#38bdf8;">]</span>');
+      ? '<span class="moe-status-line" style="color:#ef4444;">[STOPPED]</span><span class="moe-status-tail moe-status-tail-stopped" aria-hidden="true"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span class="final-dot">.</span></span>'
+      : '<span class="moe-status-line"><span style="color:#38bdf8;">[</span><span style="color:#6b7280;">IDLE</span><span style="color:#38bdf8;">]</span></span><span class="moe-status-tail moe-status-tail-idle" aria-hidden="true"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>');
 
   container.innerHTML = `
     <div style="max-width: 1200px; position: relative; left: 50%; transform: translateX(-50%) scale(1.5); transform-origin: top center; width: calc(100% / 1.5);">
@@ -136,7 +136,7 @@ function renderModelOrdering() {
                   Reorder
                 </button>
                 <span id="moe-pipeline-status-indicator"
-                      style="padding: 7px 4px; min-height: 32px; display: inline-flex; align-items: center; font-size: 30px; font-weight: 700; white-space: nowrap; letter-spacing: 0.04em; line-height: 1;">
+                      style="padding: 7px 4px; min-height: 32px; display: inline-flex; align-items: center; font-size: 21px; font-weight: 700; white-space: nowrap; letter-spacing: 0.04em; line-height: 1; align-self: center;">
                   ${pipelineStatusDisplay}
                 </span>
               ` : `
