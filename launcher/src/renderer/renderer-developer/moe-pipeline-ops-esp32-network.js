@@ -91,7 +91,11 @@ function cidrToMask(cidrRaw) {
 function getCameraBoardProfileConfig(esp32 = {}) {
   const profile = String(esp32.wifiCameraBoardProfile || '').trim().toLowerCase() || 'ai-thinker-esp32cam';
   if (profile === 'elegoo-esp32s3-camera-v1') {
-    const defaultPinProfileKey = String(esp32.wifiCameraPinProfile || 'elegoo-s3-eye-vendor-a').trim().toLowerCase();
+    let defaultPinProfileKey = String(esp32.wifiCameraPinProfile || 's3-samuelw-style').trim().toLowerCase();
+    // Migration for older saved configs that defaulted to vendor-a.
+    if (!defaultPinProfileKey || defaultPinProfileKey === 'elegoo-s3-eye-vendor-a') {
+      defaultPinProfileKey = 's3-samuelw-style';
+    }
     return {
       id: 'elegoo-esp32s3-camera-v1',
       label: 'Elegoo ESP32S3-Camera V1.0',
@@ -147,6 +151,7 @@ function getCameraBoardProfileConfig(esp32 = {}) {
 function buildEsp32CameraSketch(esp32 = {}) {
   const ssid = String(esp32.wifiCameraSsid || esp32.wifiSsid || '').trim();
   const pass = String(esp32.wifiCameraPassword || esp32.wifiPassword || '');
+  const staEnabled = esp32.wifiCameraStaEnabled !== false;
   const host = String(esp32.wifiCameraHost || '').trim();
   const port = Number.isInteger(Number(esp32.wifiCameraPort)) ? Number(esp32.wifiCameraPort) : 81;
   const streamPath = normalizeHttpPath(esp32.wifiCameraStreamPath, '/stream');
@@ -205,6 +210,7 @@ const char* CAMERA_PIN_PROFILE_KEY = ${JSON.stringify(activePinProfileKey)};
 
 const char* WIFI_SSID = ${JSON.stringify(ssid)};
 const char* WIFI_PASS = ${JSON.stringify(pass)};
+const bool WIFI_STA_ENABLED = ${staEnabled ? 'true' : 'false'};
 const char* CAMERA_BOARD_PROFILE = ${JSON.stringify(board.id)};
 const uint16_t HTTP_PORT = ${port};
 const bool USE_STATIC_IP = ${staticEnabled ? 'true' : 'false'};
@@ -227,7 +233,7 @@ void handleHealth() {
   String body = "{\\"ok\\":" + String(cameraReady ? "true" : "false") + ",\\"service\\":\\"esp32-cam\\",\\"profile\\":\\"" + String(CAMERA_BOARD_PROFILE) + "\\"";
   body += ",\\"pinProfile\\":\\"" + activePinProfile + "\\"";
   body += ",\\"cameraReady\\":" + String(cameraReady ? "true" : "false");
-  body += ",\\"networkMode\\":\\"sta\\"";
+  body += ",\\"networkMode\\":\\"" + String(WIFI_STA_ENABLED ? "sta" : "disabled") + "\\"";
   body += ",\\"wifiConnected\\":" + String(wifiStaConnected ? "true" : "false");
   body += ",\\"wlStatus\\":" + String((int)WiFi.status());
   body += ",\\"ssid\\":\\"" + String(WIFI_SSID) + "\\"";
@@ -313,26 +319,29 @@ bool initCameraWithPins(const CameraPins& pins) {
   config.pin_pwdn = pins.pwdn;
   config.pin_reset = pins.reset;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_UXGA;
+  // Use conservative defaults for first boot stability on ESP32-S3 camera boards.
+  // We can scale this up later after proven stable init + Wi-Fi association.
+  config.frame_size = FRAMESIZE_QVGA;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+  config.grab_mode = CAMERA_GRAB_LATEST;
   config.fb_location = CAMERA_FB_IN_PSRAM;
-  config.jpeg_quality = 10;
+  config.jpeg_quality = 12;
   config.fb_count = 2;
 
   if (config.pixel_format == PIXFORMAT_JPEG) {
     if (psramFound()) {
-      config.jpeg_quality = 10;
+      config.jpeg_quality = 12;
       config.fb_count = 2;
       config.grab_mode = CAMERA_GRAB_LATEST;
     } else {
       // Mirror vendor fallback when PSRAM is unavailable.
-      config.frame_size = FRAMESIZE_SVGA;
+      config.frame_size = FRAMESIZE_QVGA;
       config.fb_location = CAMERA_FB_IN_DRAM;
+      config.fb_count = 1;
     }
   } else {
     config.frame_size = FRAMESIZE_240X240;
-    config.fb_count = 2;
+    config.fb_count = 1;
   }
 
   esp_err_t err = esp_camera_init(&config);
@@ -392,6 +401,11 @@ bool initCamera() {
 }
 
 bool connectWifi() {
+  if (!WIFI_STA_ENABLED) {
+    Serial.println("WiFi: disabled (STA off)");
+    wifiStaConnected = false;
+    return false;
+  }
   WiFi.mode(WIFI_STA);
   Serial.println("WiFi: starting STA mode");
   Serial.println(String("WiFi: SSID=") + WIFI_SSID);
@@ -431,7 +445,13 @@ bool connectWifi() {
 void setup() {
   Serial.begin(115200);
   initCamera();
-  connectWifi();
+  if (WIFI_STA_ENABLED) {
+    connectWifi();
+  } else {
+    WiFi.mode(WIFI_OFF);
+    wifiStaConnected = false;
+    Serial.println("WiFi: serial-only test mode");
+  }
   server.on(${JSON.stringify(healthPath)}, HTTP_GET, handleHealth);
   server.on(${JSON.stringify(snapshotPath)}, HTTP_GET, handleSnapshot);
   server.on(${JSON.stringify(streamPath)}, HTTP_GET, handleStream);
@@ -445,14 +465,16 @@ void setup() {
 }
 
 void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
-    wifiStaConnected = true;
-  } else {
-    wifiStaConnected = false;
-    unsigned long now = millis();
-    if (now - wifiLastAttemptMs >= WIFI_RETRY_INTERVAL_MS) {
-      Serial.println("WiFi: disconnected, retrying STA connect...");
-      connectWifi();
+  if (WIFI_STA_ENABLED) {
+    if (WiFi.status() == WL_CONNECTED) {
+      wifiStaConnected = true;
+    } else {
+      wifiStaConnected = false;
+      unsigned long now = millis();
+      if (now - wifiLastAttemptMs >= WIFI_RETRY_INTERVAL_MS) {
+        Serial.println("WiFi: disconnected, retrying STA connect...");
+        connectWifi();
+      }
     }
   }
   server.handleClient();
@@ -497,19 +519,25 @@ async function flashGatewayEsp32CameraFirmware(gatewayId) {
   const serialPort = String(gateway?.sources?.serial?.port || '').trim();
   const cameraFqbn = String(esp32.wifiCameraFqbn || 'esp32:esp32:esp32cam').trim() || 'esp32:esp32:esp32cam';
   const cameraBoardProfile = String(esp32.wifiCameraBoardProfile || '').trim().toLowerCase() || 'ai-thinker-esp32cam';
+  const cameraStaEnabled = esp32.wifiCameraStaEnabled !== false;
+  const cameraUsbCdcOnBoot = esp32.wifiCameraUsbCdcOnBoot !== false;
+  const cameraCaptureRuntimeSerial = esp32.wifiCameraCaptureRuntimeSerial !== false;
+  const cameraRuntimeSerialCaptureMs = Number.isInteger(Number(esp32.wifiCameraRuntimeSerialCaptureMs))
+    ? Math.max(0, Math.min(120000, Number(esp32.wifiCameraRuntimeSerialCaptureMs)))
+    : 20000;
   const cameraUploadMode = (cameraBoardProfile === 'elegoo-esp32s3-camera-v1' && /esp32s3/i.test(cameraFqbn))
     ? 'arduino-cli'
     : 'merged-bin';
 
   const ssid = String(esp32.wifiCameraSsid || esp32.wifiSsid || '').trim();
   const cameraHost = String(esp32.wifiCameraHost || '').trim();
-  if (!ssid) {
+  if (cameraStaEnabled && !ssid) {
     state.flashMessage = 'Set Camera SSID first.';
     esp32LogStatus('[ESP32 Camera] Flash blocked: Camera SSID is required.', 'warn');
     esp32Render();
     return;
   }
-  if (!cameraHost) {
+  if (cameraStaEnabled && !cameraHost) {
     state.flashMessage = 'Set Camera Host first (e.g. 172.20.0.16).';
     esp32LogStatus('[ESP32 Camera] Flash blocked: Camera Host is required.', 'warn');
     esp32Render();
@@ -541,6 +569,10 @@ async function flashGatewayEsp32CameraFirmware(gatewayId) {
         eraseFlashBeforeUpload: true,
         uploadMode: cameraUploadMode,
         chip: /esp32s3/i.test(cameraFqbn) ? 'esp32s3' : 'esp32',
+        wifiStaEnabled: cameraStaEnabled,
+        usbCdcOnBoot: cameraUsbCdcOnBoot,
+        captureRuntimeSerial: cameraCaptureRuntimeSerial,
+        runtimeSerialCaptureMs: cameraRuntimeSerialCaptureMs,
         ...(serialPort && serialPort.toLowerCase() !== 'auto' ? { serialPort } : {}),
         language: 'arduino-cpp',
         code: sketch,
@@ -1028,6 +1060,54 @@ function toggleGatewayEsp32PasswordMask(gatewayId) {
   esp32Render();
 }
 
+function getGatewayEsp32SectionState(gatewayId) {
+  const state = readScanState(gatewayId);
+  const defaults = (() => {
+    try {
+      if (window.__PSF_GATEWAY_UI_DEFAULTS__ && typeof window.__PSF_GATEWAY_UI_DEFAULTS__ === 'object') {
+        return window.__PSF_GATEWAY_UI_DEFAULTS__;
+      }
+      const raw = localStorage.getItem('psf-gateway-ui-defaults');
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  })();
+  const collapseAllByDefault = defaults?.esp32SectionsStartCollapsed === true;
+  if (!state.sections || typeof state.sections !== 'object') {
+    state.sections = {
+      wifiControl: false,
+      drivePad: false,
+      staticNetwork: false,
+      cameraSidecar: collapseAllByDefault ? false : true
+    };
+  }
+  return {
+    wifiControl: state.sections.wifiControl === true,
+    drivePad: state.sections.drivePad === true,
+    staticNetwork: state.sections.staticNetwork === true,
+    cameraSidecar: state.sections.cameraSidecar !== false
+  };
+}
+
+function toggleGatewayEsp32Section(gatewayId, sectionKey) {
+  const state = readScanState(gatewayId);
+  if (!state.sections || typeof state.sections !== 'object') {
+    state.sections = {
+      wifiControl: false,
+      drivePad: false,
+      staticNetwork: false,
+      cameraSidecar: true
+    };
+  }
+  const key = String(sectionKey || '').trim();
+  if (!key) return;
+  state.sections[key] = !(state.sections[key] === true);
+  esp32Render();
+}
+
 window.scanGatewayEsp32Wifi = scanGatewayEsp32Wifi;
 window.getGatewayEsp32WifiScanData = getGatewayEsp32WifiScanData;
 window.selectGatewayEsp32ScannedSsid = selectGatewayEsp32ScannedSsid;
@@ -1035,6 +1115,8 @@ window.flashGatewayEsp32WifiFirmware = flashGatewayEsp32WifiFirmware;
 window.applyGatewayEsp32NetworkConfig = applyGatewayEsp32NetworkConfig;
 window.isGatewayEsp32PasswordVisible = isGatewayEsp32PasswordVisible;
 window.toggleGatewayEsp32PasswordMask = toggleGatewayEsp32PasswordMask;
+window.getGatewayEsp32SectionState = getGatewayEsp32SectionState;
+window.toggleGatewayEsp32Section = toggleGatewayEsp32Section;
 window.getGatewayEsp32CameraUrl = getGatewayEsp32CameraUrl;
 window.openGatewayEsp32CameraWindow = openGatewayEsp32CameraWindow;
 window.probeGatewayEsp32Camera = probeGatewayEsp32Camera;

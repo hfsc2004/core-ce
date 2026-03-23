@@ -16,10 +16,59 @@
     <!-- Header -->
     <header class="app-header">
       <div class="logo-container developer-logo-container">
-        <div class="header-text developer-header-text">
-          <p class="core-title core-bracket-logo">
-            <span class="core-bracket-mark">[</span>CORE<span class="core-bracket-mark">]</span>
-          </p>
+        <div class="core-relay-cluster">
+          <div class="header-text developer-header-text">
+            <p class="core-title core-bracket-logo">
+              <span class="core-bracket-mark">[</span>CORE<span class="core-bracket-mark">]</span>
+            </p>
+          </div>
+          <div id="relay-header-badge" class="context-header-badge" style="display:none; align-items:flex-end; gap:12px; margin-left:0; margin-bottom:22px; color:#e6edf3; line-height:1;">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="18" width="10" height="10" rx="2"></rect>
+              <rect x="31" y="6" width="10" height="10" rx="2"></rect>
+              <rect x="31" y="28" width="10" height="10" rx="2"></rect>
+              <line x1="13" y1="22" x2="31" y2="11"></line>
+              <line x1="13" y1="22" x2="31" y2="33"></line>
+            </svg>
+            <span style="font-size:40px; font-weight:600; letter-spacing:0.01em; line-height:1;">PSF Relay</span>
+          </div>
+          <div id="browse-header-badge" class="context-header-badge" style="display:none; align-items:flex-end; gap:12px; margin-left:0; margin-bottom:22px; color:#e6edf3; line-height:1;">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="30" width="32" height="8" rx="2"></rect>
+              <line x1="22" y1="6" x2="22" y2="26"></line>
+              <polyline points="13,18 22,27 31,18"></polyline>
+              <circle cx="12" cy="34" r="1.5" fill="#58a6ff" stroke="none"></circle>
+              <circle cx="22" cy="34" r="1.5" fill="#58a6ff" stroke="none"></circle>
+              <circle cx="32" cy="34" r="1.5" fill="#58a6ff" stroke="none"></circle>
+            </svg>
+            <span style="font-size:40px; font-weight:600; letter-spacing:0.01em; line-height:1;">Browse & Download Models</span>
+          </div>
+          <div id="catalog-header-badge" class="context-header-badge" style="display:none; align-items:flex-end; gap:12px; margin-left:0; margin-bottom:22px; color:#e6edf3; line-height:1;">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 34h28"></path>
+              <path d="M16 30l2-6 12-12a3 3 0 0 1 4 4L22 28l-6 2z"></path>
+              <path d="M27 13l4 4"></path>
+            </svg>
+            <span style="font-size:40px; font-weight:600; letter-spacing:0.01em; line-height:1;">Catalog Editor</span>
+          </div>
+          <div id="binary-header-badge" class="context-header-badge" style="display:none; align-items:flex-end; gap:12px; margin-left:0; margin-bottom:22px; color:#e6edf3; line-height:1;">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="13" width="32" height="20" rx="3"></rect>
+              <line x1="6" y1="20" x2="38" y2="20"></line>
+              <line x1="14" y1="25" x2="14" y2="30"></line>
+              <line x1="22" y1="25" x2="22" y2="30"></line>
+              <line x1="30" y1="25" x2="30" y2="30"></line>
+            </svg>
+            <span style="font-size:40px; font-weight:600; letter-spacing:0.01em; line-height:1;">Binary Manager</span>
+          </div>
+          <div id="group-header-badge" class="context-header-badge" style="display:none; align-items:flex-end; gap:12px; margin-left:0; margin-bottom:22px; color:#e6edf3; line-height:1;">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="10" width="32" height="24" rx="3"></rect>
+              <path d="M6 18h32"></path>
+              <path d="M16 10v8"></path>
+            </svg>
+            <span style="font-size:40px; font-weight:600; letter-spacing:0.01em; line-height:1;">Group Manager</span>
+          </div>
         </div>
         <img src="../assets/PSF_Logo_White_256.png" alt="Pseudo Science Fiction Logo" class="psf-logo">
       </div>
@@ -155,9 +204,12 @@
 
       <!-- Model Browser Screen -->
       <div id="model-browser" class="screen">
-        <div class="screen-header">
-          <button class="btn-back" onclick="showScreen('main-menu')">← Back</button>
-          <h2 style="display:flex; align-items:center; gap:8px;">
+        <div class="screen-header" style="background:#0f1a27; border-bottom:1px solid rgba(88,166,255,0.08); display:flex; align-items:flex-start; gap:14px; position:sticky; top:0; z-index:45; margin-left:-40px; margin-right:-40px; padding:10px 0 8px;">
+          <button class="btn-back" onclick="showScreen('main-menu')" style="color:#e6edf3; border-color:rgba(139,148,158,0.35); font-size:18px; padding:9px 18px; display:flex; align-items:center; gap:8px; margin-left:24px;">
+            <span style="font-size:27px; line-height:1;">←</span>
+            <span>Back</span>
+          </button>
+          <h2 style="display:none; align-items:center; gap:8px;">
             <svg width="44" height="44" style="width:44px; height:44px; flex:0 0 44px;" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="6" y="30" width="32" height="8" rx="2"></rect>
               <line x1="22" y1="6" x2="22" y2="26"></line>
@@ -168,8 +220,29 @@
             </svg>
             <span>Browse & Download Models</span>
           </h2>
-          <button class="btn-secondary" onclick="showScreen('catalog-editor')">🛠️ Catalog Editor</button>
-          <button class="btn-secondary" onclick="showScreen('binary-manager')">📦 Binary Manager</button>
+          <div style="flex:1 1 auto; min-width:0; display:flex; align-items:flex-start; align-content:flex-start; justify-content:flex-start; gap:8px; flex-wrap:wrap; overflow:hidden;">
+            <button class="btn-secondary header-action-btn" onclick="showScreen('catalog-editor')" style="display:inline-flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1a2 2 0 0 0-2.8-2.8z"></path>
+                <path d="m12 8-8 8v4h4l8-8"></path>
+                <path d="m5 19 3-3"></path>
+              </svg>
+              <span>Catalog Editor</span>
+            </button>
+            <button class="btn-secondary header-action-btn" onclick="showScreen('binary-manager')" style="display:inline-flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                <path d="M3 10h18"></path>
+                <path d="M8 14h.01"></path>
+                <path d="M12 14h.01"></path>
+                <path d="M16 14h.01"></path>
+              </svg>
+              <span>Binary Manager</span>
+            </button>
+          </div>
+          <div style="flex:0 0 auto; margin-left:auto; margin-right:24px; color:#6e7681; font-size:20px; letter-spacing:0.04em; line-height:1; white-space:nowrap;">
+            Browse & Download Models
+          </div>
         </div>
         
         <div class="model-grid" id="model-grid">
@@ -179,15 +252,46 @@
 
       <!-- Catalog Editor Screen -->
       <div id="catalog-editor" class="screen">
-        <div class="screen-header">
-          <button class="btn-back" onclick="showScreen('model-browser')">← Back</button>
-          <h2>Catalog Editor</h2>
+        <div class="screen-header" style="background:#0f1a27; border-bottom:1px solid rgba(88,166,255,0.08); display:flex; align-items:flex-start; gap:14px; position:sticky; top:0; z-index:45; margin-left:-40px; margin-right:-40px; padding:10px 0 8px;">
+          <button class="btn-back" onclick="showScreen('model-browser')" style="color:#e6edf3; border-color:rgba(139,148,158,0.35); font-size:18px; padding:9px 18px; display:flex; align-items:center; gap:8px; margin-left:24px;">
+            <span style="font-size:27px; line-height:1;">←</span>
+            <span>Back</span>
+          </button>
+          <h2 style="display:none;">Catalog Editor</h2>
           <!-- Tool buttons -->
-          <button class="btn-secondary" onclick="showScreen('package-manager')">🗂️ Group Manager</button>
-          <button class="btn-secondary" onclick="applyCatalogChanges()">✅ Apply Changes</button>
-          <!-- Model operations -->
-          <button class="btn-secondary" onclick="showImportDialog()">📥 Import Models</button>
-          <button class="btn-primary" onclick="showAddModelForm()">+ Add New Model</button>
+          <div style="flex:1 1 auto; min-width:0; display:flex; align-items:flex-start; align-content:flex-start; justify-content:flex-start; gap:8px; flex-wrap:wrap; overflow:hidden;">
+            <button class="btn-secondary header-action-btn" onclick="showScreen('package-manager')" style="display:inline-flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              </svg>
+              <span>Group Manager</span>
+            </button>
+            <button class="btn-secondary header-action-btn" onclick="applyCatalogChanges()" style="display:inline-flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Apply Changes</span>
+            </button>
+            <!-- Model operations -->
+            <button class="btn-secondary header-action-btn" onclick="showImportDialog()" style="display:inline-flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3v12"></path>
+                <path d="m7 10 5 5 5-5"></path>
+                <rect x="4" y="17" width="16" height="4" rx="1"></rect>
+              </svg>
+              <span>Import Models</span>
+            </button>
+            <button class="btn-primary header-action-btn" onclick="showAddModelForm()" style="display:inline-flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 5v14"></path>
+                <path d="M5 12h14"></path>
+              </svg>
+              <span>Add New Model</span>
+            </button>
+          </div>
+          <div style="flex:0 0 auto; margin-left:auto; margin-right:24px; color:#6e7681; font-size:20px; letter-spacing:0.04em; line-height:1; white-space:nowrap;">
+            Catalog Editor
+          </div>
         </div>
         
         <div id="catalog-editor-content">
@@ -200,10 +304,24 @@
 
       <!-- Group Manager Screen -->
       <div id="package-manager" class="screen">
-        <div class="screen-header">
-          <button class="btn-back" onclick="showScreen('catalog-editor')">← Back</button>
-          <h2>Group Manager</h2>
-          <button class="btn-primary" onclick="showAddCollectionForm()">+ Add New Group</button>
+        <div class="screen-header" style="background:#0f1a27; border-bottom:1px solid rgba(88,166,255,0.08); display:flex; align-items:flex-start; gap:14px; position:sticky; top:0; z-index:45; margin-left:-40px; margin-right:-40px; padding:10px 0 8px;">
+          <button class="btn-back" onclick="showScreen('catalog-editor')" style="color:#e6edf3; border-color:rgba(139,148,158,0.35); font-size:18px; padding:9px 18px; display:flex; align-items:center; gap:8px; margin-left:24px;">
+            <span style="font-size:27px; line-height:1;">←</span>
+            <span>Back</span>
+          </button>
+          <h2 style="display:none;">Group Manager</h2>
+          <div style="flex:1 1 auto; min-width:0; display:flex; align-items:flex-start; align-content:flex-start; justify-content:flex-start; gap:8px; flex-wrap:wrap; overflow:hidden;">
+            <button class="btn-primary header-action-btn" onclick="showAddCollectionForm()" style="display:inline-flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 5v14"></path>
+                <path d="M5 12h14"></path>
+              </svg>
+              <span>Add New Group</span>
+            </button>
+          </div>
+          <div style="flex:0 0 auto; margin-left:auto; margin-right:24px; color:#6e7681; font-size:20px; letter-spacing:0.04em; line-height:1; white-space:nowrap;">
+            Group Manager
+          </div>
         </div>
         
         <div id="package-manager-content">
@@ -217,24 +335,18 @@
       <div id="index-heavy-screens-slot"></div>
 
       <div id="model-ordering" class="screen">
-        <div class="screen-header" style="background:#0f1a27; border-bottom:1px solid rgba(88,166,255,0.08);">
-          <button class="btn-back" onclick="showScreen('main-menu')" style="color:#e6edf3; border-color:rgba(139,148,158,0.35); font-size:18px; padding:9px 18px;">← Back</button>
-          <h2 style="color:#e6edf3; font-size:28px; display:flex; align-items:center; gap:10px;">
-            <svg width="28" height="28" viewBox="0 0 44 44" fill="none" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="18" width="10" height="10" rx="2"></rect>
-              <rect x="31" y="6" width="10" height="10" rx="2"></rect>
-              <rect x="31" y="28" width="10" height="10" rx="2"></rect>
-              <line x1="13" y1="22" x2="31" y2="11"></line>
-              <line x1="13" y1="22" x2="31" y2="33"></line>
-            </svg>
-            <span>PSF Relay</span>
-          </h2>
-          <div style="margin-left:auto; margin-right:18px; color:#6e7681; font-size:20px; letter-spacing:0.04em; line-height:1;">
+        <div class="screen-header" style="background:#0f1a27; border-bottom:1px solid rgba(88,166,255,0.08); display:flex; align-items:flex-start; gap:14px; position:sticky; top:0; z-index:45; margin-left:-40px; margin-right:-40px; padding:10px 0 8px;">
+          <button class="btn-back" onclick="showScreen('main-menu')" style="color:#e6edf3; border-color:rgba(139,148,158,0.35); font-size:18px; padding:9px 18px; display:flex; align-items:center; gap:8px; margin-left:24px;">
+            <span style="font-size:27px; line-height:1;">←</span>
+            <span>Back</span>
+          </button>
+          <div id="model-ordering-header-controls" style="flex:1 1 auto; min-width:0; display:flex; align-items:flex-start; align-content:flex-start; justify-content:flex-start; overflow:hidden;"></div>
+          <div style="flex:0 0 auto; margin-left:auto; margin-right:24px; color:#6e7681; font-size:20px; letter-spacing:0.04em; line-height:1; white-space:nowrap;">
             Pipeline Orchestrator
           </div>
         </div>
         
-        <div id="model-ordering-content" style="padding: 20px;">
+        <div id="model-ordering-content" style="padding: 12px 20px 18px;">
           <div class="info-loading">
             <div class="spinner"></div>
             <p>Loading PSF Relay...</p>

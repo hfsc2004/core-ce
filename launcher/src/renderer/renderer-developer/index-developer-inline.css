@@ -32,6 +32,33 @@ select option {
   background: rgba(88, 166, 255, 0.06);
 }
 
+.screen-header .header-action-btn {
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.screen-header .header-action-btn:hover {
+  background: rgba(88, 166, 255, 0.12) !important;
+}
+
+#model-ordering-actions-bar button {
+  background: transparent !important;
+  min-height: 48px !important;
+  padding: 11px 18px !important;
+  font-size: 16px !important;
+  border-radius: 7px !important;
+}
+
+#model-ordering-actions-bar button:hover {
+  background: rgba(88, 166, 255, 0.12) !important;
+}
+
+#model-ordering-actions-bar button svg {
+  width: 1.5em !important;
+  height: 1.5em !important;
+}
+
 .app-header {
   position: relative;
   background: #111c2a;
@@ -41,6 +68,35 @@ select option {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.core-relay-cluster {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.context-header-badge {
+  opacity: 0;
+  transform: translateY(10px);
+  filter: blur(4px);
+}
+
+.context-header-badge.context-visible {
+  animation: headerContextFadeIn 420ms ease-out both;
+}
+
+@keyframes headerContextFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }
 
 .developer-header-text .core-title.core-bracket-logo {

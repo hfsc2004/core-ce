@@ -10,9 +10,16 @@
 (function(){
   'use strict';
   const HEAVY_SCREENS_HTML = `<div id="binary-manager" class="screen">
-        <div class="screen-header">
-          <button class="btn-back" onclick="showScreen('model-browser')">← Back</button>
-          <h2>Binary Manager</h2>
+        <div class="screen-header" style="background:#0f1a27; border-bottom:1px solid rgba(88,166,255,0.08); display:flex; align-items:flex-start; gap:14px; position:sticky; top:0; z-index:45; margin-left:-40px; margin-right:-40px; padding:10px 0 8px;">
+          <button class="btn-back" onclick="showScreen('model-browser')" style="color:#e6edf3; border-color:rgba(139,148,158,0.35); font-size:18px; padding:9px 18px; display:flex; align-items:center; gap:8px; margin-left:24px;">
+            <span style="font-size:27px; line-height:1;">←</span>
+            <span>Back</span>
+          </button>
+          <div style="flex:1 1 auto; min-width:0;"></div>
+          <div style="flex:0 0 auto; margin-left:auto; margin-right:24px; color:#6e7681; font-size:20px; letter-spacing:0.04em; line-height:1; white-space:nowrap;">
+            Binary Manager
+          </div>
+          <h2 style="display:none;">Binary Manager</h2>
         </div>
         
         <div class="binary-manager-content">

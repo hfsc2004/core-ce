@@ -114,6 +114,14 @@
         const settings = await window.electronAPI.getSettings();
         const enabled = settings?.animations_enabled !== false;
         document.body.classList.toggle('animations-disabled', !enabled);
+        window.__PSF_GATEWAY_UI_DEFAULTS__ = {
+          esp32SectionsStartCollapsed: settings?.gateway_esp32_sections_start_collapsed === true
+        };
+        try {
+          localStorage.setItem('psf-gateway-ui-defaults', JSON.stringify(window.__PSF_GATEWAY_UI_DEFAULTS__));
+        } catch {
+          // ignore storage write failures
+        }
       } catch {
         // Best-effort only; keep default animations on if settings can't be read.
       }

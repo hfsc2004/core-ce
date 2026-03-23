@@ -18,6 +18,9 @@ function showScreen(screenId) {
     screen.classList.remove('active');
   });
   document.getElementById(screenId).classList.add('active');
+  const tightHeaderScreens = new Set(['model-ordering', 'model-browser', 'catalog-editor', 'package-manager', 'binary-manager']);
+  document.body.classList.toggle('relay-screen-active', tightHeaderScreens.has(screenId));
+  updateHeaderContextBadges(screenId);
 
   if (screenId === 'hardware-detect') {
     detectHardware();
@@ -36,6 +39,33 @@ function showScreen(screenId) {
   }
 }
 
+function updateHeaderContextBadges(screenId) {
+  const relayBadge = document.getElementById('relay-header-badge');
+  const browseBadge = document.getElementById('browse-header-badge');
+  const catalogBadge = document.getElementById('catalog-header-badge');
+  const binaryBadge = document.getElementById('binary-header-badge');
+  const groupBadge = document.getElementById('group-header-badge');
+  setHeaderBadgeVisible(relayBadge, screenId === 'model-ordering');
+  setHeaderBadgeVisible(browseBadge, screenId === 'model-browser');
+  setHeaderBadgeVisible(catalogBadge, screenId === 'catalog-editor');
+  setHeaderBadgeVisible(binaryBadge, screenId === 'binary-manager');
+  setHeaderBadgeVisible(groupBadge, screenId === 'package-manager');
+}
+
+function setHeaderBadgeVisible(node, visible) {
+  if (!node) return;
+  if (!visible) {
+    node.classList.remove('context-visible');
+    node.style.display = 'none';
+    return;
+  }
+  node.style.display = 'inline-flex';
+  node.classList.remove('context-visible');
+  // restart animation each time context switches to this screen
+  void node.offsetWidth;
+  node.classList.add('context-visible');
+}
+
 function acceptDisclaimer() {
   window.__disclaimerAccepted = true;
   document.body.classList.add('disclaimer-accepted');
@@ -47,6 +77,7 @@ function acceptDisclaimer() {
     initGpuMonitorWidget();
   }
   showScreen('main-menu');
+  updateHeaderContextBadges('main-menu');
 }
 
 function getMergedFilename(filename) {

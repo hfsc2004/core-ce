@@ -79,6 +79,7 @@ window.SettingsModal = {
   saveRelayIngressBindSettings,
   saveSessionMemorySettings,
   saveAnimationSettings,
+  saveGatewayUiDefaultsSettings,
   saveComplianceProofBadgeVisibility: __saveComplianceProofBadgeVisibility,
   loadComplianceEvidenceManager,
   saveComplianceEvidenceManager,
@@ -147,6 +148,7 @@ window.toggleGpuMonitor = window.SettingsModal.toggleGpuMonitor;
 window.saveServiceNetworkPolicy = window.SettingsModal.saveServiceNetworkPolicy;
 window.saveRelayIngressBindSettings = window.SettingsModal.saveRelayIngressBindSettings;
 window.saveAnimationSettings = window.SettingsModal.saveAnimationSettings;
+window.saveGatewayUiDefaultsSettings = window.SettingsModal.saveGatewayUiDefaultsSettings;
 window.loadModsSettings = window.SettingsModal.loadModsSettings;
 window.installModDirectory = window.SettingsModal.installModDirectory;
 window.pickModsSourceDirectory = window.SettingsModal.pickModsSourceDirectory;

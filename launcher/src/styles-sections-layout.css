@@ -7,6 +7,10 @@ main {
   padding: 40px;
 }
 
+body.relay-screen-active main {
+  padding-top: 10px;
+}
+
 .screen {
   display: none;
   animation: fadeIn 420ms ease-out;

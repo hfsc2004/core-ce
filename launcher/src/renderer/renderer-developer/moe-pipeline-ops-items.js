@@ -84,9 +84,11 @@ function toggleMoeExpand(itemId) {
     window.modelOrderingState.expandedMoeItem = null;
   } else {
     window.modelOrderingState.expandedMoeItem = itemId;
-    const item = window.modelOrderingState.moeItems.find(i => i.id === itemId);
-    if (item?.type === 'gateway') {
-      refreshMoeSerialPorts(itemId, { silent: true });
+    const item = window.modelOrderingState.moeItems.find((i) => i.id === itemId);
+    if (item?.type === 'gateway' && typeof refreshMoeSerialPorts === 'function') {
+      Promise.resolve(refreshMoeSerialPorts(itemId, { silent: true })).catch((err) => {
+        console.warn('[MoE] Background serial refresh failed:', err?.message || err);
+      });
     }
   }
   renderModelOrdering();
@@ -94,12 +96,13 @@ function toggleMoeExpand(itemId) {
 
 function handleMoeItemClick(event, itemId) {
   const target = event?.target;
+  if (target?.closest?.('.drag-handle')) {
+    return;
+  }
   if (target?.closest?.('input, textarea, select, button, label, [contenteditable]:not([contenteditable="false"])')) {
     return;
   }
-  if (!window.modelOrderingState.editMode) {
-    toggleMoeExpand(itemId);
-  }
+  toggleMoeExpand(itemId);
 }
 
 function toggleMoeItemEnabled(itemId, enabled) {
