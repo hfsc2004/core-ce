@@ -122,6 +122,12 @@ function renderGatewayDetails(gateway) {
   const esp32CameraHealthPath = String(irgEsp32.wifiCameraFlashStatusPath || '/health').trim() || '/health';
   const esp32CameraBoardProfile = String(irgEsp32.wifiCameraBoardProfile || 'ai-thinker-esp32cam').trim().toLowerCase() || 'ai-thinker-esp32cam';
   const esp32CameraFqbn = String(irgEsp32.wifiCameraFqbn || 'esp32:esp32:esp32cam').trim() || 'esp32:esp32:esp32cam';
+  const esp32CameraStaEnabled = irgEsp32.wifiCameraStaEnabled !== false;
+  const esp32CameraUsbCdcOnBoot = irgEsp32.wifiCameraUsbCdcOnBoot !== false;
+  const esp32CameraCaptureRuntimeSerial = irgEsp32.wifiCameraCaptureRuntimeSerial !== false;
+  const esp32CameraRuntimeSerialCaptureMs = Number.isInteger(Number(irgEsp32.wifiCameraRuntimeSerialCaptureMs))
+    ? Number(irgEsp32.wifiCameraRuntimeSerialCaptureMs)
+    : 20000;
   const esp32CameraStaticEnabled = irgEsp32.wifiCameraStaticEnabled === true;
   const esp32CameraStaticIp = String(irgEsp32.wifiCameraStaticIp || '').trim();
   const esp32CameraStaticCidr = Number.isInteger(Number(irgEsp32.wifiCameraStaticCidr)) ? Number(irgEsp32.wifiCameraStaticCidr) : 24;
@@ -173,6 +179,33 @@ function renderGatewayDetails(gateway) {
   const esp32AiDriveTickMs = Number.isInteger(Number(irgEsp32.wifiAiDriveTickMs))
     ? Number(irgEsp32.wifiAiDriveTickMs)
     : 420;
+  const esp32SectionsRaw = (typeof window.getGatewayEsp32SectionState === 'function'
+    ? window.getGatewayEsp32SectionState(gateway.id)
+    : {
+      wifiControl: false,
+      drivePad: false,
+      staticNetwork: false,
+      cameraSidecar: true
+    });
+  const esp32Sections = (esp32SectionsRaw && typeof esp32SectionsRaw === 'object')
+    ? esp32SectionsRaw
+    : {
+      wifiControl: false,
+      drivePad: false,
+      staticNetwork: false,
+      cameraSidecar: true
+    };
+  const esp32WifiExpanded = esp32Sections.wifiControl === true;
+  const esp32DriveExpanded = esp32Sections.drivePad === true;
+  const esp32StaticExpanded = esp32Sections.staticNetwork === true;
+  const esp32CameraExpanded = esp32Sections.cameraSidecar !== false;
+  const renderEsp32SectionHeader = (sectionKey, title, expanded, borderColor = '#666', textColor = '#ddd') => `
+    <button onclick="event.stopPropagation(); toggleGatewayEsp32Section('${gateway.id}', '${sectionKey}')"
+            style="display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:7px 10px; background: rgba(255,255,255,0.04); border:1px solid ${borderColor}; border-radius:6px; color:${textColor}; cursor:pointer; font-size:11px; font-weight:600;">
+      <span style="display:inline-block; width:12px; color:${textColor};">${expanded ? '▼' : '▶'}</span>
+      <span>${title}</span>
+    </button>
+  `;
   const esp32AiAgentOptions = (Array.isArray(window.modelOrderingState?.moeItems) ? window.modelOrderingState.moeItems : [])
     .filter((item) => item?.type === 'agent' && item?.enabled !== false)
     .map((item) => {
@@ -319,7 +352,8 @@ function renderGatewayDetails(gateway) {
                    onchange="updateGatewayIrgPicoConfig('${gateway.id}', 'defaultIterations', this.value)"
                    style="width:90px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
           </div>
-          <div style="display:flex; align-items:center; gap:12px; padding:10px; background: rgba(90,140,220,0.08); border-radius:6px; flex-wrap: wrap;">
+          ${renderEsp32SectionHeader('wifiControl', 'ESP32 Wi-Fi Control', esp32WifiExpanded, '#4e78bf', '#9fc1ff')}
+          ${esp32WifiExpanded ? `<div style="display:flex; align-items:center; gap:12px; padding:10px; background: rgba(90,140,220,0.08); border-radius:6px; flex-wrap: wrap;">
             <span style="color:#9fc1ff; font-size:11px;">ESP32 Wi-Fi Control</span>
             <label style="color:#888; font-size:11px;">SSID</label>
             <input type="text" value="${escapeBinding(String(irgEsp32.wifiSsid || ''))}"
@@ -373,8 +407,9 @@ function renderGatewayDetails(gateway) {
               <span class="esp32-status-label">${escapeBinding(esp32StatusText)}</span>
               ${esp32StatusAnimate ? `<span class="esp32-status-dots" aria-label="${escapeBinding(esp32AnimateLabel)} in progress"><span></span><span></span><span></span></span>` : ''}
             </span>
-          </div>
-          <div class="esp32-drive-pad-wrap">
+          </div>` : ''}
+          ${renderEsp32SectionHeader('drivePad', 'ESP32 Drive Pad', esp32DriveExpanded, '#3d89b8', '#9fd8ff')}
+          ${esp32DriveExpanded ? `<div class="esp32-drive-pad-wrap">
             <span class="esp32-drive-title">ESP32 Drive Pad</span>
             <label style="display:flex; align-items:center; gap:5px; color:#d9e6ff; font-size:11px;">
               <input type="checkbox" ${esp32TakeControl ? 'checked' : ''} onchange="setGatewayEsp32TakeControl('${gateway.id}', this.checked)">
@@ -481,8 +516,9 @@ function renderGatewayDetails(gateway) {
             </span>
             <span class="esp32-drive-map-chip">AI Session: ${esp32AiDriveRunning ? 'RUNNING' : 'stopped'}${esp32AiDriveLastDecision ? ` | Last AI: ${escapeBinding(esp32AiDriveLastDecision)}` : ''}</span>
             <span class="esp32-drive-map-chip">Telemetry: ${esp32TelemetryAt ? escapeBinding(esp32TelemetryAt) : 'n/a'} | RSSI ${esp32TelemetryRssi == null ? 'n/a' : `${esp32TelemetryRssi} dBm`} | Cmd ${escapeBinding(esp32TelemetryCmd || 'n/a')} | Age ${esp32TelemetryAge == null ? 'n/a' : `${esp32TelemetryAge}ms`}</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:12px; padding:10px; background: rgba(90,220,160,0.08); border-radius:6px; flex-wrap: wrap;">
+          </div>` : ''}
+          ${renderEsp32SectionHeader('staticNetwork', 'ESP32 Static Network', esp32StaticExpanded, '#48a678', '#a8ffd2')}
+          ${esp32StaticExpanded ? `<div style="display:flex; align-items:center; gap:12px; padding:10px; background: rgba(90,220,160,0.08); border-radius:6px; flex-wrap: wrap;">
             <span style="color:#a8ffd2; font-size:11px;">ESP32 Static Network (for uploaded firmware)</span>
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
               <input type="checkbox" ${irgEsp32.wifiStaticEnabled === true ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiStaticEnabled', this.checked)">
@@ -507,12 +543,17 @@ function renderGatewayDetails(gateway) {
                    placeholder="172.20.0.1"
                    style="min-width:130px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
             <span style="color:#666; font-size:11px;">Applied automatically to sketches containing USE_STATIC_IP/STATIC_IP/STATIC_CIDR constants.</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:12px; padding:10px; background: rgba(145,120,255,0.10); border-radius:6px; flex-wrap: wrap;">
+          </div>` : ''}
+          ${renderEsp32SectionHeader('cameraSidecar', 'ESP32 Camera Sidecar', esp32CameraExpanded, '#7b5ccf', '#d9c8ff')}
+          ${esp32CameraExpanded ? `<div style="display:flex; align-items:center; gap:12px; padding:10px; background: rgba(145,120,255,0.10); border-radius:6px; flex-wrap: wrap;">
             <span style="color:#d9c8ff; font-size:11px;">ESP32 Camera (sidecar stream)</span>
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
               <input type="checkbox" ${esp32CameraEnabled ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraEnabled', this.checked)">
               <span style="color:#ddd; font-size:11px;">Enable Camera Sidecar</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" ${esp32CameraStaEnabled ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraStaEnabled', this.checked)">
+              <span style="color:#ddd; font-size:11px;">Enable Wi-Fi (STA)</span>
             </label>
             <label style="color:#888; font-size:11px;">SSID</label>
             <input type="text" value="${escapeBinding(esp32CameraSsid)}"
@@ -562,6 +603,18 @@ function renderGatewayDetails(gateway) {
                    placeholder="esp32:esp32:esp32cam"
                    style="min-width:180px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" ${esp32CameraUsbCdcOnBoot ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraUsbCdcOnBoot', this.checked)">
+              <span style="color:#ddd; font-size:11px;">USB CDC on Boot</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" ${esp32CameraCaptureRuntimeSerial ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraCaptureRuntimeSerial', this.checked)">
+              <span style="color:#ddd; font-size:11px;">Capture USB runtime logs</span>
+            </label>
+            <label style="color:#888; font-size:11px;">Capture(ms)</label>
+            <input type="number" min="0" max="120000" value="${esp32CameraRuntimeSerialCaptureMs}"
+                   onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraRuntimeSerialCaptureMs', this.value)"
+                   style="width:100px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
               <input type="checkbox" ${esp32CameraStaticEnabled ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraStaticEnabled', this.checked)">
               <span style="color:#ddd; font-size:11px;">Camera Static IP</span>
             </label>
@@ -601,7 +654,7 @@ function renderGatewayDetails(gateway) {
               ${esp32CameraAnimating ? `<span class="esp32-status-dots" aria-label="Camera operation in progress"><span></span><span></span><span></span></span>` : ''}
             </span>
             ${esp32CameraLastUrl ? `<span class="esp32-drive-map-chip">Last URL: ${escapeBinding(esp32CameraLastUrl)}</span>` : ''}
-          </div>
+          </div>` : ''}
           <div style="color:#666; font-size:11px;">
             Live mode uses serial upload/exec tools over the gateway serial source (<code>mpremote</code> for Pico, <code>arduino-cli</code> for ESP32). Keep Serial enabled with a valid port (or Auto Detect).
           </div>

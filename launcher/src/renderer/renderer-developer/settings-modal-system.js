@@ -124,6 +124,7 @@ async function loadSystemInfo() {
     await loadRelayIngressBindSettings();
     await loadSessionMemorySettings();
     await loadAnimationSettings();
+    await loadGatewayUiDefaultsSettings();
     await loadComplianceProofBadgeVisibilitySettings();
     await loadComplianceEvidenceManager();
     await loadSecurityStatusInfo();
@@ -137,6 +138,29 @@ async function loadSystemInfo() {
 function applyAnimationPreference(enabled) {
   const on = enabled !== false;
   document.body.classList.toggle('animations-disabled', !on);
+}
+
+const GATEWAY_UI_DEFAULTS_STORAGE_KEY = 'psf-gateway-ui-defaults';
+
+function readGatewayUiDefaultsFromStorage() {
+  try {
+    const raw = localStorage.getItem(GATEWAY_UI_DEFAULTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeGatewayUiDefaultsToStorage(next = {}) {
+  try {
+    const normalized = next && typeof next === 'object' ? next : {};
+    localStorage.setItem(GATEWAY_UI_DEFAULTS_STORAGE_KEY, JSON.stringify(normalized));
+    window.__PSF_GATEWAY_UI_DEFAULTS__ = normalized;
+  } catch {
+    // ignore storage failures
+  }
 }
 
 async function loadSessionMemorySettings() {
@@ -224,6 +248,64 @@ async function saveAnimationSettings() {
     applyAnimationPreference(checkbox.checked);
     if (status) {
       status.textContent = checkbox.checked ? 'Saved: enabled' : 'Saved: disabled';
+      status.style.color = '#00ff88';
+    }
+  } catch (err) {
+    if (status) {
+      status.textContent = `Save failed: ${err.message || String(err)}`;
+      status.style.color = '#ff6b6b';
+    }
+  }
+}
+
+async function loadGatewayUiDefaultsSettings() {
+  const checkbox = document.getElementById('settings-gateway-esp32-sections-collapsed');
+  const status = document.getElementById('settings-gateway-ui-defaults-status');
+  if (!checkbox) return;
+  try {
+    const settings = await window.electronAPI.getSettings();
+    const settingValue = settings?.gateway_esp32_sections_start_collapsed;
+    const storageDefaults = readGatewayUiDefaultsFromStorage();
+    const collapseByDefault = (typeof settingValue === 'boolean')
+      ? settingValue
+      : (storageDefaults?.esp32SectionsStartCollapsed === true);
+    checkbox.checked = collapseByDefault === true;
+    writeGatewayUiDefaultsToStorage({ esp32SectionsStartCollapsed: checkbox.checked });
+    if (status) {
+      status.textContent = checkbox.checked ? 'Default: collapsed' : 'Default: expanded camera section';
+      status.style.color = checkbox.checked ? '#00ff88' : '#888';
+    }
+  } catch (err) {
+    if (status) {
+      status.textContent = `Load failed: ${err.message || String(err)}`;
+      status.style.color = '#ff6b6b';
+    }
+  }
+}
+
+async function saveGatewayUiDefaultsSettings() {
+  const checkbox = document.getElementById('settings-gateway-esp32-sections-collapsed');
+  const status = document.getElementById('settings-gateway-ui-defaults-status');
+  if (!checkbox) return;
+  try {
+    const settings = await window.electronAPI.getSettings();
+    const next = {
+      ...(settings || {}),
+      gateway_esp32_sections_start_collapsed: !!checkbox.checked
+    };
+    const result = await window.electronAPI.saveSettings(next);
+    if (!result?.success) {
+      if (status) {
+        status.textContent = `Save failed: ${result?.error || 'Unknown error'}`;
+        status.style.color = '#ff6b6b';
+      }
+      return;
+    }
+    writeGatewayUiDefaultsToStorage({ esp32SectionsStartCollapsed: !!checkbox.checked });
+    if (status) {
+      status.textContent = checkbox.checked
+        ? 'Saved: new gateway sections start collapsed'
+        : 'Saved: new gateway camera section starts expanded';
       status.style.color = '#00ff88';
     }
   } catch (err) {

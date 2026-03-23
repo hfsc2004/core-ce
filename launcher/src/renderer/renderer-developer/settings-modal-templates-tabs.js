@@ -405,6 +405,21 @@ function getSystemInfoTabHTML() {
       </div>
 
       <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <h4 style="margin: 0 0 8px 0; color: #ddd;">Gateway UI Defaults</h4>
+        <p style="color: #888; font-size: 12px; margin: 0 0 8px 0;">
+          Controls default expansion state for ESP32 groups inside User Gateway cards.
+        </p>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <label style="display:inline-flex; align-items:center; gap:8px; color:#ddd; font-size:12px;">
+            <input id="settings-gateway-esp32-sections-collapsed" type="checkbox">
+            <span>Collapse ESP32 gateway sections by default</span>
+          </label>
+          <button class="btn-secondary" onclick="SettingsModal.saveGatewayUiDefaultsSettings()">Save</button>
+          <span id="settings-gateway-ui-defaults-status" style="color:#888; font-size:12px;"></span>
+        </div>
+      </div>
+
+      <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);">
         <h4 style="margin: 0 0 8px 0; color: #ddd;">Compliance Proof Badge Visibility</h4>
         <p style="color: #888; font-size: 12px; margin: 0 0 8px 0;">
           Controls whether the compliance proof badge is shown in launcher footer and About views.

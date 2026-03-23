@@ -121,6 +121,7 @@ function renderMoePipeline() {
   const deployLogs = Array.isArray(window.modelOrderingState?.moeDeployLogLines)
     ? window.modelOrderingState.moeDeployLogLines
     : [];
+  const deployDirty = window.modelOrderingState?.moePostDeployDirty === true;
   const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
   const frameBorderColor = deployFrameState === 'active'
     ? '#22c55e'
@@ -259,8 +260,8 @@ function renderMoePipeline() {
   
   return `
     <div id="moe-pipeline-frame"
-         style="border:1px solid ${frameBorderColor}; box-shadow:${frameShadow}; border-radius:10px; padding:10px 12px 12px; transition:border-color 220ms ease, box-shadow 220ms ease;">
-      <div style="display: flex; flex-direction: column; gap: 4px;"
+         style="border:1px solid ${frameBorderColor}; box-shadow:${frameShadow}; border-radius:10px; padding:10px 12px 12px; transition:border-color 220ms ease, box-shadow 220ms ease; display:flex; flex-direction:column; max-height:min(72vh, 860px);">
+      <div style="display: flex; flex-direction: column; gap: 4px; overflow-y:auto; padding-right:6px; min-height:260px; flex:1 1 auto;"
            id="moe-pipeline-list"
            ondragover="handleMoeDragOver(event)"
            ondrop="handleMoeDrop(event)">
@@ -301,6 +302,11 @@ function renderMoePipeline() {
         </div>
         <span id="moe-deploy-status-summary" style="font-size:10px; color:#484f58; border:1px solid rgba(139,148,158,0.18); border-radius:3px; padding:2px 8px; letter-spacing:0.1em;">${escapeMoeLogHtml(deploySummary)}</span>
       </div>
+      ${deployDirty ? `
+      <div style="margin-bottom:8px; padding:7px 9px; border:1px solid rgba(245,158,11,0.65); border-radius:6px; background:rgba(245,158,11,0.14); color:#fbbf24; font-size:11px; font-weight:600;">
+        Settings changed after deployment. Stop and Deploy again to apply changes.
+      </div>
+      ` : ''}
       <div id="moe-deploy-status-body" style="max-height:150px; overflow:auto; color:#9fb2cc; font-size:12px; line-height:1.45;">
         ${deployLogHtml}
       </div>

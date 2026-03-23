@@ -36,23 +36,18 @@ function renderModelOrdering() {
   const theme = getMoeTheme();
   const isPipelineMode = scopeMode === 'pipeline';
   const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
-  const pipelineStatusText = deployFrameState === 'active'
-    ? '[RUNNING]'
+  const pipelineStatusDisplay = deployFrameState === 'active'
+    ? '<span style="color:#22c55e;">[RUNNING]</span>'
     : ((deployFrameState === 'stopping' || deployFrameState === 'stopped' || deployFrameState === 'error')
-      ? '[STOPPED]'
-      : '[IDLE]');
-  const pipelineStatusColor = deployFrameState === 'active'
-    ? '#22c55e'
-    : ((deployFrameState === 'stopping' || deployFrameState === 'stopped' || deployFrameState === 'error')
-      ? '#ef4444'
-      : '#6b7280');
+      ? '<span style="color:#ef4444;">[STOPPED]</span>'
+      : '<span style="color:#38bdf8;">[</span><span style="color:#6b7280;">IDLE</span><span style="color:#38bdf8;">]</span>');
 
   container.innerHTML = `
     <div style="max-width: 1200px; position: relative; left: 50%; transform: translateX(-50%) scale(1.5); transform-origin: top center; width: calc(100% / 1.5);">
 
       <!-- Controls Bar -->
-      <div style="background: #161f2e; border: 1px solid rgba(88,166,255,0.22); border-radius: 6px; padding: 15px; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%;">
+      <div id="model-ordering-controls-bar" style="display:none; background: #161f2e; border: 1px solid rgba(88,166,255,0.22); border-radius: 6px; padding: 15px; margin-bottom: 12px; position: sticky; top: 76px; z-index: 35;">
+        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; justify-content: space-between;">
 
           <!-- Left: Mode Toggle & View Options -->
           <div style="display: flex; gap: 6px; align-items: center; flex: 0 0 auto;">
@@ -65,7 +60,7 @@ function renderModelOrdering() {
           <span style="flex: 1 1 auto; min-width: 0;"></span>
 
           <!-- Right: Actions (different based on mode) -->
-          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex: 1 1 100%; min-width: 0; max-width: 100%; justify-content: flex-start;">
+          <div id="model-ordering-actions-bar" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex: 1 1 100%; min-width: 0; max-width: 100%; justify-content: flex-start; align-content: flex-start;">
             ${editMode ? `
               <span style="color: #888; font-size: 13px;">
                 ${selectedModels.size > 0 ? `${selectedModels.size} selected` : ''}
@@ -141,8 +136,8 @@ function renderModelOrdering() {
                   Reorder
                 </button>
                 <span id="moe-pipeline-status-indicator"
-                      style="padding: 7px 4px; min-height: 32px; display: inline-flex; align-items: center; color: ${pipelineStatusColor}; font-size: 14px; font-weight: 700; white-space: nowrap;">
-                  ${pipelineStatusText}
+                      style="padding: 7px 4px; min-height: 32px; display: inline-flex; align-items: center; font-size: 30px; font-weight: 700; white-space: nowrap; letter-spacing: 0.04em; line-height: 1;">
+                  ${pipelineStatusDisplay}
                 </span>
               ` : `
                 <button onclick="toggleEditMode()"
@@ -172,6 +167,23 @@ function renderModelOrdering() {
   }
   if (typeof window.bindMoeDeployButtons === 'function') {
     try { window.bindMoeDeployButtons(); } catch (_) { /* no-op */ }
+  }
+  const headerControls = document.getElementById('model-ordering-header-controls');
+  const actionsBar = document.getElementById('model-ordering-actions-bar');
+  if (headerControls && actionsBar) {
+    headerControls.innerHTML = '';
+    actionsBar.style.flex = '1 1 auto';
+    actionsBar.style.width = 'auto';
+    actionsBar.style.maxWidth = '100%';
+    actionsBar.style.overflow = 'hidden';
+    actionsBar.style.alignItems = 'flex-start';
+    actionsBar.style.alignContent = 'flex-start';
+    actionsBar.style.justifyContent = 'flex-start';
+    actionsBar.style.flexWrap = 'wrap';
+    headerControls.appendChild(actionsBar);
+  }
+  if (typeof window.bindMoePostDeployChangeWatcher === 'function') {
+    try { window.bindMoePostDeployChangeWatcher(); } catch (_) { /* no-op */ }
   }
   if (typeof window.initializeMoeChatInput === 'function') {
     try { window.initializeMoeChatInput(); } catch (_) { /* no-op */ }

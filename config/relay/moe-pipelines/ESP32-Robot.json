@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastModified": "2026-03-23T14:47:05.259Z",
+  "lastModified": "2026-03-23T19:28:25.349Z",
   "items": [
     {
       "enabled": true,
@@ -195,7 +195,12 @@
           "wifiCameraStaticIp": "172.20.0.16",
           "wifiCameraStaticCidr": 24,
           "wifiCameraStaticGatewayEnabled": false,
-          "wifiCameraStaticGateway": ""
+          "wifiCameraStaticGateway": "",
+          "wifiCameraPinProfile": "",
+          "wifiCameraStaEnabled": false,
+          "wifiCameraUsbCdcOnBoot": true,
+          "wifiCameraCaptureRuntimeSerial": true,
+          "wifiCameraRuntimeSerialCaptureMs": 30000
         },
         "targets": [
           "raspberry-pi-pico",

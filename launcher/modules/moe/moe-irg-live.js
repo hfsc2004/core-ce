@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const gatewayAdapters = require('./moe-gateway-adapters');
 const liveTools = require('./moe-irg-live-tools');
 const {
@@ -108,6 +109,226 @@ function resolveMergedBinPath(sketchName, compileStartAtMs = 0) {
   }
 }
 
+function hashSha256(value) {
+  try {
+    return crypto.createHash('sha256').update(String(value || ''), 'utf8').digest('hex');
+  } catch {
+    return '';
+  }
+}
+
+const ESP32_MIRROR_MAX_FILES = 3;
+const ESP32_MIRROR_MAX_BYTES = 100 * 1024;
+
+function truncateUtf8ToBytes(value, maxBytes = ESP32_MIRROR_MAX_BYTES) {
+  const text = String(value || '');
+  const bytes = Buffer.byteLength(text, 'utf8');
+  if (bytes <= maxBytes) return text;
+  const marker = '\n\n[TRUNCATED]\n';
+  const markerBytes = Buffer.byteLength(marker, 'utf8');
+  const target = Math.max(0, maxBytes - markerBytes);
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    const slice = text.slice(0, mid);
+    const size = Buffer.byteLength(slice, 'utf8');
+    if (size <= target) lo = mid;
+    else hi = mid - 1;
+  }
+  return `${text.slice(0, lo)}${marker}`;
+}
+
+function pruneOldMirrorFiles(dir, maxFiles = ESP32_MIRROR_MAX_FILES) {
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true })
+      .filter((d) => d.isFile())
+      .map((d) => path.join(dir, d.name))
+      .map((filePath) => {
+        let mtimeMs = 0;
+        try { mtimeMs = Number(fs.statSync(filePath).mtimeMs || 0); } catch { }
+        return { filePath, mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+    const stale = entries.slice(Math.max(0, maxFiles));
+    for (const item of stale) {
+      try { fs.rmSync(item.filePath, { force: true }); } catch { }
+    }
+  } catch {
+    // ignore pruning failures
+  }
+}
+
+function buildEsp32MirrorDump({
+  contract,
+  policy,
+  sketchName,
+  sketchText,
+  resolvedPort,
+  fqbn,
+  effectiveFqbn,
+  result
+} = {}) {
+  try {
+    const projectRoot = path.resolve(__dirname, '..', '..', '..');
+    const dir = path.join(projectRoot, '.psf', 'logs', 'esp32-mirror');
+    fs.mkdirSync(dir, { recursive: true });
+
+    const stampIso = new Date().toISOString();
+    const stampFile = stampIso.replace(/[:.]/g, '-');
+    const status = result?.success ? 'success' : 'error';
+    const base = `${stampFile}_${String(sketchName || 'psf_irg_esp32')}_${status}`;
+
+    const sketchPath = path.join(dir, `${base}.ino`);
+    const transcriptPath = path.join(dir, `${base}.log`);
+    const jsonPath = path.join(dir, `${base}.json`);
+
+    const output = result?.output || {};
+    const runtimeSerialBody = String(output.runtimeSerial || '').trim() || '(no runtime serial captured)';
+    const sections = [
+      ['PREFLIGHT', output.preflight],
+      ['ERASE', output.erase],
+      ['COMPILE', output.compile],
+      ['UPLOAD', output.upload],
+      ['RUNTIME_SERIAL', runtimeSerialBody],
+      ['STDOUT', output.stdout],
+      ['STDERR', output.stderr],
+      ['HTTP', output.http]
+    ];
+    const transcript = sections
+      .filter(([, body]) => String(body || '').trim())
+      .map(([label, body]) => `===== ${label} =====\n${String(body || '').trim()}`)
+      .join('\n\n')
+      .trim();
+
+    fs.writeFileSync(sketchPath, truncateUtf8ToBytes(String(sketchText || '')), 'utf8');
+    fs.writeFileSync(transcriptPath, truncateUtf8ToBytes(transcript || '(no command output captured)'), 'utf8');
+
+    const payload = {
+      at: stampIso,
+      status,
+      target: 'esp32',
+      resolvedPort: String(resolvedPort || ''),
+      fqbn: String(fqbn || ''),
+      effectiveFqbn: String(effectiveFqbn || ''),
+      reason: String(result?.reason || ''),
+      metadata: result?.metadata || {},
+      serial: result?.serial || {},
+      sketch: {
+        name: String(sketchName || ''),
+        sha256: hashSha256(sketchText),
+        bytes: Buffer.byteLength(String(sketchText || ''), 'utf8'),
+        path: sketchPath
+      },
+      transcript: {
+        path: transcriptPath
+      },
+      contract: contract || {},
+      policy: policy || {}
+    };
+    fs.writeFileSync(jsonPath, truncateUtf8ToBytes(JSON.stringify(payload, null, 2)), 'utf8');
+    pruneOldMirrorFiles(dir, ESP32_MIRROR_MAX_FILES);
+    return { jsonPath, sketchPath, transcriptPath };
+  } catch {
+    return null;
+  }
+}
+
+async function captureEsp32RuntimeSerialOnPort(port, timeoutMs = 20000, emit = null, monitorCommand = null) {
+  const resolved = String(port || '').trim();
+  if (!resolved) return '';
+  await runCommandAsync('stty', ['-F', resolved, '115200', 'raw', '-echo'], {
+    timeoutMs: 1500
+  });
+  // Allow USB CDC to re-enumerate and sketch boot logs to start.
+  await new Promise((resolve) => setTimeout(resolve, 2500));
+  const args = [resolved];
+  if (typeof emit === 'function') {
+    emit({ stage: 'runtime', level: 'info', line: `$ cat ${resolved}  (capturing runtime serial for ~${Math.max(1, Math.round(timeoutMs / 1000))}s)` });
+  }
+  const run = await runCommandAsync('cat', args, {
+    timeoutMs,
+    onStdout: (chunk) => {
+      if (typeof emit === 'function') emit({ stage: 'runtime', stream: 'stdout', chunk: String(chunk || '') });
+    },
+    onStderr: (chunk) => {
+      if (typeof emit === 'function') emit({ stage: 'runtime', stream: 'stderr', chunk: String(chunk || '') });
+    }
+  });
+  const out = stripAnsi(`${String(run.stdout || '')}\n${String(run.stderr || '')}`).trim();
+  if (out) return out;
+
+  // Fallback: arduino-cli monitor can sometimes capture CDC output when plain cat cannot.
+  const monitorBin = String(monitorCommand?.bin || '').trim();
+  if (!monitorBin) return '';
+  const monitorBaseArgs = Array.isArray(monitorCommand?.baseArgs) ? monitorCommand.baseArgs : [];
+  const monitorArgs = [...monitorBaseArgs, 'monitor', '-p', resolved, '-c', 'baudrate=115200'];
+  if (typeof emit === 'function') {
+    emit({ stage: 'runtime', level: 'info', line: `$ ${formatCommandForLog(monitorBin, monitorArgs)}  (fallback capture)` });
+  }
+  const monitorRun = await runCommandAsync(monitorBin, monitorArgs, {
+    timeoutMs: Math.max(2500, timeoutMs),
+    onStdout: (chunk) => {
+      if (typeof emit === 'function') emit({ stage: 'runtime', stream: 'stdout', chunk: String(chunk || '') });
+    },
+    onStderr: (chunk) => {
+      if (typeof emit === 'function') emit({ stage: 'runtime', stream: 'stderr', chunk: String(chunk || '') });
+    }
+  });
+  return stripAnsi(`${String(monitorRun.stdout || '')}\n${String(monitorRun.stderr || '')}`).trim();
+}
+
+async function captureEsp32RuntimeSerial(resolvedPort, timeoutMs = 20000, emit = null, availablePorts = [], monitorCommand = null) {
+  const preferredPort = String(resolvedPort || '').trim();
+  const discoveredPorts = Array.isArray(availablePorts)
+    ? availablePorts
+      .map((entry) => (entry && typeof entry === 'object' ? entry.path : entry))
+      .map((entry) => String(entry || '').trim())
+      .filter(Boolean)
+    : [];
+  const candidates = [];
+  const seen = new Set();
+  const pushCandidate = (entry) => {
+    const value = String(entry || '').trim();
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    candidates.push(value);
+  };
+  pushCandidate(preferredPort);
+  for (const port of discoveredPorts) pushCandidate(port);
+  if (candidates.length === 0) {
+    return {
+      output: '',
+      activePort: '',
+      attemptedPorts: []
+    };
+  }
+  const totalBudgetMs = Math.max(2000, Number(timeoutMs) || 20000);
+  const attempted = [];
+  for (let i = 0; i < candidates.length; i += 1) {
+    const port = candidates[i];
+    const remaining = Math.max(1, candidates.length - i);
+    const perPortBudget = Math.max(2500, Math.floor(totalBudgetMs / remaining));
+    attempted.push(port);
+    if (typeof emit === 'function' && i > 0) {
+      emit({ stage: 'runtime', level: 'info', line: `runtime serial fallback probe: ${port}` });
+    }
+    const out = await captureEsp32RuntimeSerialOnPort(port, perPortBudget, emit, monitorCommand);
+    if (out) {
+      return {
+        output: out,
+        activePort: port,
+        attemptedPorts: attempted
+      };
+    }
+  }
+  return {
+    output: '',
+    activePort: preferredPort,
+    attemptedPorts: attempted
+  };
+}
+
 function isElegooEsp32s3Camera(contract = {}, fqbn = '') {
   const params = contract?.params || {};
   const profile = String(params.cameraBoardProfile || '').trim().toLowerCase();
@@ -120,8 +341,12 @@ function resolveEsp32EffectiveFqbn(contract = {}, fqbn = '') {
   const explicit = String(params.effectiveFqbn || '').trim();
   if (explicit) return explicit;
   if (isElegooEsp32s3Camera(contract, fqbn)) {
-    // Matches known-good manual command used during validation.
-    return `${String(fqbn).trim()}:PSRAM=opi,FlashMode=qio,FlashSize=8M,USBMode=hwcdc,CDCOnBoot=cdc,PartitionScheme=default_8MB`;
+    const withUsbCdc = params?.usbCdcOnBoot !== false;
+    const parts = ['PSRAM=opi', 'FlashMode=qio', 'FlashSize=8M', 'PartitionScheme=default_8MB'];
+    if (withUsbCdc) {
+      parts.push('USBMode=hwcdc', 'CDCOnBoot=cdc');
+    }
+    return `${String(fqbn).trim()}:${parts.join(',')}`;
   }
   return String(fqbn || '').trim();
 }
@@ -400,11 +625,37 @@ async function executeLiveEsp32Contract({
   }
   const strictNoFallback = contract?.params?.strictNoFallback === true;
   const eraseFlashBeforeUpload = contract?.params?.eraseFlashBeforeUpload === true;
+  const captureRuntimeSerial = contract?.params?.captureRuntimeSerial !== false;
+  const runtimeSerialCaptureMs = Number.isFinite(Number(contract?.params?.runtimeSerialCaptureMs))
+    ? Math.max(0, Math.min(120000, Number(contract.params.runtimeSerialCaptureMs)))
+    : 20000;
 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'psf-irg-esp32-'));
   const sketchDir = path.join(tempRoot, sketchName);
   const sketchFile = path.join(sketchDir, `${sketchName}.ino`);
   const patchedSketch = applyEsp32NetworkOverridesToSketch(String(sketch || ''), policy);
+  const finalizeEsp32Result = (resultObj) => {
+    const result = (resultObj && typeof resultObj === 'object') ? resultObj : {};
+    const dump = buildEsp32MirrorDump({
+      contract,
+      policy,
+      sketchName,
+      sketchText: patchedSketch,
+      resolvedPort,
+      fqbn,
+      effectiveFqbn,
+      result
+    });
+    if (dump) {
+      result.metadata = {
+        ...(result.metadata || {}),
+        mirrorDumpPath: dump.jsonPath,
+        mirrorSketchPath: dump.sketchPath,
+        mirrorTranscriptPath: dump.transcriptPath
+      };
+    }
+    return result;
+  };
   try {
     fs.mkdirSync(sketchDir, { recursive: true });
     fs.writeFileSync(sketchFile, patchedSketch, 'utf8');
@@ -440,7 +691,7 @@ async function executeLiveEsp32Contract({
       });
       eraseOutGlobal = `$ ${eraseCommand}\n${stripAnsi(`${String(erase.stdout || '')}\n${String(erase.stderr || '')}`).trim()}`.trim();
       if (erase.error || erase.status !== 0) {
-        return {
+        return finalizeEsp32Result({
           success: false,
           blocked: true,
           mode: 'live',
@@ -451,7 +702,7 @@ async function executeLiveEsp32Contract({
             preflight: preflightOutGlobal,
             erase: eraseOutGlobal
           }
-        };
+        });
       }
     }
 
@@ -529,7 +780,7 @@ async function executeLiveEsp32Contract({
       .trim();
 
     if (compile.error || compile.status !== 0) {
-      return {
+      return finalizeEsp32Result({
         success: false,
         blocked: true,
         mode: 'live',
@@ -541,13 +792,13 @@ async function executeLiveEsp32Contract({
           preflight: preflightOutGlobal,
           erase: eraseOutGlobal
         }
-      };
+      });
     }
 
     if (uploadMode === 'merged-bin') {
       const mergedBin = resolveMergedBinPath(sketchName, compileStartedAt);
       if (!mergedBin) {
-        return {
+        return finalizeEsp32Result({
           success: false,
           blocked: true,
           mode: 'live',
@@ -555,7 +806,7 @@ async function executeLiveEsp32Contract({
           serial: { resolvedPort },
           metadata: { target: 'esp32', fqbn: effectiveFqbn, sketchFile, uploadMode: 'merged-bin' },
           output: { compile: compileAttemptsOut || compileOut }
-        };
+        });
       }
       const preflightOut = preflightOutGlobal;
       const esptoolBin = resolveManagedEsptoolPath(arduinoCli.env || {}) || 'esptool';
@@ -572,7 +823,7 @@ async function executeLiveEsp32Contract({
       });
       const uploadOut = `$ ${esptoolCommand}\n${stripAnsi(`${String(upload.stdout || '')}\n${String(upload.stderr || '')}`).trim()}`.trim();
       if (upload.error || upload.status !== 0) {
-        return {
+        return finalizeEsp32Result({
           success: false,
           blocked: true,
           mode: 'live',
@@ -585,9 +836,24 @@ async function executeLiveEsp32Contract({
             erase: eraseOut,
             upload: uploadOut
           }
-        };
+        });
       }
-      return {
+      const runtimeCapture = captureRuntimeSerial
+        ? await captureEsp32RuntimeSerial(
+          resolvedPort,
+          runtimeSerialCaptureMs,
+          emit,
+          gatewayAdapters.listSerialPorts(),
+          { bin: arduinoCli.bin, baseArgs: arduinoCli.baseArgs }
+        )
+        : {
+          output: '(runtime serial capture disabled)',
+          activePort: resolvedPort,
+          attemptedPorts: [resolvedPort].filter(Boolean)
+        };
+      const runtimeSerial = String(runtimeCapture?.output || '').trim()
+        || `(no runtime serial captured; attempted ports: ${Array.isArray(runtimeCapture?.attemptedPorts) ? runtimeCapture.attemptedPorts.join(', ') : resolvedPort})`;
+      return finalizeEsp32Result({
         success: true,
         mode: 'live',
         verification: {
@@ -599,7 +865,8 @@ async function executeLiveEsp32Contract({
           compile: compileAttemptsOut || compileOut,
           preflight: preflightOut,
           erase: eraseOut,
-          upload: uploadOut
+          upload: uploadOut,
+          runtimeSerial
         },
         metadata: {
           target: 'esp32',
@@ -609,9 +876,11 @@ async function executeLiveEsp32Contract({
           sketchFile,
           mergedBin,
           uploadMode: 'merged-bin',
+          runtimeSerialPort: String(runtimeCapture?.activePort || '').trim() || null,
+          runtimeSerialPortsAttempted: Array.isArray(runtimeCapture?.attemptedPorts) ? runtimeCapture.attemptedPorts : [],
           networkOverridesApplied: patchedSketch !== String(sketch || '')
         }
-      };
+      });
     }
 
     const preflightOut = preflightOutGlobal;
@@ -669,7 +938,7 @@ async function executeLiveEsp32Contract({
       .trim();
 
     if (!upload || upload.error || upload.status !== 0) {
-      return {
+      return finalizeEsp32Result({
         success: false,
         blocked: true,
         mode: 'live',
@@ -682,10 +951,25 @@ async function executeLiveEsp32Contract({
           erase: eraseOut,
           upload: uploadAttemptsOut || uploadOut
         }
-      };
+      });
     }
+    const runtimeCapture = captureRuntimeSerial
+      ? await captureEsp32RuntimeSerial(
+        resolvedPort,
+        runtimeSerialCaptureMs,
+        emit,
+        gatewayAdapters.listSerialPorts(),
+        { bin: arduinoCli.bin, baseArgs: arduinoCli.baseArgs }
+      )
+      : {
+        output: '(runtime serial capture disabled)',
+        activePort: resolvedPort,
+        attemptedPorts: [resolvedPort].filter(Boolean)
+      };
+    const runtimeSerial = String(runtimeCapture?.output || '').trim()
+      || `(no runtime serial captured; attempted ports: ${Array.isArray(runtimeCapture?.attemptedPorts) ? runtimeCapture.attemptedPorts.join(', ') : resolvedPort})`;
 
-    return {
+    return finalizeEsp32Result({
       success: true,
       mode: 'live',
       verification: {
@@ -697,7 +981,8 @@ async function executeLiveEsp32Contract({
         compile: compileAttemptsOut || compileOut,
         preflight: preflightOut,
         erase: eraseOut,
-        upload: uploadAttemptsOut || uploadOut
+        upload: uploadAttemptsOut || uploadOut,
+        runtimeSerial
       },
       metadata: {
         target: 'esp32',
@@ -705,9 +990,11 @@ async function executeLiveEsp32Contract({
         sketchFile,
         compileProfile: usedCompileProfile || null,
         uploadProfile: usedUploadProfile || null,
+        runtimeSerialPort: String(runtimeCapture?.activePort || '').trim() || null,
+        runtimeSerialPortsAttempted: Array.isArray(runtimeCapture?.attemptedPorts) ? runtimeCapture.attemptedPorts : [],
         networkOverridesApplied: patchedSketch !== String(sketch || '')
       }
-    };
+    });
   } finally {
     try {
       fs.rmSync(tempRoot, { recursive: true, force: true });

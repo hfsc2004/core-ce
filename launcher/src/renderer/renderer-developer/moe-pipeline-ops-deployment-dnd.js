@@ -17,6 +17,7 @@ let moeDeploySummaryAnimTimer = null;
 let moeDeployHeartbeatTimer = null;
 let moeDeployBusySinceMs = 0;
 const MOE_DEPLOY_LOG_MAX = 1200;
+let moePostDeployChangeWatcherBound = false;
 
 function ensureMoeDeployLogState() {
   if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return null;
@@ -29,7 +30,47 @@ function ensureMoeDeployLogState() {
   if (typeof window.modelOrderingState.moeDeployFrameState !== 'string') {
     window.modelOrderingState.moeDeployFrameState = 'idle';
   }
+  if (window.modelOrderingState.moePostDeployDirty !== true) {
+    window.modelOrderingState.moePostDeployDirty = false;
+  }
   return window.modelOrderingState;
+}
+
+function isMoePipelineRunning() {
+  const state = ensureMoeDeployLogState();
+  if (!state) return false;
+  return String(state.moeDeployFrameState || 'idle').toLowerCase() === 'active';
+}
+
+function clearMoePostDeployDirty() {
+  const state = ensureMoeDeployLogState();
+  if (!state) return;
+  state.moePostDeployDirty = false;
+}
+
+function markMoePipelineConfigChanged(sourceLabel = 'Node settings') {
+  const state = ensureMoeDeployLogState();
+  if (!state || !isMoePipelineRunning()) return;
+  if (state.moePostDeployDirty === true) return;
+  state.moePostDeployDirty = true;
+  appendMoeDeployStatusLine(`${sourceLabel} changed after deploy. Stop and Deploy again to apply changes.`, 'warn');
+  setMoeDeployStatusSummary('Ready • Redeploy Required');
+  renderModelOrdering();
+}
+
+function bindMoePostDeployChangeWatcher() {
+  if (moePostDeployChangeWatcherBound) return;
+  moePostDeployChangeWatcherBound = true;
+  document.addEventListener('change', (event) => {
+    const target = event?.target;
+    if (!target || !target.closest) return;
+    const card = target.closest('#moe-pipeline-frame .moe-item');
+    if (!card) return;
+    if (!target.matches('input, select, textarea')) return;
+    const itemType = String(card.getAttribute('data-moe-type') || 'Node').trim();
+    const itemLabel = itemType ? `${itemType[0].toUpperCase()}${itemType.slice(1)} card` : 'Node settings';
+    markMoePipelineConfigChanged(itemLabel);
+  }, true);
 }
 
 function applyMoePipelineStatusIndicatorToDom(stateName = 'idle') {
@@ -37,19 +78,16 @@ function applyMoePipelineStatusIndicatorToDom(stateName = 'idle') {
   if (!el) return;
   const state = String(stateName || 'idle').toLowerCase();
   if (state === 'active') {
-    el.textContent = '[RUNNING]';
-    el.style.color = '#22c55e';
+    el.innerHTML = '<span style="color:#22c55e;">[RUNNING]</span>';
     el.style.textShadow = '0 0 6px rgba(34,197,94,0.32)';
     return;
   }
   if (state === 'stopping' || state === 'stopped' || state === 'error') {
-    el.textContent = '[STOPPED]';
-    el.style.color = '#ef4444';
+    el.innerHTML = '<span style="color:#ef4444;">[STOPPED]</span>';
     el.style.textShadow = 'none';
     return;
   }
-  el.textContent = '[IDLE]';
-  el.style.color = '#6b7280';
+  el.innerHTML = '<span style="color:#38bdf8;">[</span><span style="color:#6b7280;">IDLE</span><span style="color:#38bdf8;">]</span>';
   el.style.textShadow = 'none';
 }
 
@@ -158,6 +196,7 @@ async function deployMoePipeline() {
       startedAgents.forEach((agent) => {
         appendMoeDeployStatusLine(`Agent online: ${agent.name} (port ${agent.port})`, 'success');
       });
+      clearMoePostDeployDirty();
       setMoeDeployStatusSummary(`Ready • ${startedAgents.length} agent(s)`);
       
       // Update chat status
@@ -223,6 +262,7 @@ async function teardownMoePipeline() {
       setMoePipelineFrameState('stopped');
       console.log('[MoE] Pipeline torn down:', result);
       appendMoeDeployStatusLine(`Pipeline stopped. Closed ${result.closedAgents} agent(s).`, 'success');
+      clearMoePostDeployDirty();
       setMoeDeployStatusSummary('Stopped');
       
       const statusSpan = document.getElementById('moe-chat-status');
@@ -236,6 +276,7 @@ async function teardownMoePipeline() {
       setMoeDeployBusyUi(false);
       setMoePipelineFrameState('stopped');
       appendMoeDeployStatusLine(`Teardown completed with errors: ${(result.errors || []).join('; ')}`, 'warn');
+      clearMoePostDeployDirty();
       setMoeDeployStatusSummary('Stopped with warnings');
     }
   } catch (err) {
@@ -437,6 +478,8 @@ window.openMoeChatWindowFromPipeline = openMoeChatWindowFromPipeline;
 window.setMoeDeployStatusSummary = setMoeDeployStatusSummary;
 window.appendMoeDeployStatusLine = appendMoeDeployStatusLine;
 window.bindMoeDeployButtons = bindMoeDeployButtons;
+window.markMoePipelineConfigChanged = markMoePipelineConfigChanged;
+window.bindMoePostDeployChangeWatcher = bindMoePostDeployChangeWatcher;
 if (typeof window.openMoeChatWindow !== 'function') {
   window.openMoeChatWindow = openMoeChatWindowFromPipeline;
 }

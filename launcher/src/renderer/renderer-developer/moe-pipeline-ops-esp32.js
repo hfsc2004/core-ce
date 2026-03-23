@@ -5,6 +5,43 @@
  */
 
 const moeEsp32WifiScanStateByGateway = Object.create(null);
+const ESP32_GATEWAY_UI_DEFAULTS_STORAGE_KEY = 'psf-gateway-ui-defaults';
+
+function readGatewayUiDefaults() {
+  try {
+    const fromWindow = window.__PSF_GATEWAY_UI_DEFAULTS__;
+    if (fromWindow && typeof fromWindow === 'object') return fromWindow;
+  } catch {
+    // ignore
+  }
+  try {
+    const raw = localStorage.getItem(ESP32_GATEWAY_UI_DEFAULTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function resolveInitialGatewayEsp32Sections() {
+  const defaults = readGatewayUiDefaults();
+  const collapseAll = defaults?.esp32SectionsStartCollapsed === true;
+  if (collapseAll) {
+    return {
+      wifiControl: false,
+      drivePad: false,
+      staticNetwork: false,
+      cameraSidecar: false
+    };
+  }
+  return {
+    wifiControl: false,
+    drivePad: false,
+    staticNetwork: false,
+    cameraSidecar: true
+  };
+}
 
 function readGatewayById(gatewayId) {
   const items = Array.isArray(window.modelOrderingState?.moeItems)
@@ -57,6 +94,7 @@ function readScanState(gatewayId) {
       cameraLastSketch: '',
       cameraLastUrl: '',
       cameraLastOkAt: '',
+      sections: resolveInitialGatewayEsp32Sections(),
       drivePulseTimer: null,
       driveReleaseHandler: null,
       telemetryTimer: null
