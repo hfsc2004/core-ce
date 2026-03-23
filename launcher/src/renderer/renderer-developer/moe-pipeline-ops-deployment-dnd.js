@@ -78,16 +78,16 @@ function applyMoePipelineStatusIndicatorToDom(stateName = 'idle') {
   if (!el) return;
   const state = String(stateName || 'idle').toLowerCase();
   if (state === 'active') {
-    el.innerHTML = '<span style="color:#22c55e;">[RUNNING]</span>';
+    el.innerHTML = '<span class="moe-status-line" style="color:#22c55e;">[RUNNING]</span><span class="moe-status-tail moe-status-tail-running" aria-hidden="true"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>';
     el.style.textShadow = '0 0 6px rgba(34,197,94,0.32)';
     return;
   }
   if (state === 'stopping' || state === 'stopped' || state === 'error') {
-    el.innerHTML = '<span style="color:#ef4444;">[STOPPED]</span>';
+    el.innerHTML = '<span class="moe-status-line" style="color:#ef4444;">[STOPPED]</span><span class="moe-status-tail moe-status-tail-stopped" aria-hidden="true"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span class="final-dot">.</span></span>';
     el.style.textShadow = 'none';
     return;
   }
-  el.innerHTML = '<span style="color:#38bdf8;">[</span><span style="color:#6b7280;">IDLE</span><span style="color:#38bdf8;">]</span>';
+  el.innerHTML = '<span class="moe-status-line"><span style="color:#38bdf8;">[</span><span style="color:#6b7280;">IDLE</span><span style="color:#38bdf8;">]</span></span><span class="moe-status-tail moe-status-tail-idle" aria-hidden="true"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>';
   el.style.textShadow = 'none';
 }
 
@@ -426,13 +426,13 @@ function setMoeDeployBusyUi(isBusy, mode = 'deploy') {
     deployBtn.disabled = !!isBusy;
     deployBtn.style.opacity = isBusy ? '0.7' : '1';
     deployBtn.style.cursor = isBusy ? 'not-allowed' : 'pointer';
-    deployBtn.textContent = isBusy && mode === 'deploy' ? '⏳ Deploying...' : '🚀 Deploy';
+    deployBtn.title = isBusy && mode === 'deploy' ? 'Deploying...' : 'Deploy';
   }
   if (stopBtn) {
     stopBtn.disabled = !!isBusy;
     stopBtn.style.opacity = isBusy ? '0.7' : '1';
     stopBtn.style.cursor = isBusy ? 'not-allowed' : 'pointer';
-    stopBtn.textContent = isBusy && mode === 'stop' ? '⏳ Stopping...' : '⏹️ Stop';
+    stopBtn.title = isBusy && mode === 'stop' ? 'Stopping...' : 'Stop';
   }
 }
 
