@@ -78,6 +78,177 @@ function sanitizeAgentOutputForHandoff(value) {
   return text.trim();
 }
 
+function extractSection(text, heading) {
+  const source = String(text || '');
+  if (!source) return '';
+  const escaped = String(heading).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`${escaped}\\s*:\\s*([\\s\\S]*?)(?=\\n[A-Z_][A-Z0-9_ ]*:\\s*|$)`, 'i');
+  const match = source.match(pattern);
+  return String(match?.[1] || '').trim();
+}
+
+function buildStructuredUpdateFromStep(outputText) {
+  const out = String(outputText || '');
+  if (!out) return {};
+  const update = {};
+  const motion = extractSection(out, 'MOTION');
+  const forCase = extractSection(out, 'FOR_CASE');
+  const risks = extractSection(out, 'RISKS');
+  const amendment = extractSection(out, 'AMENDMENT');
+  const plan = extractSection(out, 'PLAN');
+  const safetyCheck = extractSection(out, 'SAFETY_CHECK');
+  const rationale = extractSection(out, 'RATIONALE');
+  const requiredGuardrail = extractSection(out, 'REQUIRED_GUARDRAIL');
+  if (motion) update.MOTION = motion;
+  if (forCase) update.FOR_CASE = forCase;
+  if (risks) update.RISKS = risks;
+  if (amendment) update.AMENDMENT = amendment;
+  if (plan) update.PLAN = plan;
+  if (safetyCheck) update.SAFETY_CHECK = safetyCheck;
+  if (rationale) update.RATIONALE = rationale;
+  if (requiredGuardrail) update.REQUIRED_GUARDRAIL = requiredGuardrail;
+  return update;
+}
+
+function buildStructuredContextText(record = {}) {
+  const fields = [
+    `MOTION: ${record.MOTION || 'N/A'}`,
+    `FOR_CASE: ${record.FOR_CASE || 'N/A'}`,
+    `RISKS: ${record.RISKS || 'N/A'}`,
+    `AMENDMENT: ${record.AMENDMENT || 'N/A'}`,
+    `PLAN: ${record.PLAN || 'N/A'}`,
+    `SAFETY_CHECK: ${record.SAFETY_CHECK || 'N/A'}`,
+    `RATIONALE: ${record.RATIONALE || 'N/A'}`,
+    `REQUIRED_GUARDRAIL: ${record.REQUIRED_GUARDRAIL || 'N/A'}`
+  ];
+  return fields.join('\n');
+}
+
+function normalizeToolName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function extractAgentToolCapabilities(agent = {}) {
+  const caps = {
+    pipelineStateRead: false,
+    pipelineStateWrite: false
+  };
+  const tools = Array.isArray(agent?.tools) ? agent.tools : [];
+  for (const entry of tools) {
+    if (typeof entry === 'string') {
+      const name = normalizeToolName(entry);
+      if (name === 'pipeline_state' || name === 'pipeline-state') {
+        caps.pipelineStateRead = true;
+        caps.pipelineStateWrite = true;
+      } else if (name === 'pipeline_state:read' || name === 'pipeline-state:read') {
+        caps.pipelineStateRead = true;
+      } else if (name === 'pipeline_state:write' || name === 'pipeline-state:write') {
+        caps.pipelineStateWrite = true;
+      }
+      continue;
+    }
+    if (entry && typeof entry === 'object') {
+      const name = normalizeToolName(entry.name || entry.id || entry.tool || '');
+      if (name === 'pipeline_state' || name === 'pipeline-state') {
+        if (entry.read === false && entry.write === false) continue;
+        if (entry.read === true || entry.read == null) caps.pipelineStateRead = true;
+        if (entry.write === true || entry.write == null) caps.pipelineStateWrite = true;
+      }
+    }
+  }
+  return caps;
+}
+
+function parsePipelineStateGetKeys(text) {
+  const raw = String(text || '');
+  if (!raw) return [];
+  const keys = [];
+  const regex = /PIPE_STATE_GET\s*:\s*(.+)$/gim;
+  let match = regex.exec(raw);
+  while (match) {
+    const payload = String(match[1] || '').trim();
+    if (payload) {
+      if (payload.startsWith('{') || payload.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(payload);
+          if (Array.isArray(parsed)) {
+            for (const row of parsed) {
+              const key = String(row || '').trim();
+              if (key) keys.push(key);
+            }
+          } else if (parsed && typeof parsed === 'object') {
+            const list = Array.isArray(parsed.keys) ? parsed.keys : [];
+            for (const row of list) {
+              const key = String(row || '').trim();
+              if (key) keys.push(key);
+            }
+          }
+        } catch {
+          for (const part of payload.split(',')) {
+            const key = String(part || '').trim();
+            if (key) keys.push(key);
+          }
+        }
+      } else {
+        for (const part of payload.split(',')) {
+          const key = String(part || '').trim();
+          if (key) keys.push(key);
+        }
+      }
+    }
+    match = regex.exec(raw);
+  }
+  return Array.from(new Set(keys));
+}
+
+function parsePipelineStateSetOps(text) {
+  const raw = String(text || '');
+  if (!raw) return [];
+  const ops = [];
+  const regex = /PIPE_STATE_SET\s*:\s*(.+)$/gim;
+  let match = regex.exec(raw);
+  while (match) {
+    const payload = String(match[1] || '').trim();
+    if (!payload) {
+      match = regex.exec(raw);
+      continue;
+    }
+    if (payload.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(payload);
+        if (parsed && typeof parsed === 'object') {
+          const key = String(parsed.key || '').trim();
+          const value = parsed.value != null ? String(parsed.value) : '';
+          if (key) ops.push({ key, value });
+        }
+      } catch {
+        // ignore malformed json
+      }
+      match = regex.exec(raw);
+      continue;
+    }
+    const eqIndex = payload.indexOf('=');
+    if (eqIndex > 0) {
+      const key = payload.slice(0, eqIndex).trim();
+      const value = payload.slice(eqIndex + 1).trim();
+      if (key) ops.push({ key, value });
+    }
+    match = regex.exec(raw);
+  }
+  return ops;
+}
+
+function buildPipelineStateReadContext(keys = [], store = null) {
+  const list = Array.isArray(keys) ? keys : [];
+  if (!store || !(store instanceof Map) || list.length === 0) return '';
+  const lines = [];
+  for (const key of list) {
+    const val = store.has(key) ? String(store.get(key)) : 'N/A';
+    lines.push(`${key}=${val}`);
+  }
+  return lines.join('\n');
+}
+
 function rememberLastIrgExecution({ contract, gatewayConfig } = {}) {
   if (!contract || !gatewayConfig) return;
   lastIrgReplay = {
@@ -179,7 +350,8 @@ async function routeMessage(userMessage, options = {}) {
     finalResponse: null,
     deterministicTools: {
       enabled: !!deterministicToolsRuntime
-    }
+    },
+    pipelineState: {}
   };
   if (forceLlmIrgRefinement && deterministicDraftResult) {
     trace.steps.push({
@@ -200,6 +372,17 @@ async function routeMessage(userMessage, options = {}) {
   }
 
   let currentContext = userMessage;
+  const pipelineState = new Map();
+  const structuredRecord = {
+    MOTION: '',
+    FOR_CASE: '',
+    RISKS: '',
+    AMENDMENT: '',
+    PLAN: '',
+    SAFETY_CHECK: '',
+    RATIONALE: '',
+    REQUIRED_GUARDRAIL: ''
+  };
   let previousResponses = [];
   let previousStepSuccess = true;
   let currentAgentIndex = 0;
@@ -249,7 +432,16 @@ async function routeMessage(userMessage, options = {}) {
             !!irgGateway &&
             hardwareIntent,
           hardwarePlanContext: currentAgentIndex === 0 ? buildHardwarePlanContext(irgGateway) : '',
-          rlmAssistContext
+          rlmAssistContext,
+          pipelineStateToolCapabilities: extractAgentToolCapabilities(agent),
+          pipelineStateReadContext: buildPipelineStateReadContext(
+            parsePipelineStateGetKeys(`${agent?.systemPrompt || ''}\n${currentContext || ''}`),
+            pipelineState
+          ),
+          structuredRecordContext:
+            String(agent?.name || '').trim().toLowerCase() === 'clerk'
+              ? buildStructuredContextText(structuredRecord)
+              : ''
         }
       );
 
@@ -281,8 +473,17 @@ async function routeMessage(userMessage, options = {}) {
         attempts: response.attempts || 1,
         execution: resolvedExecution.meta || null,
         rlmAssistApplied: rlmAssistContext.length > 0,
-        rlmAssistContextChars: rlmAssistContext.length
+        rlmAssistContextChars: rlmAssistContext.length,
+        pipelineStateOps: []
       };
+      const toolCaps = extractAgentToolCapabilities(agent);
+      if (toolCaps.pipelineStateWrite) {
+        const setOps = parsePipelineStateSetOps(normalizedOutput || response.content);
+        for (const op of setOps) {
+          pipelineState.set(op.key, op.value);
+          step.pipelineStateOps.push({ op: 'set', key: op.key, valuePreview: String(op.value).slice(0, 80) });
+        }
+      }
       trace.steps.push(step);
 
       if (options.onAgentResponse) {
@@ -314,6 +515,7 @@ async function routeMessage(userMessage, options = {}) {
       }
 
       previousResponses.push({ agent: agent.name, response: normalizedOutput || response.content });
+      Object.assign(structuredRecord, buildStructuredUpdateFromStep(normalizedOutput || response.content));
       currentContext = normalizedOutput || response.content;
       previousStepSuccess = true;
 
@@ -364,6 +566,7 @@ async function routeMessage(userMessage, options = {}) {
     }
 
     trace.finalResponse = currentContext;
+    trace.pipelineState = Object.fromEntries(pipelineState.entries());
     trace.completedAt = new Date().toISOString();
     trace.totalDurationMs = trace.steps.reduce((sum, s) => sum + s.durationMs, 0);
 

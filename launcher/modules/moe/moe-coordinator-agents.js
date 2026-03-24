@@ -197,6 +197,41 @@ function createAgentTransport({ requestTimeout }) {
       });
     }
 
+    if (options?.structuredRecordContext) {
+      messages.push({
+        role: 'system',
+        content:
+          `Structured record context from prior agents (authoritative for carry-forward fields):\n` +
+          `${String(options.structuredRecordContext)}\n\n` +
+          `Use this context to populate missing fields. Do not output placeholders.`
+      });
+    }
+
+    const stateCaps = options?.pipelineStateToolCapabilities || {};
+    if (stateCaps.pipelineStateRead || stateCaps.pipelineStateWrite) {
+      const rules = [];
+      if (stateCaps.pipelineStateRead) {
+        rules.push('Read: Include `PIPE_STATE_GET: key1,key2` in your output only when explicitly instructed to retrieve variables.');
+      }
+      if (stateCaps.pipelineStateWrite) {
+        rules.push('Write: Include `PIPE_STATE_SET: key=value` (or JSON: `PIPE_STATE_SET: {"key":"k","value":"v"}`) only when explicitly instructed to save variables.');
+      }
+      rules.push('Do not use PIPE_STATE commands unless explicitly requested by prompt/policy.');
+      messages.push({
+        role: 'system',
+        content: `Pipeline state tool policy:\n${rules.join('\n')}`
+      });
+    }
+
+    if (options?.pipelineStateReadContext) {
+      messages.push({
+        role: 'system',
+        content:
+          `Pipeline state lookup result:\n${String(options.pipelineStateReadContext)}\n\n` +
+          `Use these retrieved values as authoritative variable values for this turn.`
+      });
+    }
+
     messages.push({ role: 'user', content: currentInput });
     return messages;
   }
