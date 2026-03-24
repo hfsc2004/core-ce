@@ -603,11 +603,15 @@
       if (preKey) {
         const preSaved = prefs.loadModelConfig(preKey);
         if (preSaved && typeof preSaved === 'object') {
-          if (Object.prototype.hasOwnProperty.call(preSaved, 'provider')) terminalConfig.provider = String(preSaved.provider || terminalConfig.provider || 'ollama');
-          if (Object.prototype.hasOwnProperty.call(preSaved, 'provider_base_url')) terminalConfig.baseUrl = String(preSaved.provider_base_url || terminalConfig.baseUrl || '');
-          if (Object.prototype.hasOwnProperty.call(preSaved, 'provider_api_key')) terminalConfig.apiKey = String(preSaved.provider_api_key || terminalConfig.apiKey || '');
-          if (Object.prototype.hasOwnProperty.call(preSaved, 'provider_model_id')) terminalConfig.providerModel = String(preSaved.provider_model_id || terminalConfig.providerModel || '');
-          if (Object.prototype.hasOwnProperty.call(preSaved, 'llama_cpp_model_path')) terminalConfig.llamaCppModelPath = String(preSaved.llama_cpp_model_path || terminalConfig.llamaCppModelPath || '');
+          // Preserve global/provider persistence precedence for backend selection.
+          // Model-specific config should not force provider reset on startup.
+          // (Keeps dropdown/provider selections stable across sessions.)
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'systemPrompt')) terminalConfig.systemPrompt = String(preSaved.systemPrompt || terminalConfig.systemPrompt || '');
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'temperature')) terminalConfig.temperature = Number(preSaved.temperature ?? terminalConfig.temperature ?? 0.7);
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'top_p')) terminalConfig.top_p = Number(preSaved.top_p ?? terminalConfig.top_p ?? 0.9);
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'top_k')) terminalConfig.top_k = Number(preSaved.top_k ?? terminalConfig.top_k ?? 40);
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'num_ctx')) terminalConfig.num_ctx = Number(preSaved.num_ctx ?? terminalConfig.num_ctx ?? 4096);
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'num_gpu')) terminalConfig.num_gpu = Number(preSaved.num_gpu ?? terminalConfig.num_gpu ?? 0);
         }
       }
     }
@@ -619,11 +623,8 @@
       const savedModelCfg = prefs.loadModelConfig(currentModel);
       if (savedModelCfg && typeof savedModelCfg === 'object') {
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'systemPrompt')) systemPrompt = savedModelCfg.systemPrompt;
-        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'provider')) provider = String(savedModelCfg.provider || 'ollama').trim().toLowerCase() || 'ollama';
-        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'provider_base_url')) providerBaseUrl = String(savedModelCfg.provider_base_url || '').trim();
-        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'provider_api_key')) providerApiKey = String(savedModelCfg.provider_api_key || '');
-        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'provider_model_id')) providerModelId = String(savedModelCfg.provider_model_id || '').trim();
-        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'llama_cpp_model_path')) llamaCppModelPath = String(savedModelCfg.llama_cpp_model_path || '').trim();
+        // Do not override provider runtime from per-model config at startup.
+        // Provider persistence is handled globally/per-provider in commands-models.
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'temperature')) temperature = savedModelCfg.temperature;
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'top_p')) top_p = savedModelCfg.top_p;
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'top_k')) top_k = savedModelCfg.top_k;

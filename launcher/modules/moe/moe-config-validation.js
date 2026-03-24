@@ -64,17 +64,52 @@ function validateItem(item, index) {
       if (item.rlmAttachmentSessionId != null && typeof item.rlmAttachmentSessionId !== 'string') {
         errors.push(`${prefix}: rlmAttachmentSessionId must be string`);
       }
+      if (item.groups != null && !Array.isArray(item.groups)) {
+        errors.push(`${prefix}: groups must be array`);
+      }
+      if (Array.isArray(item.groups)) {
+        item.groups.forEach((groupId, groupIndex) => {
+          if (typeof groupId !== 'string') {
+            errors.push(`${prefix}: groups[${groupIndex}] must be string`);
+          }
+        });
+      }
       break;
 
     case 'channel':
+      if (item.mode != null) {
+        const mode = String(item.mode).trim().toLowerCase();
+        if (!['direct', 'broadcast', 'group'].includes(mode)) {
+          errors.push(`${prefix}: invalid mode '${item.mode}'`);
+        }
+      }
       if (item.direction && !VALID_CHANNEL_DIRECTIONS.includes(item.direction)) {
         errors.push(`${prefix}: invalid direction '${item.direction}'`);
       }
-      if (item.flowCondition && !VALID_CHANNEL_FLOW_CONDITIONS.includes(item.flowCondition)) {
-        errors.push(`${prefix}: invalid flowCondition '${item.flowCondition}'`);
+      const flowCondition = String(item.when || item.flowCondition || '').trim();
+      if (flowCondition && !VALID_CHANNEL_FLOW_CONDITIONS.includes(flowCondition)) {
+        errors.push(`${prefix}: invalid flow/when '${flowCondition}'`);
       }
       if (item.onFailure && !VALID_CHANNEL_FAILURE_POLICIES.includes(item.onFailure)) {
         errors.push(`${prefix}: invalid onFailure '${item.onFailure}'`);
+      }
+      if (item.fromAgentId != null && typeof item.fromAgentId !== 'string') {
+        errors.push(`${prefix}: fromAgentId must be string`);
+      }
+      if (item.toAgentId != null && typeof item.toAgentId !== 'string') {
+        errors.push(`${prefix}: toAgentId must be string`);
+      }
+      if (item.matchRule != null && typeof item.matchRule !== 'string') {
+        errors.push(`${prefix}: matchRule must be string`);
+      }
+      if (item.groupId != null && typeof item.groupId !== 'string') {
+        errors.push(`${prefix}: groupId must be string`);
+      }
+      if (flowCondition === 'on_match' && !String(item.matchRule || '').trim()) {
+        errors.push(`${prefix}: matchRule is required when flow/when is 'on_match'`);
+      }
+      if (String(item.mode || '').toLowerCase() === 'group' && !String(item.groupId || '').trim()) {
+        errors.push(`${prefix}: groupId is required when mode is 'group'`);
       }
       if (item.retryCount != null) {
         const retry = Number(item.retryCount);

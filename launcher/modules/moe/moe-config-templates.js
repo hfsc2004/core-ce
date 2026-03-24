@@ -18,13 +18,20 @@ function ensureItemDefaults(item) {
       systemPrompt: '',
       routingMode: 'dynamic',
       routingRules: [],
+      groups: [],
       rlmAssist: false,
       rlmAttachmentSessionId: '',
       tools: []
     },
     channel: {
       enabled: true,
+      mode: 'direct',
       direction: 'bidirectional',
+      fromAgentId: '',
+      toAgentId: '',
+      groupId: '',
+      when: 'always',
+      matchRule: '',
       flowCondition: 'always',
       retryCount: 0,
       timeoutMs: 120000,
@@ -90,10 +97,19 @@ function ensureItemDefaults(item) {
 
   const typeDefaults = defaults[item.type] || {};
 
-  return {
+  const merged = {
     ...typeDefaults,
     ...item
   };
+  if (item?.type === 'channel') {
+    if (!Object.prototype.hasOwnProperty.call(item, 'when') && Object.prototype.hasOwnProperty.call(item, 'flowCondition')) {
+      merged.when = merged.flowCondition;
+    }
+    if (!Object.prototype.hasOwnProperty.call(item, 'flowCondition') && Object.prototype.hasOwnProperty.call(item, 'when')) {
+      merged.flowCondition = merged.when;
+    }
+  }
+  return merged;
 }
 
 function createEmptyConfig() {
@@ -172,7 +188,13 @@ function createStarterPipeline() {
       {
         id: `channel-${Date.now()}-1`,
         type: 'channel',
+        mode: 'direct',
         direction: 'bidirectional',
+        fromAgentId: '',
+        toAgentId: '',
+        groupId: '',
+        when: 'always',
+        matchRule: '',
         flowCondition: 'always',
         retryCount: 0,
         timeoutMs: 120000,

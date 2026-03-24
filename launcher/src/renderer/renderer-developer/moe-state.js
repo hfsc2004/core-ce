@@ -82,6 +82,7 @@ function createAgent(name = 'New Agent') {
     systemPrompt: '',
     routingMode: 'dynamic',
     routingRules: [],
+    groups: [],
     rlmAssist: false,
     rlmAttachmentBucketId: '',
     rlmAttachmentSessionId: '',
@@ -101,9 +102,15 @@ function createChannel(direction = 'bidirectional') {
   return {
     id: `channel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     type: 'channel',
+    mode: 'direct',               // direct | broadcast | group
     direction: direction,
+    fromAgentId: '',
+    toAgentId: '',
+    groupId: '',
     label: '',
-    flowCondition: 'always',      // always | on_success | on_failure
+    when: 'always',               // always | on_success | on_failure | on_match
+    matchRule: '',                // used when when=on_match
+    flowCondition: 'always',      // legacy alias of "when"
     retryCount: 0,                // retries after first attempt
     timeoutMs: 120000,            // per-agent timeout on this edge
     onFailure: 'stop',            // stop | continue

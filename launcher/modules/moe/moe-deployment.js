@@ -263,11 +263,19 @@ function deployGateway(gateway) {
 }
 
 function deployChannel(channel) {
+  const when = String(channel.when || channel.flowCondition || 'always').trim().toLowerCase();
+  const mode = String(channel.mode || 'direct').trim().toLowerCase();
   activeDeployment.channels.push({
     id: channel.id,
+    mode: ['direct', 'broadcast', 'group'].includes(mode) ? mode : 'direct',
     direction: channel.direction,
+    fromAgentId: String(channel.fromAgentId || '').trim(),
+    toAgentId: String(channel.toAgentId || '').trim(),
+    groupId: String(channel.groupId || '').trim(),
     label: channel.label || '',
-    flowCondition: channel.flowCondition || 'always',
+    when,
+    flowCondition: when, // legacy alias
+    matchRule: String(channel.matchRule || '').trim(),
     retryCount: Number.isInteger(Number(channel.retryCount)) ? Number(channel.retryCount) : 0,
     timeoutMs: Number.isFinite(Number(channel.timeoutMs)) ? Number(channel.timeoutMs) : 120000,
     onFailure: channel.onFailure || 'stop'

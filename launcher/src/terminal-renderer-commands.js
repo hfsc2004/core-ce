@@ -291,9 +291,30 @@
           addErrorMessage('Provider switch API unavailable in this build.');
           return;
         }
+        // Provider switch to llama.cpp requires a GGUF path. If none is set yet,
+        // auto-select the first discovered GGUF so Apply can succeed in one step.
+        if (requestedProvider === 'llama.cpp') {
+          const currentPath = String(getLlamaCppModelPath() || '').trim();
+          if (!currentPath && typeof api.terminalListLlamaCppModels === 'function') {
+            try {
+              const llamaList = await api.terminalListLlamaCppModels();
+              const firstModel = Array.isArray(llamaList?.models) ? llamaList.models[0] : null;
+              const firstPath = String(firstModel?.pathAbs || '').trim();
+              const firstName = String(firstModel?.name || '').trim();
+              if (firstPath) {
+                setLlamaCppModelPath(firstPath);
+                if (firstName) setCurrentModel(firstName);
+                addSystemMessage(`Auto-selected llama.cpp model: ${firstName || firstPath}`);
+              }
+            } catch (_) {
+              // Continue; BMOC switch call will return a clear error if no path is available.
+            }
+          }
+        }
         const switchResult = await api.terminalSwitchProvider({
           provider: requestedProvider,
           modelPath: getLlamaCppModelPath(),
+          modelName: String(getCurrentModel() || '').trim(),
           contextSize: getNumCtx(),
           gpuLayers: getNumGpu()
         });

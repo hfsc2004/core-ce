@@ -39,11 +39,93 @@ function updateChannelDirection(channelId, direction) {
   }
 }
 
+function updateChannelMode(channelId, mode) {
+  const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
+  if (channel) {
+    const normalized = String(mode || '').trim().toLowerCase();
+    channel.mode = ['direct', 'broadcast', 'group'].includes(normalized) ? normalized : 'direct';
+    console.log('[MoE] Updated channel mode:', channelId, channel.mode);
+    renderModelOrdering();
+  }
+}
+
+function updateChannelGroupId(channelId, groupId) {
+  const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
+  if (channel) {
+    channel.groupId = String(groupId || '').trim();
+    console.log('[MoE] Updated channel groupId:', channelId, channel.groupId || '(none)');
+  }
+}
+
+function normalizeAgentGroups(agent) {
+  const groups = Array.isArray(agent?.groups) ? agent.groups : [];
+  return groups
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+}
+
+function toggleChannelGroupMember(channelId, agentId, enabled) {
+  const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
+  if (!channel) return;
+  const groupId = String(channel.groupId || '').trim();
+  if (!groupId) return;
+  const agent = window.modelOrderingState.moeItems.find(i => i.id === agentId && i.type === 'agent');
+  if (!agent) return;
+  const groups = normalizeAgentGroups(agent);
+  const has = groups.includes(groupId);
+  if (enabled && !has) groups.push(groupId);
+  if (!enabled && has) {
+    const idx = groups.indexOf(groupId);
+    if (idx >= 0) groups.splice(idx, 1);
+  }
+  agent.groups = groups;
+  console.log('[MoE] Updated group membership:', agent.name || agent.id, groupId, enabled ? 'join' : 'leave');
+}
+
+function updateChannelFromAgent(channelId, fromAgentId) {
+  const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
+  if (channel) {
+    channel.fromAgentId = String(fromAgentId || '').trim();
+    console.log('[MoE] Updated channel fromAgentId:', channelId, channel.fromAgentId || '(auto)');
+  }
+}
+
+function updateChannelToAgent(channelId, toAgentId) {
+  const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
+  if (channel) {
+    channel.toAgentId = String(toAgentId || '').trim();
+    console.log('[MoE] Updated channel toAgentId:', channelId, channel.toAgentId || '(auto)');
+  }
+}
+
+function updateChannelWhen(channelId, whenValue) {
+  const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
+  if (channel) {
+    const normalized = String(whenValue || '').trim().toLowerCase();
+    channel.when = ['always', 'on_success', 'on_failure', 'on_match'].includes(normalized) ? normalized : 'always';
+    // Keep legacy field in sync for backward compatibility.
+    channel.flowCondition = channel.when;
+    console.log('[MoE] Updated channel when:', channelId, channel.when);
+    renderModelOrdering();
+  }
+}
+
+function updateChannelMatchRule(channelId, matchRule) {
+  const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
+  if (channel) {
+    channel.matchRule = String(matchRule || '');
+    console.log('[MoE] Updated channel matchRule:', channelId, channel.matchRule || '(empty)');
+  }
+}
+
 function updateChannelFlowCondition(channelId, flowCondition) {
   const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
   if (channel) {
-    channel.flowCondition = flowCondition;
-    console.log('[MoE] Updated channel flow condition:', channelId, flowCondition);
+    const normalized = String(flowCondition || '').trim().toLowerCase();
+    channel.flowCondition = ['always', 'on_success', 'on_failure', 'on_match'].includes(normalized) ? normalized : 'always';
+    // Keep new field in sync for newer profiles.
+    channel.when = channel.flowCondition;
+    console.log('[MoE] Updated channel flow condition:', channelId, channel.flowCondition);
     renderModelOrdering();
   }
 }
@@ -106,6 +188,13 @@ function updateGatewaySourceConfig(gatewayId, sourceType, key, value) {
 window.updateAgentSystemPrompt = updateAgentSystemPrompt;
 window.updateAgentRoutingRules = updateAgentRoutingRules;
 window.updateChannelDirection = updateChannelDirection;
+window.updateChannelMode = updateChannelMode;
+window.updateChannelGroupId = updateChannelGroupId;
+window.toggleChannelGroupMember = toggleChannelGroupMember;
+window.updateChannelFromAgent = updateChannelFromAgent;
+window.updateChannelToAgent = updateChannelToAgent;
+window.updateChannelWhen = updateChannelWhen;
+window.updateChannelMatchRule = updateChannelMatchRule;
 window.updateChannelFlowCondition = updateChannelFlowCondition;
 window.updateChannelRetryCount = updateChannelRetryCount;
 window.updateChannelTimeoutMs = updateChannelTimeoutMs;
