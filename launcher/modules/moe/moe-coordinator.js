@@ -88,18 +88,6 @@ function rememberLastIrgExecution({ contract, gatewayConfig } = {}) {
 }
 
 async function routeMessage(userMessage, options = {}) {
-  const emitProgress = (payload = {}) => {
-    if (typeof options?.onRouteProgress !== 'function') return;
-    try {
-      options.onRouteProgress({
-        ...payload,
-        progressTag: String(payload?.progressTag || options?.progressTag || '').trim()
-      });
-    } catch {
-      // ignore progress callback failures
-    }
-  };
-
   if (!deploymentManager || !deploymentManager.isActive()) {
     return { success: false, error: 'No active MoE deployment' };
   }
@@ -242,15 +230,6 @@ async function routeMessage(userMessage, options = {}) {
       }
 
       hops += 1;
-      emitProgress({
-        event: 'agent-start',
-        agentId: agent.id,
-        agentName: agent.name,
-        modelName: agent.modelName || agent.modelId || '',
-        index: currentAgentIndex,
-        total: agents.length
-      });
-
       const rlmAssistContext = await buildAgentRlmAssistContext({
         agent,
         currentInput: currentContext,
@@ -279,19 +258,7 @@ async function routeMessage(userMessage, options = {}) {
       const response = await transport.callAgentWithPolicy(
         resolvedExecution.agent,
         messages,
-        edgePolicy,
-        {
-          onToken: (chunk) => {
-            emitProgress({
-              event: 'agent-token',
-              agentId: agent.id,
-              agentName: agent.name,
-              index: currentAgentIndex,
-              total: agents.length,
-              chunk: String(chunk || '')
-            });
-          }
-        }
+        edgePolicy
       );
       const stepDuration = Date.now() - stepStart;
       const normalizedOutput = sanitizeAgentOutputForHandoff(response?.content);
@@ -317,15 +284,6 @@ async function routeMessage(userMessage, options = {}) {
         rlmAssistContextChars: rlmAssistContext.length
       };
       trace.steps.push(step);
-      emitProgress({
-        event: 'agent-complete',
-        agentId: agent.id,
-        agentName: agent.name,
-        index: currentAgentIndex,
-        total: agents.length,
-        durationMs: stepDuration,
-        success: !!response.success
-      });
 
       if (options.onAgentResponse) {
         options.onAgentResponse(step, currentAgentIndex, agents.length);

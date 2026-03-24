@@ -8,7 +8,6 @@ window.createMoeChatMessageOps = function createMoeChatMessageOps(ctx = {}) {
   const getElements = () => (typeof ctx.getElements === 'function' ? ctx.getElements() : {});
   const getKvmTarget = () => (typeof ctx.getKvmTarget === 'function' ? ctx.getKvmTarget() : 'pipeline');
   const renderUtils = () => (typeof ctx.getRenderUtils === 'function' ? (ctx.getRenderUtils() || {}) : {});
-  const suppressActivityReplay = () => (typeof ctx.getSuppressActivityReplay === 'function' ? !!ctx.getSuppressActivityReplay() : false);
   const ACTIVITY_MAX = 1500;
   const activeStreams = new Map();
 
@@ -161,19 +160,18 @@ window.createMoeChatMessageOps = function createMoeChatMessageOps(ctx = {}) {
     }
 
     const snippet = compactActivityText(content);
-    const suppressReplay = suppressActivityReplay();
     switch (type) {
     case 'user':
       appendActivityLine(`USER ${routeInfo || ''}: ${snippet || '(empty)'}`, 'info');
       break;
     case 'agent':
-      if (!suppressReplay) appendActivityLine(`AGENT ${agentName || 'Unknown'} (${durationMs}ms): ${snippet || '(empty)'}`, 'success');
+      appendActivityLine(`AGENT ${agentName || 'Unknown'} (${durationMs}ms): ${snippet || '(empty)'}`, 'success');
       break;
     case 'direct':
       appendActivityLine(`DIRECT ${agentName || 'Agent'}: ${snippet || '(empty)'}`, 'success');
       break;
     case 'final':
-      if (!suppressReplay) appendActivityLine(`FINAL: ${snippet || '(empty)'}`, 'success');
+      appendActivityLine(`FINAL: ${snippet || '(empty)'}`, 'success');
       break;
     case 'error':
       appendActivityLine(`ERROR: ${snippet || '(empty)'}`, 'error');
