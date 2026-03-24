@@ -74,6 +74,24 @@
       const llamaCppModelPath = String(getLlamaCppModelPath() || '').trim();
       return { provider, baseUrl, apiKey, providerModel, llamaCppModelPath };
     }
+    function isTransientProviderError(provider, message) {
+      const p = String(provider || '').trim().toLowerCase();
+      const text = String(message || '').toLowerCase();
+      if (!text) return false;
+      if (text.includes('generation stopped')) return false;
+      if (p === 'llama.cpp') {
+        if (text.includes('loading model')) return true;
+        if (text.includes('network error')) return true;
+        if (text.includes('http 503')) return true;
+        if (text.includes('unavailable_error')) return true;
+      }
+      return false;
+    }
+    async function waitMs(ms) {
+      const duration = Math.max(0, Number(ms) || 0);
+      if (!duration) return;
+      await new Promise((resolve) => setTimeout(resolve, duration));
+    }
     function buildOpenAIStyleMessages(messages = []) {
       return (Array.isArray(messages) ? messages : []).map((m) => ({
         role: String(m?.role || 'user'),
@@ -402,8 +420,18 @@
       if (providerRuntime.provider !== 'ollama') {
         setThinkingStatusText(`Calling ${providerRuntime.provider}`);
         try {
-          const result = await streamViaProvider(providerRuntime, messages);
-          if (result.success) {
+          const maxAttempts = providerRuntime.provider === 'llama.cpp' ? 4 : 1;
+          let result = null;
+          for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            result = await streamViaProvider(providerRuntime, messages);
+            if (result?.success || result?.stopped) break;
+            if (!isTransientProviderError(providerRuntime.provider, result?.message || '')) break;
+            if (attempt >= maxAttempts) break;
+            const delayMs = 900 * attempt;
+            addSystemMessage(`Provider warming up (${attempt}/${maxAttempts - 1} retries)...`);
+            await waitMs(delayMs);
+          }
+          if (result && result.success) {
             const assistantMessage = sanitizeQwenSelfDialogue(result.message || '');
             const finalAssistantMessage = localOnly
               ? `{local} ${assistantMessage}`
@@ -413,10 +441,10 @@
               finalizeStreamingMessage(active.contentDiv, finalAssistantMessage);
             }
             appendConversationPair(message, finalAssistantMessage, { skipRelay: localOnly });
-          } else if (result.stopped) {
+          } else if (result && result.stopped) {
             addSystemMessage('⏹️ Generation stopped.');
           } else {
-            addErrorMessage(`Provider error: ${result.message || 'unknown error'}`);
+            addErrorMessage(`Provider error: ${(result && result.message) || 'unknown error'}`);
           }
         } catch (error) {
           addErrorMessage(`Provider error: ${error?.message || String(error)}`);
