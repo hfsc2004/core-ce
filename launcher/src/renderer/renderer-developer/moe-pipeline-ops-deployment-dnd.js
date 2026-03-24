@@ -453,6 +453,9 @@ function appendMoeDeployStatusLine(message, level = 'info') {
   }
 
   const body = document.getElementById('moe-deploy-status-body');
+  if (typeof window.appendMoeActivityLine === 'function') {
+    window.appendMoeActivityLine(`[Deploy] ${safeMessage}`, safeLevel);
+  }
   if (!body) return;
   const line = document.createElement('div');
   const color = safeLevel === 'error'

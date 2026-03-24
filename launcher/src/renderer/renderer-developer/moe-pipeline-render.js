@@ -47,30 +47,33 @@ function escapeMoeLogHtml(value) {
 // ============================================================================
 
 /**
- * Get only downloaded AND wrapped models (ready for MoE deployment)
- * MoE requires models to be both downloaded AND wrapped (launched at least once)
- * @returns {Array} Array of ready model objects
+ * Get downloaded models (provider-specific readiness is resolved in agent renderer)
+ * @returns {Array} Array of downloaded model objects
  */
 function getDownloadedModels() {
   const { catalog, downloadStatus } = window.modelOrderingState;
-  const ready = [];
+  const downloaded = [];
   
   for (const [collKey, collection] of Object.entries(catalog?.collections || {})) {
     for (const model of collection.models || []) {
       const status = downloadStatus[model.id];
-      // MoE needs models that are both downloaded AND wrapped
-      if (status?.downloaded && status?.wrapped) {
-        ready.push({
+      if (status?.downloaded) {
+        downloaded.push({
           id: model.id,
           name: model.name,
           collectionKey: collKey,
           filename: model.filename,
-          projectorFilename: model.projector_filename || null
+          projectorFilename: model.projector_filename || null,
+          runtimes: Array.isArray(model.runtimes) ? model.runtimes : [],
+          ollamaModel: String(model.ollama_model || '').trim(),
+          isDownloaded: true,
+          isWrapped: Boolean(status?.wrapped),
+          isReady: Boolean(status?.wrapped)
         });
       }
     }
   }
-  return ready;
+  return downloaded;
 }
 
 /**
@@ -93,6 +96,8 @@ function getAllModelsForDropdown() {
         collectionKey: collKey,
         filename: model.filename,
         projectorFilename: model.projector_filename || null,
+        runtimes: Array.isArray(model.runtimes) ? model.runtimes : [],
+        ollamaModel: String(model.ollama_model || '').trim(),
         isDownloaded,
         isWrapped,
         // Ready for MoE = downloaded AND wrapped
@@ -322,6 +327,22 @@ function renderMoePipeline() {
 function renderMoeChat() {
   const { moeItems } = window.modelOrderingState;
   const theme = getMoeTheme();
+  const activityLines = Array.isArray(window.modelOrderingState?.moeActivityLogLines)
+    ? window.modelOrderingState.moeActivityLogLines
+    : [];
+  const activityHtml = activityLines.length > 0
+    ? activityLines.map((entry) => {
+      const level = String(entry?.level || 'info').toLowerCase();
+      const color = level === 'error'
+        ? '#ff9b9b'
+        : level === 'warn'
+          ? '#ffd38a'
+          : level === 'success'
+            ? '#8dffbd'
+            : '#9fb2cc';
+      return `<div style="color:${color};">[${escapeMoeLogHtml(entry?.stamp || '')}] ${escapeMoeLogHtml(entry?.message || '')}</div>`;
+    }).join('')
+    : '<div style="color:#666;">No activity yet.</div>';
   
   return `
     <div id="moe-chat-section" style="margin-top: 25px; border-top: 1px solid #333; padding-top: 20px;">
@@ -386,6 +407,23 @@ function renderMoeChat() {
                        border-radius: 8px; color: ${theme.accent}; cursor: pointer; font-weight: bold;">
           Send
         </button>
+      </div>
+
+      <div style="margin-top: 12px; padding: 9px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; background: rgba(8,12,18,0.55);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <div style="display:flex; align-items:center; gap:8px; color:#9fb2cc; font-size:12px; font-weight:600;">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#9fb2cc" stroke-width="1.4" stroke-linecap="round"><rect x="1.2" y="1.2" width="9.6" height="9.6" rx="1.6"></rect><line x1="3.2" y1="4.2" x2="8.8" y2="4.2"></line><line x1="3.2" y1="6.2" x2="8.8" y2="6.2"></line><line x1="3.2" y1="8.2" x2="6.8" y2="8.2"></line></svg>
+            Activity
+          </div>
+          <button onclick="clearMoeActivityLog()"
+                  style="padding:4px 8px; background:rgba(255,255,255,0.06); border:1px solid #555; border-radius:6px; color:#bbb; cursor:pointer; font-size:11px;">
+            Clear
+          </button>
+        </div>
+        <div id="moe-activity-log"
+             style="max-height: 180px; overflow-y: auto; font-family: monospace; font-size: 11px; line-height: 1.4; color: #9fb2cc;">
+          ${activityHtml}
+        </div>
       </div>
     </div>
   `;

@@ -13,6 +13,7 @@ function ensureItemDefaults(item) {
   const defaults = {
     agent: {
       enabled: true,
+      provider: 'ollama',
       modelId: null,
       modelName: null,
       systemPrompt: '',
@@ -206,6 +207,7 @@ function createStarterPipeline() {
         id: `agent-${Date.now()}-main`,
         type: 'agent',
         name: 'Main Agent',
+        provider: 'ollama',
         modelId: null,
         modelName: null,
         systemPrompt: 'You are a helpful assistant.',

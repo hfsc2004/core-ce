@@ -8,6 +8,104 @@ window.createMoeChatMessageOps = function createMoeChatMessageOps(ctx = {}) {
   const getElements = () => (typeof ctx.getElements === 'function' ? ctx.getElements() : {});
   const getKvmTarget = () => (typeof ctx.getKvmTarget === 'function' ? ctx.getKvmTarget() : 'pipeline');
   const renderUtils = () => (typeof ctx.getRenderUtils === 'function' ? (ctx.getRenderUtils() || {}) : {});
+  const suppressActivityReplay = () => (typeof ctx.getSuppressActivityReplay === 'function' ? !!ctx.getSuppressActivityReplay() : false);
+  const ACTIVITY_MAX = 1500;
+  const activeStreams = new Map();
+
+  function compactActivityText(value, max = 220) {
+    const raw = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!raw) return '';
+    return raw.length > max ? `${raw.slice(0, max)}...` : raw;
+  }
+
+  function appendActivityLine(message, level = 'info') {
+    const elements = getElements();
+    const body = elements?.activityLog;
+    if (!body) return;
+    const stamp = new Date().toLocaleTimeString();
+    const safeMessage = String(message || '').trim();
+    if (!safeMessage) return;
+    const safeLevel = String(level || 'info').trim().toLowerCase();
+    const color = safeLevel === 'error'
+      ? '#ff9b9b'
+      : safeLevel === 'warn'
+        ? '#ffd38a'
+        : safeLevel === 'success'
+          ? '#8dffbd'
+          : '#9fb2cc';
+    if (body.textContent.includes('No activity yet.')) {
+      body.innerHTML = '';
+    }
+    const line = document.createElement('div');
+    line.style.color = color;
+    line.textContent = `[${stamp}] ${safeMessage}`;
+    body.appendChild(line);
+    while (body.childElementCount > ACTIVITY_MAX) {
+      body.removeChild(body.firstChild);
+    }
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function clearActivityLog() {
+    const elements = getElements();
+    const body = elements?.activityLog;
+    if (!body) return;
+    body.innerHTML = '<div class="activity-empty">No activity yet.</div>';
+    activeStreams.clear();
+  }
+
+  function beginActivityStream(agentId, agentName = '') {
+    const elements = getElements();
+    const body = elements?.activityLog;
+    if (!body) return;
+    if (body.textContent.includes('No activity yet.')) {
+      body.innerHTML = '';
+    }
+    const row = document.createElement('div');
+    row.style.marginBottom = '8px';
+    const header = document.createElement('div');
+    header.style.color = '#8dffbd';
+    header.style.fontWeight = '600';
+    header.textContent = `[${new Date().toLocaleTimeString()}] ${agentName || agentId || 'Agent'} (streaming)`;
+    const bodyText = document.createElement('div');
+    bodyText.style.color = '#b9c9dc';
+    bodyText.style.whiteSpace = 'pre-wrap';
+    bodyText.style.wordBreak = 'break-word';
+    row.appendChild(header);
+    row.appendChild(bodyText);
+    body.appendChild(row);
+    activeStreams.set(String(agentId || ''), { row, header, bodyText, chars: 0 });
+    while (body.childElementCount > ACTIVITY_MAX) {
+      body.removeChild(body.firstChild);
+    }
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function appendActivityStream(agentId, chunk) {
+    const key = String(agentId || '');
+    if (!key) return;
+    const stream = activeStreams.get(key);
+    if (!stream) return;
+    const text = String(chunk || '');
+    if (!text) return;
+    stream.bodyText.textContent += text;
+    stream.chars += text.length;
+    const elements = getElements();
+    const body = elements?.activityLog;
+    if (body) body.scrollTop = body.scrollHeight;
+  }
+
+  function endActivityStream(agentId, payload = {}) {
+    const key = String(agentId || '');
+    if (!key) return;
+    const stream = activeStreams.get(key);
+    if (!stream) return;
+    const success = payload?.success !== false;
+    const durationMs = Number(payload?.durationMs || 0);
+    stream.header.style.color = success ? '#8dffbd' : '#ff9b9b';
+    stream.header.textContent = `[${new Date().toLocaleTimeString()}] ${payload?.agentName || key} (${success ? 'done' : 'error'}${durationMs > 0 ? `, ${durationMs}ms` : ''})`;
+    activeStreams.delete(key);
+  }
 
   function renderPipelineResult(result) {
     if (result?.trace?.steps) {
@@ -60,6 +158,31 @@ window.createMoeChatMessageOps = function createMoeChatMessageOps(ctx = {}) {
         break;
       default:
         break;
+    }
+
+    const snippet = compactActivityText(content);
+    const suppressReplay = suppressActivityReplay();
+    switch (type) {
+    case 'user':
+      appendActivityLine(`USER ${routeInfo || ''}: ${snippet || '(empty)'}`, 'info');
+      break;
+    case 'agent':
+      if (!suppressReplay) appendActivityLine(`AGENT ${agentName || 'Unknown'} (${durationMs}ms): ${snippet || '(empty)'}`, 'success');
+      break;
+    case 'direct':
+      appendActivityLine(`DIRECT ${agentName || 'Agent'}: ${snippet || '(empty)'}`, 'success');
+      break;
+    case 'final':
+      if (!suppressReplay) appendActivityLine(`FINAL: ${snippet || '(empty)'}`, 'success');
+      break;
+    case 'error':
+      appendActivityLine(`ERROR: ${snippet || '(empty)'}`, 'error');
+      break;
+    case 'system':
+      appendActivityLine(`SYSTEM: ${snippet || '(empty)'}`, 'warn');
+      break;
+    default:
+      break;
     }
 
     const routeLine = type === 'agent' && ops.buildRouteTraceLine ? ops.buildRouteTraceLine(meta) : '';
@@ -117,6 +240,11 @@ window.createMoeChatMessageOps = function createMoeChatMessageOps(ctx = {}) {
   return {
     renderPipelineResult,
     addMessage,
-    addSystemMessage
+    addSystemMessage,
+    appendActivityLine,
+    clearActivityLog,
+    beginActivityStream,
+    appendActivityStream,
+    endActivityStream
   };
 };

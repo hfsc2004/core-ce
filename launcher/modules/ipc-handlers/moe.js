@@ -22,8 +22,24 @@ function createMoEHandlers() {
     'moe-list-pipeline-profiles': (ctx) => ctx.sessionManager.listMoEPipelineConfigs(ctx.appDir),
     'moe-delete-pipeline-profile': (ctx, event, profileName) =>
       ctx.sessionManager.deleteMoEPipelineConfig(ctx.appDir, { profileName }),
-    'moe-route-message': async (ctx, event, message, options) =>
-      ctx.sessionManager.routeMoEMessage(message, options),
+    'moe-route-message': async (ctx, event, message, options) => {
+      const progressTag = String(options?.progressTag || '').trim();
+      const progressCallback = (payload = {}) => {
+        try {
+          event.sender.send('moe-route-progress', {
+            ...payload,
+            progressTag: String(payload?.progressTag || progressTag || '').trim()
+          });
+        } catch {
+          // ignore renderer send errors
+        }
+      };
+      return ctx.sessionManager.routeMoEMessage(message, {
+        ...(options || {}),
+        progressTag,
+        onRouteProgress: progressCallback
+      });
+    },
     'moe-rerun-last-irg': async (ctx, event, options) =>
       ctx.sessionManager.rerunLastMoEIrg(options),
     'moe-run-irg-contract': async (ctx, event, contract, options) => {

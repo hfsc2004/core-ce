@@ -8,6 +8,9 @@ const MoEChat = (function() {
   let latestEsp32TelemetryAt = '';
   let voiceController = null;
   let speechEngine = null;
+  let routeProgressUnsub = null;
+  let activeProgressTag = '';
+  let suppressActivityReplay = false;
   const sessionOps = window.MoeChatSessionOps || null;
   const sessionController = sessionOps?.createController
     ? sessionOps.createController()
@@ -44,7 +47,8 @@ const MoEChat = (function() {
       setStatus,
       runContractFromMessage,
       speakAssistantText,
-      sessionController
+      sessionController,
+      getSuppressActivityReplay: () => suppressActivityReplay
     })
     : null;
   const pipelineOps = window.createMoeChatPipelineOps
@@ -54,6 +58,7 @@ const MoEChat = (function() {
       setAgents: (next) => { agents = Array.isArray(next) ? next : []; },
       setKvmTarget: (next) => { kvmTarget = String(next || 'pipeline'); },
       addSystemMessage,
+      messageOps,
       startEsp32TelemetryPolling,
       stopEsp32TelemetryPolling
     })
@@ -84,6 +89,8 @@ const MoEChat = (function() {
       clearAttachBtn: document.getElementById('clear-attach-btn'),
       voiceBtn: document.getElementById('voice-btn'),
       voiceModeBtn: document.getElementById('voice-mode-btn'),
+      activityLog: document.getElementById('activity-log'),
+      activityClearBtn: document.getElementById('activity-clear-btn'),
       statusBadge: document.getElementById('status-badge'),
       kvmSelect: document.getElementById('kvm-select'),
       kvmIndicator: document.getElementById('kvm-indicator'),
@@ -120,13 +127,42 @@ const MoEChat = (function() {
       }
     });
     elements.kvmSelect.addEventListener('change', updateKvmSelection);
+    elements.activityClearBtn?.addEventListener('click', () => {
+      messageOps?.clearActivityLog?.();
+    });
     window.addEventListener('focus', () => {
       if (!elements.input.disabled) {
         elements.input.focus();
       }
     });
     window.addEventListener('beforeunload', () => {
+      if (typeof routeProgressUnsub === 'function') {
+        routeProgressUnsub();
+        routeProgressUnsub = null;
+      }
       stopEsp32TelemetryPolling();
+    });
+    bindRouteProgressStream();
+  }
+
+  function bindRouteProgressStream() {
+    if (typeof routeProgressUnsub === 'function') return;
+    if (!window.electronAPI?.onMoERouteProgress) return;
+    routeProgressUnsub = window.electronAPI.onMoERouteProgress((payload = {}) => {
+      const tag = String(payload?.progressTag || '').trim();
+      if (!activeProgressTag || tag !== activeProgressTag) return;
+      const event = String(payload?.event || '').trim();
+      if (event === 'agent-start') {
+        messageOps?.beginActivityStream?.(payload.agentId, payload.agentName);
+        return;
+      }
+      if (event === 'agent-token') {
+        messageOps?.appendActivityStream?.(payload.agentId, payload.chunk || '');
+        return;
+      }
+      if (event === 'agent-complete') {
+        messageOps?.endActivityStream?.(payload.agentId, payload);
+      }
     });
   }
 
@@ -296,17 +332,23 @@ const MoEChat = (function() {
       let result;
       
       if (isPipeline) {
+        const progressTag = `moe-chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        activeProgressTag = progressTag;
+        suppressActivityReplay = true;
         const liveIrgEnabled = await isLiveIrgInputGatewayEnabled();
         if (liveIrgEnabled) {
           result = await withRequestTimeout(
             'Pipeline request',
-            window.electronAPI.routeMoEMessage(outboundText, { irgModeOverride: 'live' }),
+            window.electronAPI.routeMoEMessage(outboundText, {
+              irgModeOverride: 'live',
+              progressTag
+            }),
             REQUEST_TIMEOUT_MS
           );
         } else {
           result = await withRequestTimeout(
             'Pipeline request',
-            window.electronAPI.routeMoEMessage(outboundText),
+            window.electronAPI.routeMoEMessage(outboundText, { progressTag }),
             REQUEST_TIMEOUT_MS
           );
         }
@@ -335,6 +377,8 @@ const MoEChat = (function() {
       addMessage('error', err.message);
       setStatus('error', 'Error');
     } finally {
+      suppressActivityReplay = false;
+      activeProgressTag = '';
       stopActivityIndicator();
       setInputBusyState(false);
       elements.input.focus();

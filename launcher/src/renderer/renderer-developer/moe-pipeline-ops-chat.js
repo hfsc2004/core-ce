@@ -9,6 +9,65 @@ let moeSessionMemoryLoadPromise = null;
 let moePromptRecallHistory = [];
 let moePromptRecallIndex = -1;
 let moePromptRecallDraft = '';
+const MOE_ACTIVITY_LOG_MAX = 1500;
+
+function ensureMoeActivityState() {
+  if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return null;
+  if (!Array.isArray(window.modelOrderingState.moeActivityLogLines)) {
+    window.modelOrderingState.moeActivityLogLines = [];
+  }
+  return window.modelOrderingState;
+}
+
+function appendMoeActivityLine(message, level = 'info') {
+  const stamp = new Date().toLocaleTimeString();
+  const safeMessage = String(message || '').trim();
+  const safeLevel = String(level || 'info').trim().toLowerCase();
+  if (!safeMessage) return;
+
+  const state = ensureMoeActivityState();
+  if (state) {
+    state.moeActivityLogLines.push({
+      stamp,
+      message: safeMessage,
+      level: safeLevel
+    });
+    if (state.moeActivityLogLines.length > MOE_ACTIVITY_LOG_MAX) {
+      state.moeActivityLogLines.splice(0, state.moeActivityLogLines.length - MOE_ACTIVITY_LOG_MAX);
+    }
+  }
+
+  const body = document.getElementById('moe-activity-log');
+  if (!body) return;
+  const line = document.createElement('div');
+  const color = safeLevel === 'error'
+    ? '#ff9b9b'
+    : safeLevel === 'warn'
+      ? '#ffd38a'
+      : safeLevel === 'success'
+        ? '#8dffbd'
+        : '#9fb2cc';
+  line.style.color = color;
+  line.textContent = `[${stamp}] ${safeMessage}`;
+  if (body.textContent.includes('No activity yet.')) {
+    body.innerHTML = '';
+  }
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+
+function clearMoeActivityLog() {
+  const state = ensureMoeActivityState();
+  if (state) state.moeActivityLogLines = [];
+  const body = document.getElementById('moe-activity-log');
+  if (body) body.innerHTML = '<div style="color:#666;">No activity yet.</div>';
+}
+
+function compactActivityText(value, max = 220) {
+  const raw = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!raw) return '';
+  return raw.length > max ? `${raw.slice(0, max)}...` : raw;
+}
 
 function activateMoeChatInput(inputCandidate = null) {
   const input = inputCandidate instanceof HTMLInputElement
@@ -426,6 +485,30 @@ function appendChatMessage(type, content, agentName = '', durationMs = 0, routeI
       break;
   }
 
+  const snippet = compactActivityText(content);
+  switch (type) {
+    case 'user':
+      appendMoeActivityLine(`USER ${routeInfo || ''}: ${snippet || '(empty)'}`, 'info');
+      break;
+    case 'agent':
+      appendMoeActivityLine(`AGENT ${agentName || 'Unknown'} (${durationMs}ms): ${snippet || '(empty)'}`, 'success');
+      break;
+    case 'direct':
+      appendMoeActivityLine(`DIRECT ${agentName || 'Agent'}: ${snippet || '(empty)'}`, 'success');
+      break;
+    case 'final':
+      appendMoeActivityLine(`FINAL: ${snippet || '(empty)'}`, 'success');
+      break;
+    case 'error':
+      appendMoeActivityLine(`ERROR: ${snippet || '(empty)'}`, 'error');
+      break;
+    case 'system':
+      appendMoeActivityLine(`SYSTEM: ${snippet || '(empty)'}`, 'warn');
+      break;
+    default:
+      break;
+  }
+
   if (type === 'user') {
     recordMoeSessionMemory({
       role: 'user',
@@ -474,3 +557,5 @@ window.buildInlineHandoffDetails = buildInlineHandoffDetails;
 window.openMoeChatWindow = () => window.MoePipelineOpsChatHelpers.openMoeChatWindow();
 window.initializeMoeChatInput = initializeMoeChatInput;
 window.activateMoeChatInput = activateMoeChatInput;
+window.appendMoeActivityLine = appendMoeActivityLine;
+window.clearMoeActivityLog = clearMoeActivityLog;
