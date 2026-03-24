@@ -6,66 +6,6 @@
 const moeEndpoint = require('./moe-endpoint');
 
 function createAgentTransport({ requestTimeout }) {
-  async function readProviderStream(response, provider, onToken) {
-    const reader = response?.body?.getReader?.();
-    if (!reader) return '';
-    const decoder = new TextDecoder();
-    let pending = '';
-    let fullText = '';
-
-    const emit = (chunk) => {
-      const text = String(chunk || '');
-      if (!text) return;
-      fullText += text;
-      if (typeof onToken === 'function') {
-        try { onToken(text); } catch {}
-      }
-    };
-
-    const consumeLine = (rawLine) => {
-      let line = String(rawLine || '').trim();
-      if (!line) return;
-      if (provider === 'llama.cpp') {
-        if (line.startsWith('data:')) line = line.slice(5).trim();
-        if (!line || line === '[DONE]') return;
-        try {
-          const parsed = JSON.parse(line);
-          emit(
-            parsed?.choices?.[0]?.delta?.content
-            || parsed?.choices?.[0]?.delta?.reasoning_content
-            || parsed?.choices?.[0]?.text
-            || ''
-          );
-        } catch {
-          // ignore malformed lines
-        }
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(line);
-        emit(parsed?.message?.content || parsed?.response || '');
-      } catch {
-        // ignore malformed lines
-      }
-    };
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      pending += decoder.decode(value, { stream: true });
-      let newlineIndex = pending.indexOf('\n');
-      while (newlineIndex >= 0) {
-        consumeLine(pending.slice(0, newlineIndex));
-        pending = pending.slice(newlineIndex + 1);
-        newlineIndex = pending.indexOf('\n');
-      }
-    }
-    pending += decoder.decode();
-    if (pending.trim()) consumeLine(pending);
-    return fullText;
-  }
-
   function normalizeMessagesForLlamaTemplate(messages = []) {
     const rows = Array.isArray(messages) ? messages : [];
     const normalized = [];
@@ -123,17 +63,16 @@ function createAgentTransport({ requestTimeout }) {
       const url = provider === 'llama.cpp'
         ? moeEndpoint.buildEndpointURL(agent.endpoint, '/v1/chat/completions')
         : moeEndpoint.buildOllamaChatURL(agent.endpoint);
-      const streamEnabled = typeof options?.onToken === 'function';
       const body = provider === 'llama.cpp'
         ? {
             model: modelTag,
             messages: normalizeMessagesForLlamaTemplate(messages),
-            stream: streamEnabled
+            stream: false
           }
         : {
             model: modelTag,
             messages,
-            stream: streamEnabled
+            stream: false
           };
 
       const response = await fetch(url, {
@@ -150,11 +89,6 @@ function createAgentTransport({ requestTimeout }) {
         return { success: false, error: `HTTP ${response.status}: ${errorText}` };
       }
 
-      if (streamEnabled) {
-        const streamed = await readProviderStream(response, provider, options.onToken);
-        return { success: true, content: streamed };
-      }
-
       const data = await response.json();
       const content = provider === 'llama.cpp'
         ? extractLlamaAssistantContent(data)
@@ -168,17 +102,14 @@ function createAgentTransport({ requestTimeout }) {
     }
   }
 
-  async function callAgentWithPolicy(agent, messages, edgePolicy, options = {}) {
+  async function callAgentWithPolicy(agent, messages, edgePolicy) {
     const retries = Math.max(0, Number.parseInt(String(edgePolicy?.retryCount ?? 0), 10) || 0);
     const timeoutMs = Number.isFinite(Number(edgePolicy?.timeoutMs))
       ? Number(edgePolicy.timeoutMs)
       : requestTimeout;
     let lastResult = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
-      const result = await callAgent(agent, messages, {
-        timeoutMs,
-        onToken: options?.onToken
-      });
+      const result = await callAgent(agent, messages, { timeoutMs });
       lastResult = result;
       if (result?.success) {
         return { ...result, attempts: attempt + 1 };
