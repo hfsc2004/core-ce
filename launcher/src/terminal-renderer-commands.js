@@ -364,6 +364,7 @@
       addSystemMessage('  /temp <0.0-2.0> - Set temperature (default 0.7)');
       addSystemMessage('  /local <message> - Send to this terminal only (no mesh relay)');
       addSystemMessage('  /room [on|off|show] - Enable/disable/show multi-agent room rules prompt');
+      addSystemMessage('  /token [on|off|show|take] - Deterministic turn token for mesh relay');
       addSystemMessage('  /show - Show current settings');
       addSystemMessage('  /stop - Stop current generation');
       addSystemMessage('  /switch <model> - Switch to different model');
@@ -434,6 +435,60 @@
         return;
       }
       addErrorMessage('Usage: /room [on|off|show]');
+    }
+
+    async function handleTokenCommand(argsRaw) {
+      const mode = String(argsRaw || '').trim().toLowerCase();
+      const api = getElectronAPI();
+      if (!api) {
+        addErrorMessage('Token control unavailable (electron API missing).');
+        return;
+      }
+      if (mode === 'on' || mode === 'off') {
+        if (typeof api.terminalLinkTokenSetEnabled !== 'function') {
+          addErrorMessage('Token control is unavailable in this build.');
+          return;
+        }
+        const result = await api.terminalLinkTokenSetEnabled(mode === 'on');
+        if (!result?.success) {
+          addErrorMessage(`Token control failed: ${result?.message || 'unknown error'}`);
+          return;
+        }
+        addSystemMessage(`✅ Token mode ${mode === 'on' ? 'enabled' : 'disabled'}.`);
+        const holder = Number(result?.tokenHolderWindowId || 0);
+        if (mode === 'on' && holder > 0) addSystemMessage(`Token holder: Terminal #${holder}`);
+        return;
+      }
+      if (mode === 'take') {
+        if (typeof api.terminalLinkTokenTakeTurn !== 'function') {
+          addErrorMessage('Token take-turn is unavailable in this build.');
+          return;
+        }
+        const result = await api.terminalLinkTokenTakeTurn();
+        if (!result?.success) {
+          addErrorMessage(`Token take-turn failed: ${result?.message || 'unknown error'}`);
+          return;
+        }
+        addSystemMessage(`✅ Token taken by Terminal #${Number(result?.selfWindowId || 0) || '?'}.`);
+        return;
+      }
+      if (mode === 'show' || mode === '') {
+        if (typeof api.terminalLinkListPeers !== 'function') {
+          addErrorMessage('Token status unavailable in this build.');
+          return;
+        }
+        const state = await api.terminalLinkListPeers();
+        if (!state?.success) {
+          addErrorMessage(`Token status failed: ${state?.message || 'unknown error'}`);
+          return;
+        }
+        const enabled = state.tokenEnabled === true;
+        const holder = Number(state.tokenHolderWindowId || 0);
+        addSystemMessage(`Token mode: ${enabled ? 'ON' : 'OFF'}`);
+        addSystemMessage(`Token holder: ${enabled ? (holder > 0 ? `Terminal #${holder}` : 'none') : 'n/a'}`);
+        return;
+      }
+      addErrorMessage('Usage: /token [on|off|show|take]');
     }
 
     function setTemperature(tempStr) {
@@ -515,6 +570,9 @@
           break;
         case '/room':
           handleRoomCommand(args);
+          break;
+        case '/token':
+          await handleTokenCommand(args);
           break;
         case '/show':
           showSettings();

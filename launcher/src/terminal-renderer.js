@@ -75,6 +75,7 @@
   let interjectBtn = null;
   let labelBtn = null;
   let selfLabelEl = null;
+  let terminalIdBadgeEl = null;
   let voiceController = null;
   let speechEngine = null;
   let speechController = null;
@@ -91,6 +92,8 @@
   let inboundRelayHold = false;
   let suppressUserRelay = false;
   let terminalIdentityLabel = '';
+  let tokenModeEnabled = false;
+  let tokenHolderWindowId = null;
   const inboundRelayQueue = [];
   let inboundRelayBusy = false;
   const call = (controller, method, fallback, ...args) => (
@@ -224,6 +227,11 @@
     if (!selfLabelEl) return;
     selfLabelEl.textContent = formatLocalTerminalIdentity();
     selfLabelEl.title = `Identity: ${formatLocalTerminalIdentity()}`;
+    if (terminalIdBadgeEl) {
+      const idValue = Number(terminalWindowId || 0);
+      terminalIdBadgeEl.textContent = idValue > 0 ? `T#${idValue}` : 'T#--';
+      terminalIdBadgeEl.title = idValue > 0 ? `Terminal #${idValue}` : 'Terminal ID pending';
+    }
   }
   async function handleLabelEdit() {
     const existing = String(terminalIdentityLabel || '').trim();
@@ -254,6 +262,8 @@
     if (!peerSelect) return;
     const peers = Array.isArray(state.peers) ? state.peers : [];
     terminalIdentityLabel = String(state.selfLabel || terminalIdentityLabel || '').trim();
+    tokenModeEnabled = state?.tokenEnabled === true;
+    tokenHolderWindowId = Number(state?.tokenHolderWindowId || 0) || null;
     renderSelfLabel();
     const selectedPeerWindowId = Number(state.linkedPeerWindowId || 0);
     const selectedGroupPeerIds = Array.isArray(state.groupPeerWindowIds)
@@ -386,6 +396,7 @@
     try {
       while (inboundRelayQueue.length > 0) {
         if (inboundRelayHold) return;
+        if (tokenModeEnabled && tokenHolderWindowId && terminalWindowId && Number(tokenHolderWindowId) !== Number(terminalWindowId)) return;
         if (isWaitingForResponse || activeStream) {
           await new Promise((resolve) => setTimeout(resolve, 350));
           continue;
@@ -424,11 +435,17 @@
     try {
       if (hasPair && (!hasGroup || !groupedPeerIds.has(Number(linkedPeerId)))) {
         if (typeof window.electronAPI.terminalLinkRelayMessage === 'function') {
-          await window.electronAPI.terminalLinkRelayMessage(sharedPayload);
+          const result = await window.electronAPI.terminalLinkRelayMessage(sharedPayload);
+          if (result?.success === false && result?.message) {
+            addSystemMessage(`Mesh relay blocked: ${result.message}`);
+          }
         }
       }
       if (hasGroup && typeof window.electronAPI.terminalLinkRelayGroupMessage === 'function') {
-        await window.electronAPI.terminalLinkRelayGroupMessage(sharedPayload);
+        const result = await window.electronAPI.terminalLinkRelayGroupMessage(sharedPayload);
+        if (result?.success === false && result?.message) {
+          addSystemMessage(`Mesh relay blocked: ${result.message}`);
+        }
       }
     } catch (err) {
       console.warn('[Terminal Mesh] Relay failed:', err?.message || err);
@@ -450,6 +467,7 @@
     interjectBtn = document.getElementById('interject-btn');
     labelBtn = document.getElementById('terminal-label-btn');
     selfLabelEl = document.getElementById('terminal-self-label');
+    terminalIdBadgeEl = document.getElementById('terminal-id-badge');
     if (!peerSelect) return;
     peerSelect.addEventListener('change', handlePeerSelectChange);
     if (groupSelect) {

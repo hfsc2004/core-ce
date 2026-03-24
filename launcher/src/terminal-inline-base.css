@@ -131,6 +131,21 @@ body {
   height: 33px;
 }
 
+.terminal-id-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid var(--term-border);
+  border-radius: 999px;
+  color: var(--term-text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  background: rgba(255, 255, 255, 0.02);
+}
+
 #model-select {
   background: var(--term-bg-primary);
   border: 1px solid var(--term-border);

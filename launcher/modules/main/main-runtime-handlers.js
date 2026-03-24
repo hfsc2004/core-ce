@@ -16,6 +16,10 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
   const terminalMeshLinks = new Map(); // windowId -> peerWindowId
   const terminalMeshGroupLinks = new Map(); // windowId -> Set(peerWindowId)
   const terminalIdentityLabels = new Map(); // windowId -> editable terminal label
+  const terminalMeshTokenState = {
+    enabled: false,
+    holderWindowId: null
+  };
 
   async function closeTrackedTerminalSession(windowId) {
     const ownerWindowId = Number(windowId || 0);
@@ -217,6 +221,53 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     return `Terminal #${meta.windowId}`;
   }
 
+  function listTokenParticipants() {
+    const alive = new Set(listTerminalWindows().map((win) => Number(win.id)));
+    const participants = new Set();
+    for (const [selfId, peerId] of terminalMeshLinks.entries()) {
+      const s = Number(selfId || 0);
+      const p = Number(peerId || 0);
+      if (alive.has(s) && alive.has(p)) {
+        participants.add(s);
+        participants.add(p);
+      }
+    }
+    for (const [selfId, peerSet] of terminalMeshGroupLinks.entries()) {
+      const s = Number(selfId || 0);
+      if (!alive.has(s)) continue;
+      let added = false;
+      for (const peerId of (peerSet instanceof Set ? peerSet.values() : [])) {
+        const p = Number(peerId || 0);
+        if (!alive.has(p)) continue;
+        participants.add(p);
+        added = true;
+      }
+      if (added) participants.add(s);
+    }
+    return Array.from(participants.values()).sort((a, b) => a - b);
+  }
+
+  function normalizeTokenHolder() {
+    const participants = listTokenParticipants();
+    if (!terminalMeshTokenState.enabled || participants.length === 0) {
+      terminalMeshTokenState.holderWindowId = null;
+      return null;
+    }
+    const holder = Number(terminalMeshTokenState.holderWindowId || 0);
+    if (participants.includes(holder)) return holder;
+    terminalMeshTokenState.holderWindowId = participants[0];
+    return terminalMeshTokenState.holderWindowId;
+  }
+
+  function nextTokenHolder(fromWindowId) {
+    const participants = listTokenParticipants();
+    if (!terminalMeshTokenState.enabled || participants.length === 0) return null;
+    const fromId = Number(fromWindowId || 0);
+    const idx = participants.indexOf(fromId);
+    if (idx < 0) return participants[0];
+    return participants[(idx + 1) % participants.length];
+  }
+
   function buildMeshState(selfWindowId) {
     pruneTerminalMeshLinks();
     const selfId = Number(selfWindowId || 0);
@@ -248,12 +299,15 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
       : [];
     const selfLabel = String(terminalIdentityLabels.get(selfId) || '').trim();
 
+    normalizeTokenHolder();
     return {
       success: true,
       selfWindowId: selfId,
       selfLabel,
       linkedPeerWindowId: validLinkedPeer,
       groupPeerWindowIds,
+      tokenEnabled: terminalMeshTokenState.enabled === true,
+      tokenHolderWindowId: Number(terminalMeshTokenState.holderWindowId || 0) || null,
       peers
     };
   }
@@ -322,12 +376,48 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     return buildMeshState(selfId);
   });
 
+  ipcMain.handle('terminal-link:token-set-enabled', async (event, enabled = false) => {
+    const selfWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!selfWindow || selfWindow.isDestroyed()) {
+      return { success: false, message: 'Terminal window context unavailable.' };
+    }
+    terminalMeshTokenState.enabled = enabled === true;
+    if (terminalMeshTokenState.enabled) {
+      // STP-style start election: always seed to lowest active participant when enabling token mode.
+      terminalMeshTokenState.holderWindowId = null;
+      normalizeTokenHolder();
+    } else {
+      terminalMeshTokenState.holderWindowId = null;
+    }
+    broadcastMeshState();
+    return buildMeshState(Number(selfWindow.id));
+  });
+
+  ipcMain.handle('terminal-link:token-take-turn', async (event) => {
+    const selfWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!selfWindow || selfWindow.isDestroyed()) {
+      return { success: false, message: 'Terminal window context unavailable.' };
+    }
+    const selfId = Number(selfWindow.id);
+    terminalMeshTokenState.enabled = true;
+    terminalMeshTokenState.holderWindowId = selfId;
+    normalizeTokenHolder();
+    broadcastMeshState();
+    return buildMeshState(selfId);
+  });
+
   ipcMain.handle('terminal-link:relay-message', async (event, payload = {}) => {
     const selfWindow = BrowserWindow.fromWebContents(event.sender);
     if (!selfWindow || selfWindow.isDestroyed()) {
       return { success: false, message: 'Terminal window context unavailable.' };
     }
     const selfId = Number(selfWindow.id);
+    if (terminalMeshTokenState.enabled) {
+      const holder = Number(normalizeTokenHolder() || 0);
+      if (holder > 0 && holder !== selfId) {
+        return { success: false, message: `Token is held by Terminal #${holder}.` };
+      }
+    }
     const peerId = Number(terminalMeshLinks.get(selfId) || 0);
     if (!peerId) {
       return { success: false, message: 'No linked terminal selected.' };
@@ -354,6 +444,11 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
         from: parseTerminalWindowMeta(selfWindow),
         at: new Date().toISOString()
       });
+      if (terminalMeshTokenState.enabled) {
+        terminalMeshTokenState.holderWindowId = nextTokenHolder(selfId);
+        normalizeTokenHolder();
+        broadcastMeshState();
+      }
       return { success: true, fromWindowId: selfId, toWindowId: peerId };
     } catch (err) {
       return { success: false, message: err?.message || 'Failed to relay message.' };
@@ -366,6 +461,12 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
       return { success: false, message: 'Terminal window context unavailable.' };
     }
     const selfId = Number(selfWindow.id);
+    if (terminalMeshTokenState.enabled) {
+      const holder = Number(normalizeTokenHolder() || 0);
+      if (holder > 0 && holder !== selfId) {
+        return { success: false, message: `Token is held by Terminal #${holder}.` };
+      }
+    }
     const groupSet = terminalMeshGroupLinks.get(selfId);
     if (!(groupSet instanceof Set) || groupSet.size === 0) {
       return { success: false, message: 'No group peers selected.' };
@@ -402,6 +503,11 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
       } catch (_) {
         // best effort
       }
+    }
+    if (delivered > 0 && terminalMeshTokenState.enabled) {
+      terminalMeshTokenState.holderWindowId = nextTokenHolder(selfId);
+      normalizeTokenHolder();
+      broadcastMeshState();
     }
     return { success: delivered > 0, fromWindowId: selfId, delivered };
   });
