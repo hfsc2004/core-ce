@@ -55,6 +55,16 @@
           getCurrentModel: ctx.getCurrentModel,
           setCurrentModel: ctx.setCurrentModel,
           getTerminalPort: ctx.getTerminalPort,
+          getProvider: ctx.getProvider,
+          setProvider: ctx.setProvider,
+          getProviderBaseUrl: ctx.getProviderBaseUrl,
+          setProviderBaseUrl: ctx.setProviderBaseUrl,
+          getProviderApiKey: ctx.getProviderApiKey,
+          setProviderApiKey: ctx.setProviderApiKey,
+          getProviderModelId: ctx.getProviderModelId,
+          setProviderModelId: ctx.setProviderModelId,
+          getLlamaCppModelPath: ctx.getLlamaCppModelPath,
+          setLlamaCppModelPath: ctx.setLlamaCppModelPath,
           getSystemPrompt: ctx.getSystemPrompt,
           setSystemPrompt: ctx.setSystemPrompt,
           getTemperature: ctx.getTemperature,
@@ -65,6 +75,8 @@
           setTopK: ctx.setTopK,
           getNumCtx: ctx.getNumCtx,
           setNumCtx: ctx.setNumCtx,
+          getNumGpu: ctx.getNumGpu,
+          setNumGpu: ctx.setNumGpu,
           getNumPredict: ctx.getNumPredict,
           setNumPredict: ctx.setNumPredict,
           getRepeatPenalty: ctx.getRepeatPenalty,
@@ -103,6 +115,16 @@
           getCurrentModel: ctx.getCurrentModel,
           setCurrentModel: ctx.setCurrentModel,
           getTerminalPort: ctx.getTerminalPort,
+          getProvider: ctx.getProvider,
+          setProvider: ctx.setProvider,
+          getProviderBaseUrl: ctx.getProviderBaseUrl,
+          setProviderBaseUrl: ctx.setProviderBaseUrl,
+          getProviderApiKey: ctx.getProviderApiKey,
+          setProviderApiKey: ctx.setProviderApiKey,
+          getProviderModelId: ctx.getProviderModelId,
+          setProviderModelId: ctx.setProviderModelId,
+          getLlamaCppModelPath: ctx.getLlamaCppModelPath,
+          setLlamaCppModelPath: ctx.setLlamaCppModelPath,
           getTemperature: ctx.getTemperature,
           setTemperatureValue: ctx.setTemperature,
           getTopP: ctx.getTopP,
@@ -111,6 +133,8 @@
           setTopK: ctx.setTopK,
           getNumCtx: ctx.getNumCtx,
           setNumCtx: ctx.setNumCtx,
+          getNumGpu: ctx.getNumGpu,
+          setNumGpu: ctx.setNumGpu,
           getNumPredict: ctx.getNumPredict,
           getRepeatPenalty: ctx.getRepeatPenalty,
           setRepeatPenalty: ctx.setRepeatPenalty,
@@ -195,6 +219,11 @@
           addSystemMessage: ctx.addSystemMessage,
           addMessage: ctx.addMessage,
           getSystemPrompt: ctx.getSystemPrompt,
+          getProvider: ctx.getProvider,
+          getProviderBaseUrl: ctx.getProviderBaseUrl,
+          getProviderApiKey: ctx.getProviderApiKey,
+          getProviderModelId: ctx.getProviderModelId,
+          getLlamaCppModelPath: ctx.getLlamaCppModelPath,
           buildAttachmentContext: ctx.buildAttachmentContext,
           shouldInjectAttachmentContext: ctx.shouldInjectAttachmentContext,
           getConversationHistory: ctx.getConversationHistory,
@@ -243,6 +272,7 @@
       if (modelNameEl) modelNameEl.textContent = ctx.config.modelName;
 
       ctx.updateGPUIndicator(ctx.config.gpuType);
+      const provider = String(ctx.getProvider ? ctx.getProvider() : 'ollama');
       ctx.populateModelDropdown(ctx.config.port);
 
       ctx.sendBtn.addEventListener('click', ctx.handleSendClick);
@@ -260,12 +290,22 @@
         ctx.streamController.installStreamListener();
       }
 
-      if (ctx.getCurrentModel()) {
-        ctx.addSystemMessage('Connected to Ollama with model: ' + ctx.getCurrentModel());
+      if (provider === 'ollama') {
+        if (ctx.getCurrentModel()) {
+          ctx.addSystemMessage('Connected to Ollama with model: ' + ctx.getCurrentModel());
+        } else {
+          ctx.addSystemMessage('Connected to Ollama - select a model from the dropdown above');
+        }
+        ctx.addSystemMessage('Using port: ' + ctx.getTerminalPort());
       } else {
-        ctx.addSystemMessage('Connected to Ollama - select a model from the dropdown above');
+        const baseUrl = String(ctx.getProviderBaseUrl ? (ctx.getProviderBaseUrl() || '') : '').trim();
+        ctx.addSystemMessage(`Provider selected: ${provider}`);
+        if (baseUrl) ctx.addSystemMessage(`Base URL: ${baseUrl}`);
+        if (provider === 'llama.cpp') {
+          const llamaModelPath = String(ctx.getLlamaCppModelPath ? (ctx.getLlamaCppModelPath() || '') : '').trim();
+          if (llamaModelPath) ctx.addSystemMessage(`llama.cpp model path: ${llamaModelPath}`);
+        }
       }
-      ctx.addSystemMessage('Using port: ' + ctx.getTerminalPort());
       const sp = ctx.getSystemPrompt();
       if (sp) {
         ctx.addSystemMessage(`📋 System prompt: ${sp.substring(0, 100)}${sp.length > 100 ? '...' : ''}`);

@@ -67,7 +67,18 @@
 <!-- Model Configuration Panel -->
   <div id="config-panel" style="display: none;">
     <h3>Model Configuration</h3>
-    
+
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Provider</label>
+      <select id="cfg-provider" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+        <option value="ollama" selected>Ollama</option>
+        <option value="llama.cpp">llama.cpp</option>
+        <option value="vllm">vLLM</option>
+        <option value="openai-compatible">OpenAI-Compatible</option>
+        <option value="exllamav2">ExLlamaV2</option>
+      </select>
+    </div>
+
     <div style="margin-bottom: 12px;">
       <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Temperature (0.0 - 2.0)</label>
       <input type="number" id="cfg-temperature" step="0.1" min="0" max="2" value="0.7" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
@@ -86,6 +97,11 @@
     <div style="margin-bottom: 12px;">
       <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Context Length</label>
       <input type="number" id="cfg-num-ctx" step="256" min="512" max="131072" value="4096" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+    </div>
+
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">GPU Layers (`num_gpu`)</label>
+      <input type="number" id="cfg-num-gpu" step="1" min="0" max="200" value="0" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
     </div>
     
     <div style="margin-bottom: 12px;">
@@ -164,7 +180,6 @@
         <input type="number" id="cfg-rlm-max-evidence-hits" min="4" max="400" step="1" value="28" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
       </div>
     </div>
-    
     <div class="config-panel-actions">
       <button onclick="TerminalApp.applyConfig()">Apply</button>
       <button class="config-panel-close" onclick="TerminalApp.toggleConfig()">Close</button>
@@ -298,24 +313,40 @@
 
     // Extract configuration from query parameters
     const urlParams = new URLSearchParams(window.location.search);
+    const parseMaybeInt = (key) => {
+      if (!urlParams.has(key)) return null;
+      const n = parseInt(urlParams.get(key), 10);
+      return Number.isFinite(n) ? n : null;
+    };
+    const parseMaybeFloat = (key) => {
+      if (!urlParams.has(key)) return null;
+      const n = parseFloat(urlParams.get(key));
+      return Number.isFinite(n) ? n : null;
+    };
     
     const terminalConfig = {
       modelName: urlParams.get('model') || 'unknown',
       port: parseInt(urlParams.get('port')) || 52434,  // DYNAMIC PORT
-      terminalWindowId: urlParams.get('windowId') ? parseInt(urlParams.get('windowId')) : null,
+      terminalWindowId: parseMaybeInt('windowId'),
       gpuType: urlParams.get('gpuType') || 'unknown',
       gpuName: urlParams.get('gpuName') || 'Unknown',
       gpuVram: urlParams.get('gpuVram') || '?',
       gpuUuid: urlParams.get('gpuUuid') || 'none',
+      provider: urlParams.get('provider') || 'ollama',
+      baseUrl: urlParams.get('baseUrl') || '',
+      apiKey: urlParams.get('apiKey') || '',
+      providerModel: urlParams.get('providerModel') || '',
+      llamaCppModelPath: urlParams.get('llamaCppModelPath') || '',
       // Modelfile parameters
       systemPrompt: urlParams.get('systemPrompt') || null,
-      temperature: urlParams.get('temperature') ? parseFloat(urlParams.get('temperature')) : null,
-      top_p: urlParams.get('top_p') ? parseFloat(urlParams.get('top_p')) : null,
-      top_k: urlParams.get('top_k') ? parseInt(urlParams.get('top_k')) : null,
-      num_ctx: urlParams.get('num_ctx') ? parseInt(urlParams.get('num_ctx')) : null,
-      num_predict: urlParams.get('num_predict') ? parseInt(urlParams.get('num_predict')) : null,
-      repeat_penalty: urlParams.get('repeat_penalty') ? parseFloat(urlParams.get('repeat_penalty')) : null,
-      seed: urlParams.get('seed') ? parseInt(urlParams.get('seed')) : null,
+      temperature: parseMaybeFloat('temperature'),
+      top_p: parseMaybeFloat('top_p'),
+      top_k: parseMaybeInt('top_k'),
+      num_ctx: parseMaybeInt('num_ctx'),
+      num_gpu: parseMaybeInt('num_gpu'),
+      num_predict: parseMaybeInt('num_predict'),
+      repeat_penalty: parseMaybeFloat('repeat_penalty'),
+      seed: parseMaybeInt('seed'),
       stop: urlParams.get('stop') ? JSON.parse(urlParams.get('stop')) : null
     };
     

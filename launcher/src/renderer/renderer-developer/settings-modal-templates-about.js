@@ -17,7 +17,14 @@ function getAboutTabHTML() {
     </div>
     
     <div class="about-section">
-      <h4>📄 Documentation</h4>
+      <h4 style="font-size: 105%;">
+        <svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+          <path d="M4 2.5h6l2 2v9H4z"></path>
+          <path d="M10 2.5v2h2"></path>
+          <path d="M5.5 8h5M5.5 10h4"></path>
+        </svg>
+        Documentation
+      </h4>
       <div class="about-buttons">
         <button class="about-btn" onclick="openDocs('README.md')">Quick Start Guide</button>
         <button class="about-btn" onclick="openDocs('TROUBLESHOOTING.md')">Troubleshooting</button>
@@ -25,7 +32,15 @@ function getAboutTabHTML() {
     </div>
     
     <div class="about-section">
-      <h4>⚖️ Licenses</h4>
+      <h4 style="font-size: 105%;">
+        <svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+          <path d="M8 2.2v10.5"></path>
+          <path d="M4.2 4.2h7.6"></path>
+          <path d="M5.2 4.2 3.4 7.2h3.6zM12.6 7.2H9l1.8-3z"></path>
+          <path d="M5.4 11.8h5.2"></path>
+        </svg>
+        Licenses
+      </h4>
       <div class="about-buttons">
         <button class="about-btn" onclick="openDocs('LICENSE.txt')">Master License</button>
         <button class="about-btn" onclick="openDocs('ATTRIBUTIONS.md')">Model Attributions</button>
@@ -35,7 +50,14 @@ function getAboutTabHTML() {
     </div>
     
     <div class="about-section">
-      <h4>🔗 Links</h4>
+      <h4 style="font-size: 105%;">
+        <svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+          <path d="M6.4 9.6 9.6 6.4"></path>
+          <path d="M5.2 11.8H4a2.8 2.8 0 1 1 0-5.6h1.8"></path>
+          <path d="M10.8 4.2H12a2.8 2.8 0 1 1 0 5.6h-1.8"></path>
+        </svg>
+        Links
+      </h4>
       <div class="about-buttons">
         <button id="settings-about-website-link" class="about-btn" onclick="openExternal('https://pseudosf.com')">Pseudo Science Fiction Website</button>
         <button class="about-btn" onclick="openExternal('https://github.com/psfrobotics')">GitHub</button>

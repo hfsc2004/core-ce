@@ -9,11 +9,17 @@
   function createRuntimeController(deps) {
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => '';
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
+    const getProvider = typeof deps?.getProvider === 'function' ? deps.getProvider : () => 'ollama';
+    const getProviderBaseUrl = typeof deps?.getProviderBaseUrl === 'function' ? deps.getProviderBaseUrl : () => '';
+    const getProviderApiKey = typeof deps?.getProviderApiKey === 'function' ? deps.getProviderApiKey : () => '';
+    const getProviderModelId = typeof deps?.getProviderModelId === 'function' ? deps.getProviderModelId : () => '';
+    const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
     const getConfig = typeof deps?.getConfig === 'function' ? deps.getConfig : () => ({});
     const getTemperature = typeof deps?.getTemperature === 'function' ? deps.getTemperature : () => 0.7;
     const getTopP = typeof deps?.getTopP === 'function' ? deps.getTopP : () => null;
     const getTopK = typeof deps?.getTopK === 'function' ? deps.getTopK : () => null;
     const getNumCtx = typeof deps?.getNumCtx === 'function' ? deps.getNumCtx : () => null;
+    const getNumGpu = typeof deps?.getNumGpu === 'function' ? deps.getNumGpu : () => null;
     const getNumPredict = typeof deps?.getNumPredict === 'function' ? deps.getNumPredict : () => null;
     const getRepeatPenalty = typeof deps?.getRepeatPenalty === 'function' ? deps.getRepeatPenalty : () => null;
     const getSeed = typeof deps?.getSeed === 'function' ? deps.getSeed : () => null;
@@ -86,11 +92,35 @@
       if (getTopP() !== null) options.top_p = getTopP();
       if (getTopK() !== null) options.top_k = getTopK();
       if (getNumCtx() !== null) options.num_ctx = getNumCtx();
+      if (getNumGpu() !== null) options.num_gpu = getNumGpu();
       if (getNumPredict() !== null) options.num_predict = getNumPredict();
       if (getRepeatPenalty() !== null) options.repeat_penalty = getRepeatPenalty();
       if (getSeed() !== null) options.seed = getSeed();
       if (getStopSequences() !== null) options.stop = getStopSequences();
       return options;
+    }
+
+    function normalizeProvider(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return 'ollama';
+      if (raw === 'llamacpp') return 'llama.cpp';
+      return raw;
+    }
+
+    function defaultBaseUrlForProvider(providerKey) {
+      if (providerKey === 'llama.cpp') return 'http://127.0.0.1:8080';
+      if (providerKey === 'vllm') return 'http://127.0.0.1:8000';
+      if (providerKey === 'openai-compatible') return 'http://127.0.0.1:8000';
+      return '';
+    }
+
+    function buildProviderConfig() {
+      const provider = normalizeProvider(getProvider());
+      const baseUrl = String(getProviderBaseUrl() || '').trim() || defaultBaseUrlForProvider(provider);
+      const apiKey = String(getProviderApiKey() || '');
+      const providerModel = String(getProviderModelId() || '').trim();
+      const llamaCppModelPath = String(getLlamaCppModelPath() || '').trim();
+      return { provider, baseUrl, apiKey, providerModel, llamaCppModelPath };
     }
 
     async function verifyGPUUsage() {
@@ -121,6 +151,7 @@
       sanitizeQwenSelfDialogue,
       shouldInjectAttachmentContext,
       buildOllamaOptions,
+      buildProviderConfig,
       verifyGPUUsage
     };
   }

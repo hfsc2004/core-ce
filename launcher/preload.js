@@ -52,6 +52,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   launchAnythingLLM: () => ipcRenderer.invoke('launch-anythingllm'),
   openURL: (url) => ipcRenderer.invoke('open-url', url),
   openOllamaTerminal: (modelName, modelVramMB, ollamaPort, collection, modelId) => ipcRenderer.invoke('open-ollama-terminal', modelName, modelVramMB, ollamaPort, collection, modelId),
+  ensureTerminalLlamaCppSession: (payload = {}) => ipcRenderer.invoke('ensure-terminal-llamacpp-session', payload),
+  terminalListLlamaCppModels: () => ipcRenderer.invoke('terminal-list-llamacpp-models'),
   
   // Catalog Editor APIs
   loadCatalog: () => ipcRenderer.invoke('load-catalog'),

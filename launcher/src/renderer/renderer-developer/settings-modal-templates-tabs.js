@@ -299,15 +299,35 @@ function getSystemInfoTabHTML() {
       
       <div class="system-info-grid">
         <div class="system-info-card">
-          <h4>💾 Memory</h4>
+          <h4 style="font-size: 105%;">
+            <svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+              <rect x="2.5" y="4" width="11" height="8" rx="1.5"></rect>
+              <path d="M5 6.5h6M5 9h4"></path>
+            </svg>
+            Memory
+          </h4>
           <div class="value" id="settings-ram-info">--</div>
         </div>
         <div class="system-info-card">
-          <h4>⚙️ CPU</h4>
+          <h4 style="font-size: 105%;">
+            <svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+              <rect x="4.3" y="4.3" width="7.4" height="7.4" rx="1.4"></rect>
+              <path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.1 3.1l1.1 1.1M11.8 11.8l1.1 1.1M12.9 3.1l-1.1 1.1M4.2 11.8l-1.1 1.1"></path>
+            </svg>
+            CPU
+          </h4>
           <div class="value" id="settings-cpu-info">--</div>
         </div>
         <div class="system-info-card">
-          <h4>🎮 GPU</h4>
+          <h4 style="font-size: 105%;">
+            <svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+              <rect x="2.3" y="3.2" width="11.4" height="7.8" rx="1.4"></rect>
+              <circle cx="6" cy="7.1" r="1.2"></circle>
+              <path d="M9 6.2h2.8M9 8h2"></path>
+              <path d="M6 11v1.8M10 11v1.8"></path>
+            </svg>
+            GPU
+          </h4>
           <div class="value" id="settings-gpu-info">--</div>
         </div>
       </div>
@@ -317,11 +337,19 @@ function getSystemInfoTabHTML() {
       </div>
       
       <div style="margin-top: 15px; display: flex; gap: 10px; align-items: center;">
-        <button class="btn-secondary" onclick="SettingsModal.refreshSystemInfo()">
-          🔄 Refresh
+        <button class="btn-secondary" onclick="SettingsModal.refreshSystemInfo()" style="font-size: 105%;">
+          <svg width="19.5" height="19.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+            <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"></path>
+            <path d="M13.5 3.5v3.2h-3.2"></path>
+          </svg>
+          Refresh
         </button>
-        <button id="gpu-monitor-toggle-btn" class="btn-secondary" onclick="SettingsModal.toggleGpuMonitor()" style="min-width: 140px;">
-          📊 Live Monitor
+        <button id="gpu-monitor-toggle-btn" class="btn-secondary" onclick="SettingsModal.toggleGpuMonitor()" style="min-width: 140px; font-size: 105%;">
+          <svg width="19.5" height="19.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+            <path d="M2.5 12.5h11"></path>
+            <path d="M4.5 11V8.2M8 11V5.5M11.5 11V7"></path>
+          </svg>
+          Live Monitor
         </button>
         <span id="gpu-monitor-status" style="color: #888; font-size: 12px; margin-left: 10px;"></span>
       </div>

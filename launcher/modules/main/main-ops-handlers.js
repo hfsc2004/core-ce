@@ -7,6 +7,7 @@
 
 const path = require('path');
 const http = require('http');
+const fs = require('fs');
 const {
   checkLocalVoiceRuntime,
   installLocalVoiceRuntime,
@@ -47,12 +48,48 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     });
   }
 
+  async function isLlamaCppResponsive(port) {
+    const candidatePort = Number(port || 0);
+    if (candidatePort <= 0) return false;
+    return new Promise((resolve) => {
+      const req = http.get({
+        hostname: '127.0.0.1',
+        port: candidatePort,
+        path: '/health',
+        timeout: 1500
+      }, (res) => {
+        res.resume();
+        resolve(res.statusCode >= 200 && res.statusCode < 500);
+      });
+      req.on('timeout', () => {
+        try { req.destroy(new Error('timeout')); } catch (_) {}
+        resolve(false);
+      });
+      req.on('error', () => resolve(false));
+    });
+  }
+
   async function cleanupTerminalSessions() {
     const sessions = sessionManager?.getActiveSessionsForService?.('terminal') || [];
     if (!Array.isArray(sessions) || sessions.length === 0) return;
     const PortPool = require('../port-pool/port-pool-ollama');
     for (const session of sessions) {
       if (!session?.sessionId) continue;
+      try {
+        await sessionManager.closeSession(session.sessionId, { ollama: PortPool });
+      } catch (_) {
+        // best effort
+      }
+    }
+  }
+
+  async function cleanupTerminalLlamaCppSessions() {
+    const sessions = sessionManager?.getActiveSessionsForService?.('terminal') || [];
+    if (!Array.isArray(sessions) || sessions.length === 0) return;
+    const PortPool = require('../port-pool/port-pool-ollama');
+    for (const session of sessions) {
+      if (!session?.sessionId) continue;
+      if (String(session?.metadata?.backend || '').toLowerCase() !== 'llama-cpp') continue;
       try {
         await sessionManager.closeSession(session.sessionId, { ollama: PortPool });
       } catch (_) {
@@ -83,6 +120,143 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     await cleanupTerminalSessions();
 
     return sessionManager.startOllamaForService('terminal', appDir, getGpuInfo());
+  }
+
+  async function ensureTerminalLlamaCppSession(payload = {}) {
+    if (!sessionManager || typeof sessionManager.startLlamaCppForService !== 'function') {
+      return { success: false, message: 'Session manager is unavailable.' };
+    }
+
+    const modelPath = String(payload?.modelPath || '').trim();
+    const gpuInfo = getGpuInfo() || null;
+    const nvidiaDetected = String(gpuInfo?.accelerationType || '').toLowerCase() === 'nvidia';
+    const requestedGpuLayersRaw = Number(payload?.gpuLayers);
+    const forceCpu = payload?.forceCpu === true;
+    const effectiveGpuLayers = forceCpu
+      ? 0
+      : (Number.isFinite(requestedGpuLayersRaw) && requestedGpuLayersRaw > 0
+        ? requestedGpuLayersRaw
+        : (nvidiaDetected ? 999 : null));
+    const requireGpuSession = !forceCpu && nvidiaDetected && Number(effectiveGpuLayers) > 0;
+    const existingSessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
+    if (Array.isArray(existingSessions)) {
+      for (const session of existingSessions) {
+        const backend = String(session?.metadata?.backend || '').toLowerCase();
+        if (backend !== 'llama-cpp') continue;
+        const sessionModelPath = String(session?.metadata?.modelPath || '').trim();
+        if (modelPath && sessionModelPath && sessionModelPath !== modelPath) continue;
+        if (requireGpuSession) {
+          const sessionForceCpu = session?.metadata?.forceCpu === true;
+          const sessionGpuLayers = Number(session?.metadata?.gpuLayers);
+          if (sessionForceCpu) continue;
+          if (!Number.isFinite(sessionGpuLayers) || sessionGpuLayers <= 0) continue;
+        }
+        const port = Number(session?.ollamaPort || 0);
+        if (port <= 0) continue;
+        if (!(await isLlamaCppResponsive(port))) continue;
+        return {
+          success: true,
+          port,
+          ollamaPort: port,
+          sessionId: session?.sessionId || null,
+          reused: true,
+          modelPath: sessionModelPath || null,
+          baseUrl: `http://127.0.0.1:${port}`
+        };
+      }
+    }
+
+    if (!modelPath) {
+      return {
+        success: false,
+        message: 'BMOC llama.cpp startup requires a GGUF model path. Set "llama.cpp model path" in Terminal settings.'
+      };
+    }
+
+    await cleanupTerminalLlamaCppSessions();
+
+    const startResult = await sessionManager.startLlamaCppForService('terminal', appDir, {
+      modelPath,
+      contextSize: Number.isFinite(Number(payload?.contextSize)) ? Number(payload.contextSize) : undefined,
+      threads: Number.isFinite(Number(payload?.threads)) ? Number(payload.threads) : undefined,
+      parallel: Number.isFinite(Number(payload?.parallel)) ? Number(payload.parallel) : undefined,
+      gpuLayers: effectiveGpuLayers,
+      forceCpu,
+      splitMode: forceCpu ? null : (payload?.splitMode || (nvidiaDetected ? 'none' : null)),
+      mainGpuIndex: forceCpu
+        ? null
+        : (Number.isFinite(Number(payload?.mainGpuIndex)) ? Number(payload.mainGpuIndex) : undefined),
+      cudaVisibleDevices: forceCpu ? null : payload?.cudaVisibleDevices,
+      startupTimeoutMs: Number.isFinite(Number(payload?.startupTimeoutMs)) ? Number(payload.startupTimeoutMs) : undefined
+    });
+
+    if (!startResult?.success) {
+      return {
+        success: false,
+        message: startResult?.message || 'Failed to start BMOC llama.cpp terminal session.'
+      };
+    }
+
+    const port = Number(startResult.port || startResult.ollamaPort || 0);
+    return {
+      success: true,
+      port,
+      ollamaPort: port,
+      sessionId: startResult.sessionId || null,
+      reused: false,
+      modelPath,
+      baseUrl: port > 0 ? `http://127.0.0.1:${port}` : ''
+    };
+  }
+
+  function listTerminalLlamaCppModels() {
+    const projectRoot = path.join(appDir, '..');
+    const modelsRoot = path.join(projectRoot, 'models');
+    if (!fs.existsSync(modelsRoot)) {
+      return { success: true, models: [], message: 'Models directory not found.' };
+    }
+
+    const skipTopLevel = new Set(['blobs', 'manifests']);
+    const models = [];
+
+    function walk(dirPath, relDir = '') {
+      let entries = [];
+      try {
+        entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      } catch (_) {
+        return;
+      }
+      for (const entry of entries) {
+        const entryName = String(entry?.name || '');
+        if (!entryName) continue;
+        const absPath = path.join(dirPath, entryName);
+        const relPath = relDir ? path.join(relDir, entryName) : entryName;
+        if (entry.isDirectory()) {
+          if (!relDir && skipTopLevel.has(entryName)) continue;
+          walk(absPath, relPath);
+          continue;
+        }
+        if (!entry.isFile()) continue;
+        if (!/\.gguf$/i.test(entryName)) continue;
+        let statSize = 0;
+        try {
+          statSize = Number(fs.statSync(absPath).size || 0);
+        } catch (_) {
+          statSize = 0;
+        }
+        models.push({
+          name: entryName.replace(/\.gguf$/i, ''),
+          filename: entryName,
+          pathAbs: absPath,
+          pathRel: relPath,
+          sizeBytes: statSize
+        });
+      }
+    }
+
+    walk(modelsRoot, '');
+    models.sort((a, b) => String(a.pathRel || '').localeCompare(String(b.pathRel || '')));
+    return { success: true, models };
   }
 
   ipcMain.handle('check-binaries', async (event, binaryType) => {
@@ -178,6 +352,22 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       };
     } catch (err) {
       return { success: false, message: err.message };
+    }
+  });
+
+  ipcMain.handle('ensure-terminal-llamacpp-session', async (event, payload = {}) => {
+    try {
+      return await ensureTerminalLlamaCppSession(payload || {});
+    } catch (err) {
+      return { success: false, message: err.message || String(err) };
+    }
+  });
+
+  ipcMain.handle('terminal-list-llamacpp-models', async () => {
+    try {
+      return listTerminalLlamaCppModels();
+    } catch (err) {
+      return { success: false, message: err.message || String(err), models: [] };
     }
   });
 

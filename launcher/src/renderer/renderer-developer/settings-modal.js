@@ -32,10 +32,31 @@ window.settingsModalState = settingsModalState;
 async function saveHuggingFaceToken() {
   const statusDiv = document.getElementById('settings-save-status');
   const tokenInput = document.getElementById('settings-hf-token');
+  const readValue = (id) => {
+    const el = document.getElementById(id);
+    return el ? String(el.value || '').trim() : '';
+  };
 
   if (!tokenInput) return;
 
   const token = tokenInput.value.trim();
+  const apiKeys = {
+    openai_compatible: {
+      base_url: readValue('settings-api-openai-base-url'),
+      api_key: readValue('settings-api-openai-api-key'),
+      model_id: readValue('settings-api-openai-model-id')
+    },
+    vllm: {
+      base_url: readValue('settings-api-vllm-base-url'),
+      api_key: readValue('settings-api-vllm-api-key'),
+      model_id: readValue('settings-api-vllm-model-id')
+    },
+    exllamav2: {
+      base_url: readValue('settings-api-exllamav2-base-url'),
+      api_key: readValue('settings-api-exllamav2-api-key'),
+      model_id: readValue('settings-api-exllamav2-model-id')
+    }
+  };
 
   // Validate token format
   if (token && !token.startsWith('hf_')) {
@@ -49,12 +70,24 @@ async function saveHuggingFaceToken() {
 
   try {
     const current = await window.electronAPI.getSettings();
-    const settings = { ...(current || {}), huggingface_token: token };
+    const settings = { ...(current || {}), huggingface_token: token, api_keys: apiKeys };
     const result = await window.electronAPI.saveSettings(settings);
 
     if (result.success) {
       statusDiv.className = 'settings-save-status success';
-      statusDiv.textContent = '✅ Token saved successfully!';
+      statusDiv.textContent = 'API keys saved successfully.';
+
+      // Compatibility bridge for Terminal defaults while provider-specific
+      // wiring rolls out across all surfaces.
+      try {
+        const defaults = {
+          provider: 'openai-compatible',
+          provider_base_url: apiKeys.openai_compatible.base_url,
+          provider_api_key: apiKeys.openai_compatible.api_key,
+          provider_model_id: apiKeys.openai_compatible.model_id
+        };
+        localStorage.setItem('psf_terminal_provider_defaults', JSON.stringify(defaults));
+      } catch (_) {}
 
       // Update status indicator
       const tokenStatus = document.getElementById('settings-token-status');
@@ -89,10 +122,10 @@ function toggleTokenVisibility() {
   if (input && icon) {
     if (input.type === 'password') {
       input.type = 'text';
-      icon.textContent = '🙈';
+      icon.textContent = 'Hide';
     } else {
       input.type = 'password';
-      icon.textContent = '👁️';
+      icon.textContent = 'Show';
     }
   }
 }

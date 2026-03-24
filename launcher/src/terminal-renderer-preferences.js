@@ -128,10 +128,16 @@
           return s ? s : null;
         };
         if (Object.prototype.hasOwnProperty.call(src, 'systemPrompt')) out.systemPrompt = textOrNull(src.systemPrompt);
+        if (Object.prototype.hasOwnProperty.call(src, 'provider')) out.provider = textOrNull(src.provider);
+        if (Object.prototype.hasOwnProperty.call(src, 'provider_base_url')) out.provider_base_url = textOrNull(src.provider_base_url);
+        if (Object.prototype.hasOwnProperty.call(src, 'provider_api_key')) out.provider_api_key = textOrNull(src.provider_api_key);
+        if (Object.prototype.hasOwnProperty.call(src, 'provider_model_id')) out.provider_model_id = textOrNull(src.provider_model_id);
+        if (Object.prototype.hasOwnProperty.call(src, 'llama_cpp_model_path')) out.llama_cpp_model_path = textOrNull(src.llama_cpp_model_path);
         if (Object.prototype.hasOwnProperty.call(src, 'temperature')) out.temperature = numOrNull(src.temperature);
         if (Object.prototype.hasOwnProperty.call(src, 'top_p')) out.top_p = numOrNull(src.top_p);
         if (Object.prototype.hasOwnProperty.call(src, 'top_k')) out.top_k = numOrNull(src.top_k);
         if (Object.prototype.hasOwnProperty.call(src, 'num_ctx')) out.num_ctx = numOrNull(src.num_ctx);
+        if (Object.prototype.hasOwnProperty.call(src, 'num_gpu')) out.num_gpu = numOrNull(src.num_gpu);
         if (Object.prototype.hasOwnProperty.call(src, 'num_predict')) out.num_predict = numOrNull(src.num_predict);
         if (Object.prototype.hasOwnProperty.call(src, 'repeat_penalty')) out.repeat_penalty = numOrNull(src.repeat_penalty);
         if (Object.prototype.hasOwnProperty.call(src, 'seed')) out.seed = numOrNull(src.seed);
@@ -167,6 +173,8 @@
       maxEvidenceHits: 28
     };
     const pc = preferenceController;
+    const normalizeModelKey = (value) => String(value || '').trim().toLowerCase();
+    const baseModelKey = (value) => normalizeModelKey(value).split(':')[0];
     if (!pc) {
       return {
         loadAssisted: () => false,
@@ -213,21 +221,44 @@
       loadLlmAssistedFileNaming: () => pc.loadLlmAssistedFileNamingPreference(),
       setLlmAssistedFileNaming: (v) => pc.setLlmAssistedFileNamingPreference(v === true),
       loadModelConfig: (modelName) => {
-        const key = String(modelName || '').trim().toLowerCase();
+        const key = normalizeModelKey(modelName);
         if (!key) return null;
         const all = pc.loadTerminalModelConfigOverrides();
-        const cfg = all && typeof all === 'object' ? all[key] : null;
-        if (!cfg || typeof cfg !== 'object') return null;
-        return pc.normalizeTerminalModelConfig(cfg);
+        if (!all || typeof all !== 'object') return null;
+
+        // 1) exact key (full model id/tag)
+        let cfg = all[key];
+        if (cfg && typeof cfg === 'object') return pc.normalizeTerminalModelConfig(cfg);
+
+        // 2) base key fallback (strip tag, e.g. model:latest -> model)
+        const requestedBase = baseModelKey(key);
+        if (requestedBase) {
+          cfg = all[requestedBase];
+          if (cfg && typeof cfg === 'object') return pc.normalizeTerminalModelConfig(cfg);
+        }
+
+        // 3) fuzzy fallback: any saved key sharing the same base
+        if (requestedBase) {
+          const matchKey = Object.keys(all).find((savedKey) => baseModelKey(savedKey) === requestedBase);
+          if (matchKey) {
+            cfg = all[matchKey];
+            if (cfg && typeof cfg === 'object') return pc.normalizeTerminalModelConfig(cfg);
+          }
+        }
+
+        return null;
       },
       saveModelConfig: (modelName, config) => {
-        const key = String(modelName || '').trim().toLowerCase();
+        const key = normalizeModelKey(modelName);
         if (!key) return null;
         const all = pc.loadTerminalModelConfigOverrides();
         const next = (all && typeof all === 'object') ? { ...all } : {};
-        next[key] = pc.normalizeTerminalModelConfig(config);
+        const normalized = pc.normalizeTerminalModelConfig(config);
+        next[key] = normalized;
+        const base = baseModelKey(key);
+        if (base) next[base] = normalized;
         pc.saveTerminalModelConfigOverrides(next);
-        return next[key];
+        return normalized;
       }
     };
   }

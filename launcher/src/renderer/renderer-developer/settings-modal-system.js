@@ -454,6 +454,26 @@ function refreshSystemInfo() {
 /**
  * Toggle GPU monitor on/off
  */
+function setGpuMonitorButtonStateLabel(btn, mode = 'live') {
+  if (!btn) return;
+  if (mode === 'stop') {
+    btn.innerHTML = `
+      <svg width="19.5" height="19.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+        <rect x="4.4" y="4.4" width="7.2" height="7.2" rx="0.8"></rect>
+      </svg>
+      Stop Monitor
+    `;
+    return;
+  }
+  btn.innerHTML = `
+    <svg width="19.5" height="19.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="vertical-align:-4px; margin-right:7px;">
+      <path d="M2.5 12.5h11"></path>
+      <path d="M4.5 11V8.2M8 11V5.5M11.5 11V7"></path>
+    </svg>
+    Live Monitor
+  `;
+}
+
 async function toggleGpuMonitor() {
   const btn = document.getElementById('gpu-monitor-toggle-btn');
   const status = document.getElementById('gpu-monitor-status');
@@ -467,7 +487,7 @@ async function toggleGpuMonitor() {
       await window.electronAPI.setGpuMonitorEnabled(false);
 
       if (result.success) {
-        btn.textContent = '📊 Live Monitor';
+        setGpuMonitorButtonStateLabel(btn, 'live');
         btn.style.background = '';
         status.textContent = 'Disabled';
         status.style.color = '#888';
@@ -486,7 +506,7 @@ async function toggleGpuMonitor() {
 
       if (result.success) {
         await window.electronAPI.setGpuMonitorEnabled(true);
-        btn.textContent = '⏹️ Stop Monitor';
+        setGpuMonitorButtonStateLabel(btn, 'stop');
         btn.style.background = 'rgba(0, 255, 136, 0.2)';
         status.textContent = 'Running';
         status.style.color = '#00ff88';
@@ -520,12 +540,12 @@ async function updateGpuMonitorButtonState() {
     const isRunning = await window.electronAPI.isGpuMonitorRunning();
 
     if (isRunning) {
-      btn.textContent = '⏹️ Stop Monitor';
+      setGpuMonitorButtonStateLabel(btn, 'stop');
       btn.style.background = 'rgba(0, 255, 136, 0.2)';
       status.textContent = 'Running';
       status.style.color = '#00ff88';
     } else {
-      btn.textContent = '📊 Live Monitor';
+      setGpuMonitorButtonStateLabel(btn, 'live');
       btn.style.background = '';
       status.textContent = '';
     }
