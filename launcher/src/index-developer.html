@@ -70,7 +70,6 @@
             <span style="font-size:40px; font-weight:600; letter-spacing:0.01em; line-height:1;">Group Manager</span>
           </div>
         </div>
-        <img src="../assets/PSF_Logo_White_256.png" alt="Pseudo Science Fiction Logo" class="psf-logo">
       </div>
       
       <!-- Package Title (dynamically loaded) -->
@@ -419,20 +418,29 @@
 
     <!-- Footer -->
     <footer class="app-footer psf-footer">
-      <div class="psf-footer-copy">
-        Copyright © <span id="footer-copyright-year">2026</span>
-        <a id="footer-company-link" href="https://pseudosf.com" target="_blank" rel="noopener"><span id="footer-company-name">Pseudo SF</span></a>
-        <span id="footer-app-version">v1.1.2</span>
-        <span id="footer-security-tag">Core [Community Edition]</span>
-        <span id="footer-compliance-proof-tag" style="display:none;">PROOF:UNVERIFIED</span>
+      <div class="psf-footer-left">
+        <div class="psf-footer-text">
+          <div class="psf-footer-meta">
+            <span id="footer-compliance-proof-tag" style="display:none;">PROOF:UNVERIFIED</span>
+          </div>
+          <div class="psf-footer-copy">
+            Copyright © <span id="footer-copyright-year">2026</span>
+            <a id="footer-company-link" href="https://pseudosf.com" target="_blank" rel="noopener"><span id="footer-company-name">Pseudo SF</span></a>
+            <img src="../assets/PSF_Logo_White_SM.png" alt="PSF Logo" class="psf-footer-logo">
+          </div>
+        </div>
       </div>
+      <a id="footer-subscription-tag" class="psf-upgrade-btn" href="https://pseudosf.com/upgrade" target="_blank" rel="noopener">▲ UPGRADE</a>
       <div class="psf-footer-right">
-        <a id="footer-subscription-tag" class="psf-upgrade-btn" href="https://pseudosf.com/upgrade" target="_blank" rel="noopener">▲ UPGRADE</a>
         <div id="gpu-indicator" class="psf-gpu" style="display: flex;">
           <div class="psf-gpu-bar"><div class="psf-gpu-fill"></div></div>
           <span id="gpu-icon" style="display:none;">⏳</span>
           <span id="gpu-text">GPU Inference</span>
         </div>
+        <span class="psf-footer-version-block">
+          <span id="footer-app-version">v1.1.2</span>
+          <span id="footer-security-tag">Core [Community Edition]</span>
+        </span>
       </div>
     </footer>
   </div>

@@ -300,8 +300,8 @@ select option {
   position: relative;
   background: #111c2a;
   border-bottom: 1px solid rgba(88, 166, 255, 0.12);
-  min-height: 64px;
-  padding: 12px 24px;
+  min-height: 52px;
+  padding: 8px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -342,7 +342,7 @@ select option {
   align-items: center;
   gap: 2px;
   font-family: 'Rajdhani', 'Inter', sans-serif;
-  font-size: 56px;
+  font-size: 44px;
   font-weight: 700;
   color: #e6edf3;
   letter-spacing: 0.08em;
@@ -450,16 +450,63 @@ select option {
 }
 
 .psf-footer {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: max-content 1fr auto max-content;
+  grid-template-rows: minmax(0, 20px) minmax(0, 20px);
+  align-items: end;
+  padding: 0 24px 1px;
+  gap: 12px;
+}
+
+.psf-footer-left {
+  display: grid;
+  grid-template-columns: max-content;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-items: stretch;
+  min-width: 0;
+  align-self: end;
+  justify-content: start;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.psf-footer-text {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  height: 100%;
+  gap: 0;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.psf-footer-meta {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 24px;
+  gap: 10px;
+  font-size: 14px;
+  color: #6e7681;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  align-self: center;
 }
 
 .psf-footer-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 15px;
   color: #484f58;
   letter-spacing: 0.03em;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.psf-footer-version-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   white-space: nowrap;
 }
 
@@ -467,10 +514,53 @@ select option {
   color: #6e7681;
 }
 
+.psf-footer-logo {
+  width: 48px;
+  height: 48px;
+  max-height: 48px;
+  object-fit: contain;
+  display: inline-block;
+  align-self: center;
+  margin-left: 0;
+  filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.35));
+}
+
 .psf-footer-right {
-  display: flex;
+  grid-column: 4;
+  grid-row: 1 / span 2;
+  min-width: 220px;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
   align-items: center;
-  gap: 12px;
+  justify-items: end;
+  align-self: center;
+  justify-self: end;
+  min-height: 40px;
+}
+
+.psf-footer-right #gpu-indicator {
+  grid-row: 1;
+  align-self: center;
+  justify-self: end;
+}
+
+.psf-footer-right .psf-footer-version-block {
+  grid-row: 2;
+  align-self: center;
+  justify-self: end;
+  color: #6e7681;
+}
+
+.psf-footer-right .psf-footer-version-block span {
+  color: #6e7681;
+}
+
+.psf-footer #footer-subscription-tag {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
 }
 
 .psf-upgrade-btn {
@@ -478,7 +568,7 @@ select option {
   font-weight: 500;
   letter-spacing: 0.04em;
   line-height: 1;
-  padding: 8px 22px;
+  padding: 4px 20px;
   background: transparent;
   border: 1px solid rgba(139, 148, 158, 0.55);
   border-radius: 8px;
