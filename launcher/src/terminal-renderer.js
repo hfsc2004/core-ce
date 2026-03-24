@@ -71,6 +71,10 @@
   let gpuIcon = null;
   let gpuText = null;
   let peerSelect = null;
+  let groupSelect = null;
+  let interjectBtn = null;
+  let labelBtn = null;
+  let selfLabelEl = null;
   let voiceController = null;
   let speechEngine = null;
   let speechController = null;
@@ -83,6 +87,10 @@
   let meshRefreshTimer = null;
   let meshSyncInProgress = false;
   let linkedPeerId = null;
+  let groupedPeerIds = new Set();
+  let inboundRelayHold = false;
+  let suppressUserRelay = false;
+  let terminalIdentityLabel = '';
   const inboundRelayQueue = [];
   let inboundRelayBusy = false;
   const call = (controller, method, fallback, ...args) => (
@@ -122,7 +130,14 @@
   function setWaitingState(waiting) { isWaitingForResponse = waiting; call(uiController, 'setWaitingState', undefined, waiting); }
   function setThinkingStatusText(text) { call(uiController, 'setThinkingStatusText', undefined, text); }
   function updateGPUIndicator(gpuType) { call(uiController, 'updateGPUIndicator', undefined, gpuType); }
-  async function sendMessage() { await callAsync(chatFlowController, 'sendMessage'); }
+  async function sendMessage() {
+    const rawInput = String(userInput?.value || '').trim();
+    const shouldRelayUser = !suppressUserRelay && rawInput.length > 0 && !rawInput.startsWith('/');
+    if (shouldRelayUser) {
+      await relayUserToPeer(rawInput);
+    }
+    await callAsync(chatFlowController, 'sendMessage');
+  }
   function normalizeSpeechText(text) { return call(speechController, 'normalizeSpeechText', String(text || '').trim(), text); }
   function splitSpeechChunks(text, maxLen = 140) { return call(speechController, 'splitSpeechChunks', [], text, maxLen); }
   async function buildSpeechRuntimeProfile(options = {}) { return callAsync(speechController, 'buildSpeechRuntimeProfile', { timeoutMs: 45000, debugOn: false }, options); }
@@ -162,9 +177,70 @@
     return persistenceController.deleteSavedConversation(name);
   }
   function formatBytes(bytes) { return call(ioController, 'formatBytes', `${bytes || 0} B`, bytes); }
-  function handleInputKeypress(e) { call(ioController, 'handleInputKeypress', undefined, e); }
+  function syncInterjectButton() {
+    if (!interjectBtn) return;
+    if (inboundRelayHold) {
+      interjectBtn.classList.add('active');
+      interjectBtn.setAttribute('aria-pressed', 'true');
+      interjectBtn.title = 'Interject armed: inbound auto-turns paused until you send your next message';
+    } else {
+      interjectBtn.classList.remove('active');
+      interjectBtn.setAttribute('aria-pressed', 'false');
+      interjectBtn.title = 'Pause inbound auto-turns after current response so you can speak next';
+    }
+  }
+  function armInterject() {
+    if (inboundRelayHold) return;
+    inboundRelayHold = true;
+    syncInterjectButton();
+    addSystemMessage('Interject armed: waiting for current turn to finish, then inbound auto-turns will pause.');
+  }
+  function clearInterject(reason = '') {
+    const wasHeld = inboundRelayHold;
+    inboundRelayHold = false;
+    syncInterjectButton();
+    if (wasHeld && reason) addSystemMessage(reason);
+  }
+  function handleInterjectClick() {
+    if (inboundRelayHold) {
+      clearInterject('Interject cleared: inbound auto-turns resumed.');
+      void processInboundRelayQueue();
+      return;
+    }
+    armInterject();
+  }
+  function handleInputKeypress(e) {
+    if (e && e.key === 'Enter' && !e.shiftKey) clearInterject();
+    call(ioController, 'handleInputKeypress', undefined, e);
+  }
   async function handleStopClick() { await callAsync(ioController, 'handleStopClick'); }
   async function initializeVoiceToText() { await callAsync(ioController, 'initializeVoiceToText'); }
+  function formatLocalTerminalIdentity() {
+    const idPart = terminalWindowId ? `Terminal #${terminalWindowId}` : 'Terminal';
+    const custom = String(terminalIdentityLabel || '').trim();
+    return custom ? `${custom} (${idPart})` : idPart;
+  }
+  function renderSelfLabel() {
+    if (!selfLabelEl) return;
+    selfLabelEl.textContent = formatLocalTerminalIdentity();
+    selfLabelEl.title = `Identity: ${formatLocalTerminalIdentity()}`;
+  }
+  async function handleLabelEdit() {
+    const existing = String(terminalIdentityLabel || '').trim();
+    const next = window.prompt('Set terminal label (blank to clear):', existing);
+    if (next === null) return;
+    if (!window.electronAPI || typeof window.electronAPI.terminalLinkSetLabel !== 'function') return;
+    try {
+      const result = await window.electronAPI.terminalLinkSetLabel(String(next || '').trim());
+      if (result?.success) {
+        terminalIdentityLabel = String(result.selfLabel || '').trim();
+        renderSelfLabel();
+        renderPeerOptions(result || {});
+      }
+    } catch (err) {
+      addErrorMessage(`Label update failed: ${err?.message || err}`);
+    }
+  }
   function buildPeerOptionLabel(peer) {
     const label = String(peer?.label || '').trim();
     if (label) return label;
@@ -177,9 +253,15 @@
   function renderPeerOptions(state = {}) {
     if (!peerSelect) return;
     const peers = Array.isArray(state.peers) ? state.peers : [];
+    terminalIdentityLabel = String(state.selfLabel || terminalIdentityLabel || '').trim();
+    renderSelfLabel();
     const selectedPeerWindowId = Number(state.linkedPeerWindowId || 0);
+    const selectedGroupPeerIds = Array.isArray(state.groupPeerWindowIds)
+      ? state.groupPeerWindowIds.map((v) => Number(v || 0)).filter((v) => v > 0)
+      : [];
     // Keep local runtime state for relay decisions.
     linkedPeerId = selectedPeerWindowId > 0 ? selectedPeerWindowId : null;
+    groupedPeerIds = new Set(selectedGroupPeerIds);
     const options = [`<option value="">Unlinked</option>`];
     peers.forEach((peer) => {
       const windowId = Number(peer?.windowId || 0);
@@ -193,6 +275,18 @@
     }
     if (!peerSelect.value && selectedPeerWindowId > 0) {
       peerSelect.value = String(selectedPeerWindowId);
+    }
+    if (groupSelect) {
+      const groupOptions = [];
+      peers.forEach((peer) => {
+        const windowId = Number(peer?.windowId || 0);
+        if (!windowId) return;
+        const selected = selectedGroupPeerIds.includes(windowId) ? ' selected' : '';
+        groupOptions.push(`<option value="${windowId}"${selected}>${escapeHtml(buildPeerOptionLabel(peer))}</option>`);
+      });
+      groupSelect.innerHTML = groupOptions.length > 0
+        ? groupOptions.join('')
+        : `<option value="" disabled>No other terminals</option>`;
     }
   }
   async function refreshTerminalPeerLinks() {
@@ -227,12 +321,62 @@
       meshSyncInProgress = false;
     }
   }
+  function getSelectedGroupPeerIds() {
+    if (!groupSelect) return [];
+    const selected = [];
+    Array.from(groupSelect.selectedOptions || []).forEach((option) => {
+      const value = Number(option?.value || 0);
+      if (value > 0) selected.push(value);
+    });
+    return selected;
+  }
+  async function handleGroupSelectChange() {
+    if (!groupSelect || meshSyncInProgress) return;
+    if (!window.electronAPI || typeof window.electronAPI.terminalLinkSetGroupPeers !== 'function') return;
+    const selectedIds = getSelectedGroupPeerIds();
+    meshSyncInProgress = true;
+    try {
+      const result = await window.electronAPI.terminalLinkSetGroupPeers(selectedIds);
+      if (!result?.success) {
+        addErrorMessage(`Terminal group link failed: ${result?.message || 'Unknown error'}`);
+      }
+      renderPeerOptions(result || {});
+    } catch (err) {
+      addErrorMessage(`Terminal group link failed: ${err?.message || err}`);
+    } finally {
+      meshSyncInProgress = false;
+    }
+  }
+  function buildIncomingSpeakerDescriptor(next = {}) {
+    const fromWindowId = Number(next.fromWindowId || 0);
+    const senderLabel = String(next.senderLabel || '').trim();
+    const senderModel = String(next.modelName || '').trim();
+    const speakerRole = String(next.speakerRole || 'assistant').trim().toLowerCase();
+    const terminalPart = fromWindowId > 0 ? `terminal #${fromWindowId}` : 'terminal';
+    if (speakerRole === 'user') {
+      return senderLabel
+        ? `user at ${terminalPart} (${senderLabel})`
+        : `user at ${terminalPart}`;
+    }
+    const assistantName = senderLabel || senderModel || 'assistant';
+    return `${assistantName} at ${terminalPart}`;
+  }
+  function buildIncomingRelayPrompt(next = {}) {
+    const text = String(next.text || '').trim();
+    if (!text) return '';
+    const speaker = buildIncomingSpeakerDescriptor(next);
+    return `[From ${speaker}]\n${text}`;
+  }
   function enqueueInboundRelay(payload = {}) {
     const text = String(payload?.text || '').trim();
     if (!text) return;
     inboundRelayQueue.push({
       text,
-      fromWindowId: Number(payload?.fromWindowId || 0) || null
+      fromWindowId: Number(payload?.fromWindowId || 0) || null,
+      kind: String(payload?.kind || 'pair').trim().toLowerCase() || 'pair',
+      speakerRole: String(payload?.speakerRole || 'assistant').trim().toLowerCase() || 'assistant',
+      senderLabel: String(payload?.senderLabel || '').trim(),
+      modelName: String(payload?.modelName || '').trim()
     });
     void processInboundRelayQueue();
   }
@@ -241,40 +385,84 @@
     inboundRelayBusy = true;
     try {
       while (inboundRelayQueue.length > 0) {
+        if (inboundRelayHold) return;
         if (isWaitingForResponse || activeStream) {
           await new Promise((resolve) => setTimeout(resolve, 350));
           continue;
         }
         const next = inboundRelayQueue.shift();
         if (!next?.text) continue;
-        addSystemMessage(`Linked Terminal ${next.fromWindowId ? `#${next.fromWindowId}` : ''}: incoming message`);
-        if (userInput) userInput.value = next.text;
-        await sendMessage();
+        const prefix = next.kind === 'group' ? 'Group Terminal' : 'Linked Terminal';
+        const speaker = buildIncomingSpeakerDescriptor(next);
+        addSystemMessage(`${prefix} ${next.fromWindowId ? `#${next.fromWindowId}` : ''}: incoming message from ${speaker}`);
+        if (userInput) userInput.value = buildIncomingRelayPrompt(next);
+        suppressUserRelay = true;
+        try {
+          await sendMessage();
+        } finally {
+          suppressUserRelay = false;
+        }
       }
     } finally {
       inboundRelayBusy = false;
     }
   }
-  async function relayAssistantToPeer(assistantMessage) {
-    if (!linkedPeerId) return;
-    const text = String(assistantMessage || '').trim();
-    if (!text) return;
-    if (!window.electronAPI || typeof window.electronAPI.terminalLinkRelayMessage !== 'function') return;
+  async function relayToMesh(text, speakerRole = 'assistant') {
+    const payloadText = String(text || '').trim();
+    if (!payloadText) return;
+    if (!window.electronAPI) return;
+    const sharedPayload = {
+      text: payloadText,
+      speakerRole: String(speakerRole || 'assistant').trim().toLowerCase() || 'assistant',
+      senderLabel: String(terminalIdentityLabel || '').trim(),
+      fromWindowId: terminalWindowId || null,
+      modelName: currentModel || 'unknown',
+      port: terminalPort || null
+    };
+    const hasGroup = groupedPeerIds instanceof Set && groupedPeerIds.size > 0;
+    const hasPair = Number(linkedPeerId || 0) > 0;
     try {
-      await window.electronAPI.terminalLinkRelayMessage({
-        text,
-        fromWindowId: terminalWindowId || null,
-        modelName: currentModel || 'unknown',
-        port: terminalPort || null
-      });
+      if (hasPair && (!hasGroup || !groupedPeerIds.has(Number(linkedPeerId)))) {
+        if (typeof window.electronAPI.terminalLinkRelayMessage === 'function') {
+          await window.electronAPI.terminalLinkRelayMessage(sharedPayload);
+        }
+      }
+      if (hasGroup && typeof window.electronAPI.terminalLinkRelayGroupMessage === 'function') {
+        await window.electronAPI.terminalLinkRelayGroupMessage(sharedPayload);
+      }
     } catch (err) {
       console.warn('[Terminal Mesh] Relay failed:', err?.message || err);
     }
   }
+  async function relayAssistantToPeer(assistantMessage) {
+    const text = String(assistantMessage || '').trim();
+    if (!text) return;
+    await relayToMesh(text, 'assistant');
+  }
+  async function relayUserToPeer(userMessage) {
+    const text = String(userMessage || '').trim();
+    if (!text) return;
+    await relayToMesh(text, 'user');
+  }
   function initializeTerminalMesh() {
     peerSelect = document.getElementById('terminal-peer-select');
+    groupSelect = document.getElementById('terminal-group-select');
+    interjectBtn = document.getElementById('interject-btn');
+    labelBtn = document.getElementById('terminal-label-btn');
+    selfLabelEl = document.getElementById('terminal-self-label');
     if (!peerSelect) return;
     peerSelect.addEventListener('change', handlePeerSelectChange);
+    if (groupSelect) {
+      groupSelect.addEventListener('change', handleGroupSelectChange);
+    }
+    if (interjectBtn) {
+      interjectBtn.addEventListener('click', handleInterjectClick);
+      syncInterjectButton();
+    }
+    if (labelBtn) {
+      labelBtn.addEventListener('click', handleLabelEdit);
+    }
+    renderSelfLabel();
     if (window.electronAPI && typeof window.electronAPI.onTerminalLinkStateChanged === 'function') {
       if (typeof meshStateUnsubscribe === 'function') {
         try { meshStateUnsubscribe(); } catch (_) {}
@@ -451,6 +639,8 @@
       getCurrentModel: () => currentModel,
       setTerminalPort: (value) => { terminalPort = value; },
       getTerminalPort: () => terminalPort,
+      getTerminalWindowId: () => terminalWindowId,
+      getTerminalIdentityLabel: () => String(terminalIdentityLabel || '').trim(),
       setAttachmentSessionId: (value) => { attachmentSessionId = value; },
       getAttachmentSessionId: () => attachmentSessionId,
       setSystemPrompt: (value) => { systemPrompt = value; },
@@ -544,6 +734,9 @@
         if (options?.skipRelay !== true) {
           void relayAssistantToPeer(assistantMessage);
         }
+        if (!inboundRelayHold) {
+          void processInboundRelayQueue();
+        }
       },
       isTtsDebugTraceEnabled,
       speakAssistantText,
@@ -575,7 +768,10 @@
       updateGPUIndicator,
       populateModelDropdown,
       handleSendClick: () => {
-        if (!isWaitingForResponse) sendMessage();
+        if (!isWaitingForResponse) {
+          clearInterject();
+          sendMessage();
+        }
       },
       openAttachmentManager,
       handleInputKeypress,
@@ -618,6 +814,7 @@
 
     initController.initializeTerminal(terminalConfig, initOptions);
     terminalWindowId = Number(terminalConfig?.terminalWindowId || 0) || null;
+    renderSelfLabel();
     initializeTerminalMesh();
     if (prefs && typeof prefs.loadModelConfig === 'function') {
       const savedModelCfg = prefs.loadModelConfig(currentModel);

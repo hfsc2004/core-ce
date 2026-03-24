@@ -150,6 +150,10 @@ body {
   min-width: 0;
 }
 
+.terminal-link-group--multi {
+  align-items: flex-start;
+}
+
 .terminal-link-label {
   color: var(--term-text-secondary);
   font-size: 13px;
@@ -170,8 +174,23 @@ body {
   appearance: none;
 }
 
+#terminal-group-select {
+  background: var(--term-bg-primary);
+  border: 1px solid var(--term-border);
+  border-radius: 5px;
+  color: var(--term-text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 5px 8px;
+  min-width: 220px;
+  max-width: 340px;
+  min-height: 58px;
+}
+
 #config-btn,
-#attachments-btn {
+#attachments-btn,
+#interject-btn,
+#terminal-label-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -187,13 +206,17 @@ body {
 }
 
 #config-btn:hover,
-#attachments-btn:hover {
+#attachments-btn:hover,
+#interject-btn:hover,
+#terminal-label-btn:hover {
   border-color: rgba(88, 166, 255, 0.4);
   color: var(--term-accent);
 }
 
 #config-btn svg,
-#attachments-btn svg {
+#attachments-btn svg,
+#interject-btn svg,
+#terminal-label-btn svg {
   flex-shrink: 0;
   width: 19px;
   height: 19px;
@@ -203,6 +226,20 @@ body {
   border-color: rgba(88, 166, 255, 0.5);
   color: var(--term-accent);
   background: rgba(88, 166, 255, 0.06);
+}
+
+#interject-btn.active {
+  border-color: rgba(255, 184, 108, 0.6);
+  color: #ffb86c;
+  background: rgba(255, 184, 108, 0.08);
+}
+
+.terminal-self-label {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.95;
 }
 
 .header-buttons {

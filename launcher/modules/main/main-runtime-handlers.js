@@ -14,6 +14,8 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
   const getMainWindow = typeof deps.getMainWindow === 'function' ? deps.getMainWindow : () => null;
   const terminalSessionRegistry = deps.terminalSessionRegistry instanceof Map ? deps.terminalSessionRegistry : new Map();
   const terminalMeshLinks = new Map(); // windowId -> peerWindowId
+  const terminalMeshGroupLinks = new Map(); // windowId -> Set(peerWindowId)
+  const terminalIdentityLabels = new Map(); // windowId -> editable terminal label
 
   async function closeTrackedTerminalSession(windowId) {
     const ownerWindowId = Number(windowId || 0);
@@ -84,6 +86,7 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
   function parseTerminalWindowMeta(win) {
     const fallback = {
       windowId: win?.id || null,
+      label: '',
       modelName: 'unknown',
       port: null
     };
@@ -94,8 +97,10 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
       const parsed = new URL(raw);
       const modelName = String(parsed.searchParams.get('model') || '').trim() || 'unknown';
       const portRaw = Number(parsed.searchParams.get('port') || 0);
+      const customLabel = String(terminalIdentityLabels.get(Number(win.id)) || '').trim();
       return {
         windowId: win.id,
+        label: customLabel,
         modelName,
         port: Number.isFinite(portRaw) && portRaw > 0 ? portRaw : null
       };
@@ -121,6 +126,21 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
       if (!alive.has(Number(windowId)) || !alive.has(Number(peerId))) {
         terminalMeshLinks.delete(windowId);
       }
+    }
+    for (const [windowId, peers] of terminalMeshGroupLinks.entries()) {
+      if (!alive.has(Number(windowId))) {
+        terminalMeshGroupLinks.delete(windowId);
+        continue;
+      }
+      const next = new Set();
+      for (const peerId of (peers instanceof Set ? peers : new Set())) {
+        const value = Number(peerId || 0);
+        if (!alive.has(value)) continue;
+        if (value === Number(windowId)) continue;
+        next.add(value);
+      }
+      if (next.size > 0) terminalMeshGroupLinks.set(Number(windowId), next);
+      else terminalMeshGroupLinks.delete(Number(windowId));
     }
   }
 
@@ -149,7 +169,47 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     terminalMeshLinks.set(peerId, selfId);
   }
 
+  function setGroupLinks(selfWindowId, peerWindowIds = []) {
+    const selfId = Number(selfWindowId || 0);
+    if (!Number.isFinite(selfId) || selfId <= 0) return;
+    const requested = Array.isArray(peerWindowIds)
+      ? peerWindowIds.map((v) => Number(v || 0)).filter((v) => Number.isFinite(v) && v > 0 && v !== selfId)
+      : [];
+    const previous = terminalMeshGroupLinks.get(selfId);
+    if (previous instanceof Set) {
+      for (const prevPeerId of previous.values()) {
+        const peerSet = terminalMeshGroupLinks.get(Number(prevPeerId));
+        if (peerSet instanceof Set) {
+          peerSet.delete(selfId);
+          if (peerSet.size === 0) terminalMeshGroupLinks.delete(Number(prevPeerId));
+        }
+      }
+    }
+    if (requested.length === 0) {
+      terminalMeshGroupLinks.delete(selfId);
+      return;
+    }
+    const selfSet = new Set();
+    for (const peerId of requested) {
+      const peerWindow = BrowserWindow.fromId(peerId);
+      if (!peerWindow || peerWindow.isDestroyed() || !isTerminalWindow(peerWindow)) continue;
+      selfSet.add(peerId);
+      const peerSet = terminalMeshGroupLinks.get(peerId) instanceof Set
+        ? terminalMeshGroupLinks.get(peerId)
+        : new Set();
+      peerSet.add(selfId);
+      terminalMeshGroupLinks.set(peerId, peerSet);
+    }
+    if (selfSet.size > 0) terminalMeshGroupLinks.set(selfId, selfSet);
+    else terminalMeshGroupLinks.delete(selfId);
+  }
+
   function createPeerLabel(meta) {
+    const custom = String(meta?.label || '').trim();
+    if (custom) {
+      if (meta.port) return `${custom} (Terminal #${meta.windowId} • port ${meta.port})`;
+      return `${custom} (Terminal #${meta.windowId})`;
+    }
     const suffix = [];
     if (meta.port) suffix.push(`port ${meta.port}`);
     if (meta.modelName && meta.modelName !== 'unknown') suffix.push(meta.modelName);
@@ -182,11 +242,18 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     if (linkedPeerWindowId > 0 && !validLinkedPeer) {
       clearLinkFor(selfId);
     }
+    const groupSet = terminalMeshGroupLinks.get(selfId);
+    const groupPeerWindowIds = groupSet instanceof Set
+      ? Array.from(groupSet.values()).map((v) => Number(v || 0)).filter((v) => peers.some((peer) => peer.windowId === v)).sort((a, b) => a - b)
+      : [];
+    const selfLabel = String(terminalIdentityLabels.get(selfId) || '').trim();
 
     return {
       success: true,
       selfWindowId: selfId,
+      selfLabel,
       linkedPeerWindowId: validLinkedPeer,
+      groupPeerWindowIds,
       peers
     };
   }
@@ -231,6 +298,30 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     return buildMeshState(selfId);
   });
 
+  ipcMain.handle('terminal-link:set-group-peers', async (event, peerWindowIds = []) => {
+    const selfWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!selfWindow || selfWindow.isDestroyed()) {
+      return { success: false, message: 'Terminal window context unavailable.' };
+    }
+    const selfId = Number(selfWindow.id);
+    setGroupLinks(selfId, Array.isArray(peerWindowIds) ? peerWindowIds : []);
+    broadcastMeshState();
+    return buildMeshState(selfId);
+  });
+
+  ipcMain.handle('terminal-link:set-label', async (event, label = '') => {
+    const selfWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!selfWindow || selfWindow.isDestroyed()) {
+      return { success: false, message: 'Terminal window context unavailable.' };
+    }
+    const selfId = Number(selfWindow.id);
+    const normalized = String(label || '').trim().slice(0, 80);
+    if (normalized) terminalIdentityLabels.set(selfId, normalized);
+    else terminalIdentityLabels.delete(selfId);
+    broadcastMeshState();
+    return buildMeshState(selfId);
+  });
+
   ipcMain.handle('terminal-link:relay-message', async (event, payload = {}) => {
     const selfWindow = BrowserWindow.fromWebContents(event.sender);
     if (!selfWindow || selfWindow.isDestroyed()) {
@@ -256,6 +347,9 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     try {
       peerWindow.webContents.send('terminal-link:inbound', {
         text,
+        speakerRole: String(payload?.speakerRole || 'assistant').trim().toLowerCase() || 'assistant',
+        senderLabel: String(payload?.senderLabel || '').trim().slice(0, 80),
+        modelName: String(payload?.modelName || '').trim() || null,
         fromWindowId: selfId,
         from: parseTerminalWindowMeta(selfWindow),
         at: new Date().toISOString()
@@ -264,6 +358,52 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     } catch (err) {
       return { success: false, message: err?.message || 'Failed to relay message.' };
     }
+  });
+
+  ipcMain.handle('terminal-link:relay-group-message', async (event, payload = {}) => {
+    const selfWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!selfWindow || selfWindow.isDestroyed()) {
+      return { success: false, message: 'Terminal window context unavailable.' };
+    }
+    const selfId = Number(selfWindow.id);
+    const groupSet = terminalMeshGroupLinks.get(selfId);
+    if (!(groupSet instanceof Set) || groupSet.size === 0) {
+      return { success: false, message: 'No group peers selected.' };
+    }
+    const text = String(payload?.text || '').trim();
+    if (!text) {
+      return { success: false, message: 'Empty relay message.' };
+    }
+    const targets = [];
+    for (const peerId of groupSet.values()) {
+      const value = Number(peerId || 0);
+      if (!value || value === selfId) continue;
+      const peerWindow = BrowserWindow.fromId(value);
+      if (!peerWindow || peerWindow.isDestroyed() || !isTerminalWindow(peerWindow)) continue;
+      targets.push(peerWindow);
+    }
+    if (targets.length === 0) {
+      return { success: false, message: 'Group peers are no longer available.' };
+    }
+    let delivered = 0;
+    for (const peerWindow of targets) {
+      try {
+        peerWindow.webContents.send('terminal-link:inbound', {
+          text,
+          kind: 'group',
+          speakerRole: String(payload?.speakerRole || 'assistant').trim().toLowerCase() || 'assistant',
+          senderLabel: String(payload?.senderLabel || '').trim().slice(0, 80),
+          modelName: String(payload?.modelName || '').trim() || null,
+          fromWindowId: selfId,
+          from: parseTerminalWindowMeta(selfWindow),
+          at: new Date().toISOString()
+        });
+        delivered += 1;
+      } catch (_) {
+        // best effort
+      }
+    }
+    return { success: delivered > 0, fromWindowId: selfId, delivered };
   });
 
   ipcMain.handle('gpu-monitor-start', (event) => {

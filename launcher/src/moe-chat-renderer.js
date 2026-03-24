@@ -8,6 +8,8 @@ const MoEChat = (function() {
   let latestEsp32TelemetryAt = '';
   let voiceController = null;
   let speechEngine = null;
+  let userFloorPending = false;
+  let userFloorHold = false;
   const sessionOps = window.MoeChatSessionOps || null;
   const sessionController = sessionOps?.createController
     ? sessionOps.createController()
@@ -85,6 +87,7 @@ const MoEChat = (function() {
       clearAttachBtn: document.getElementById('clear-attach-btn'),
       voiceBtn: document.getElementById('voice-btn'),
       voiceModeBtn: document.getElementById('voice-mode-btn'),
+      floorBtn: document.getElementById('floor-btn'),
       statusBadge: document.getElementById('status-badge'),
       kvmSelect: document.getElementById('kvm-select'),
       kvmIndicator: document.getElementById('kvm-indicator'),
@@ -120,6 +123,7 @@ const MoEChat = (function() {
         sendMessage();
       }
     });
+    elements.floorBtn?.addEventListener('click', handleUserFloorRequest);
     elements.kvmSelect.addEventListener('change', updateKvmSelection);
     window.addEventListener('focus', () => {
       if (!elements.input.disabled) {
@@ -129,6 +133,7 @@ const MoEChat = (function() {
     window.addEventListener('beforeunload', () => {
       stopEsp32TelemetryPolling();
     });
+    updateFloorButton();
   }
 
   function setInputBusyState(busy) {
@@ -136,6 +141,47 @@ const MoEChat = (function() {
     elements.input.disabled = !!busy;
     elements.sendBtn.disabled = !!busy;
     if (elements.attachBtn) elements.attachBtn.disabled = !!busy;
+    updateFloorButton();
+  }
+
+  function updateFloorButton() {
+    const btn = elements.floorBtn;
+    if (!btn) return;
+    btn.classList.remove('active', 'pending');
+    if (userFloorPending) {
+      btn.classList.add('pending');
+      btn.textContent = 'Floor Pending';
+      return;
+    }
+    if (userFloorHold) {
+      btn.classList.add('active');
+      btn.textContent = 'User Floor On';
+      return;
+    }
+    btn.textContent = 'Request Floor';
+  }
+
+  function handleUserFloorRequest() {
+    if (isProcessing) {
+      userFloorPending = !userFloorPending;
+      if (userFloorPending) {
+        addSystemMessage('User floor requested. Current turn will finish; auto-send will pause afterward.');
+      } else {
+        addSystemMessage('User floor request canceled for this turn.');
+      }
+      updateFloorButton();
+      return;
+    }
+    userFloorHold = !userFloorHold;
+    addSystemMessage(
+      userFloorHold
+        ? 'User floor active. Auto-send is paused until you release floor or send manually.'
+        : 'User floor released. Auto-send is enabled.'
+    );
+    if (userFloorHold && String(elements.statusBadge?.className || '').includes('connected')) {
+      setStatus('connected', 'Ready • User Floor');
+    }
+    updateFloorButton();
   }
 
   function updateAttachedFileUi() {
@@ -267,7 +313,12 @@ const MoEChat = (function() {
   /**
    * Send message through pipeline or to direct agent
    */
-  async function sendMessage() {
+  async function sendMessage(options = {}) {
+    const source = String(options?.source || 'manual').trim().toLowerCase();
+    const autoTriggered = source === 'auto';
+    if (autoTriggered && (userFloorHold || userFloorPending)) {
+      return;
+    }
     const text = elements.input.value.trim();
     const controlIntent = isEsp32ControlIntent(text);
     const uploadIntent = isEsp32UploadIntent(text);
@@ -276,6 +327,10 @@ const MoEChat = (function() {
     }
     const outboundText = buildOutboundMessage(text);
     if (!outboundText || isProcessing) return;
+    if (!autoTriggered && userFloorHold) {
+      userFloorHold = false;
+      updateFloorButton();
+    }
     sessionController?.addPromptEntry?.(text);
     
     setInputBusyState(true);
@@ -336,9 +391,18 @@ const MoEChat = (function() {
       addMessage('error', err.message);
       setStatus('error', 'Error');
     } finally {
+      if (userFloorPending) {
+        userFloorPending = false;
+        userFloorHold = true;
+        addSystemMessage('Current turn finished. User floor is now active.');
+        if (String(elements.statusBadge?.className || '').includes('connected')) {
+          setStatus('connected', 'Ready • User Floor');
+        }
+      }
       stopActivityIndicator();
       setInputBusyState(false);
       elements.input.focus();
+      updateFloorButton();
     }
   }
 

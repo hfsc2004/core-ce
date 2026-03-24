@@ -12,6 +12,8 @@
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => null;
     const setCurrentModel = typeof deps?.setCurrentModel === 'function' ? deps.setCurrentModel : (() => {});
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
+    const getTerminalWindowId = typeof deps?.getTerminalWindowId === 'function' ? deps.getTerminalWindowId : () => null;
+    const getTerminalIdentityLabel = typeof deps?.getTerminalIdentityLabel === 'function' ? deps.getTerminalIdentityLabel : () => '';
     const setTerminalPort = typeof deps?.setTerminalPort === 'function' ? deps.setTerminalPort : (() => {});
     const getProvider = typeof deps?.getProvider === 'function' ? deps.getProvider : () => 'ollama';
     const setProvider = typeof deps?.setProvider === 'function' ? deps.setProvider : (() => {});
@@ -360,6 +362,8 @@
       addSystemMessage('  /models - List available Ollama models');
       addSystemMessage('  /system <prompt> - Set system prompt');
       addSystemMessage('  /temp <0.0-2.0> - Set temperature (default 0.7)');
+      addSystemMessage('  /local <message> - Send to this terminal only (no mesh relay)');
+      addSystemMessage('  /room [on|off|show] - Enable/disable/show multi-agent room rules prompt');
       addSystemMessage('  /show - Show current settings');
       addSystemMessage('  /stop - Stop current generation');
       addSystemMessage('  /switch <model> - Switch to different model');
@@ -384,6 +388,52 @@
         persistTerminalModelConfig();
         addSystemMessage('✅ System prompt cleared');
       }
+    }
+
+    function buildRoomRulesPrompt() {
+      const windowId = Number(getTerminalWindowId() || 0);
+      const label = String(getTerminalIdentityLabel() || '').trim();
+      const model = String(getCurrentModel() || 'unknown').trim();
+      const identity = label
+        ? `${label} at Terminal #${windowId || '?'}`
+        : `Terminal #${windowId || '?'} (${model})`;
+      return [
+        `You are ${identity} in a multi-model room.`,
+        'Communication rules:',
+        '1) Messages prefixed with "[From ...]" are incoming statements from another participant.',
+        '2) If a message indicates "user at terminal #X", treat it as user speech from that terminal.',
+        '3) Keep replies concise and role-consistent with your terminal identity.',
+        '4) Do not claim to be other terminals.',
+        '5) If the assistant output begins with "{local}", treat it as private to local user and do not frame it as room-wide.',
+        '6) When uncertain, ask a clarifying question rather than hallucinating room state.'
+      ].join('\n');
+    }
+
+    function handleRoomCommand(argsRaw) {
+      const mode = String(argsRaw || '').trim().toLowerCase();
+      if (!mode || mode === 'on') {
+        const prompt = buildRoomRulesPrompt();
+        setSystemPromptValue(prompt);
+        persistTerminalModelConfig();
+        addSystemMessage('✅ Multi-agent room rules enabled for this terminal.');
+        return;
+      }
+      if (mode === 'off') {
+        setSystemPromptValue(null);
+        persistTerminalModelConfig();
+        addSystemMessage('✅ Multi-agent room rules disabled (system prompt cleared).');
+        return;
+      }
+      if (mode === 'show') {
+        const sp = String(getSystemPrompt() || '').trim();
+        if (!sp) {
+          addSystemMessage('No system prompt is currently set.');
+          return;
+        }
+        addSystemMessage(`System prompt:\n${sp}`);
+        return;
+      }
+      addErrorMessage('Usage: /room [on|off|show]');
     }
 
     function setTemperature(tempStr) {
@@ -462,6 +512,9 @@
           break;
         case '/temp':
           setTemperature(args);
+          break;
+        case '/room':
+          handleRoomCommand(args);
           break;
         case '/show':
           showSettings();

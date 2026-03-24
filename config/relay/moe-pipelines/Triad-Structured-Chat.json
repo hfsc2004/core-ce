@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "lastModified": "2026-03-24T21:59:08.729Z",
+  "items": [
+    {
+      "enabled": true,
+      "provider": "llama.cpp",
+      "modelId": "gemma-3-4b-it-mm",
+      "modelName": "Gemma 3:4B-IT-MM",
+      "systemPrompt": "You are Moderator. Keep the conversation orderly and concise.\\nOutput exactly:\\nTOPIC: <one sentence>\\nUSER_INTENT: <one sentence>\\nTOKEN_GRANTED: Builder\\nNo extra commentary.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Builder"
+        }
+      ],
+      "groups": [],
+      "rlmAssist": false,
+      "rlmAttachmentSessionId": "moe-agent-agent-triad-moderator",
+      "tools": [],
+      "id": "agent-triad-moderator",
+      "type": "agent",
+      "name": "Moderator",
+      "collectionKey": "vision-multimodal",
+      "filename": "gemma-3-4b-it-mm.gguf",
+      "projectorFilename": "mmproj-F16.gguf",
+      "rlmAttachmentBucketId": "relay-agent-agent-triad-moderator",
+      "rlmSharedAttachmentBucketId": "relay-shared-default",
+      "rlmSharedAttachmentSessionId": "moe-shared"
+    },
+    {
+      "enabled": true,
+      "provider": "llama.cpp",
+      "modelId": "qwen3-1-7b-i1-gguf",
+      "modelName": "Qwen3-1.7B-i1-Mradermacher",
+      "systemPrompt": "You are Builder. Produce a practical answer draft only.\\nOutput exactly:\\nDRAFT:\\n- <point 1>\\n- <point 2>\\n- <point 3>\\nOPEN_QUESTION: <single question if needed, otherwise 'none'>\\nTOKEN_GRANTED: Reviewer\\nNo extra commentary.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Reviewer"
+        }
+      ],
+      "groups": [],
+      "rlmAssist": false,
+      "rlmAttachmentSessionId": "moe-agent-agent-triad-builder",
+      "tools": [],
+      "id": "agent-triad-builder",
+      "type": "agent",
+      "name": "Builder",
+      "collectionKey": "starter-fast",
+      "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
+      "projectorFilename": null,
+      "rlmAttachmentBucketId": "relay-agent-agent-triad-builder",
+      "rlmSharedAttachmentBucketId": "relay-shared-default",
+      "rlmSharedAttachmentSessionId": "moe-shared"
+    },
+    {
+      "enabled": true,
+      "provider": "llama.cpp",
+      "modelId": "qwen2-5-coder-1-5b-instruct-thomas_q4_k_m",
+      "modelName": "Qwen2.5-Coder-1.5B-Instruct (ThomasBaruzier Q4_K_M)",
+      "systemPrompt": "You are Reviewer. Improve correctness and clarity; keep it short.\\nOutput exactly:\\nREVIEW: <one short paragraph>\\nFINAL:\\n- <final point 1>\\n- <final point 2>\\n- <final point 3>\\nNEXT_PROMPT_SUGGESTION: <one sentence for user's next turn>\\nTOKEN_GRANTED: end\\nNo extra commentary.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "end"
+        }
+      ],
+      "groups": [],
+      "rlmAssist": false,
+      "rlmAttachmentSessionId": "moe-agent-agent-triad-reviewer",
+      "tools": [],
+      "id": "agent-triad-reviewer",
+      "type": "agent",
+      "name": "Reviewer",
+      "collectionKey": "coding-agents",
+      "filename": "Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+      "projectorFilename": null,
+      "rlmAttachmentBucketId": "relay-agent-agent-triad-reviewer",
+      "rlmSharedAttachmentBucketId": "relay-shared-default",
+      "rlmSharedAttachmentSessionId": "moe-shared"
+    },
+    {
+      "enabled": true,
+      "mode": "direct",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-triad-moderator",
+      "toAgentId": "agent-triad-builder",
+      "groupId": "",
+      "when": "always",
+      "matchRule": "",
+      "flowCondition": "always",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "label": "Moderator -> Builder",
+      "id": "channel-triad-1",
+      "type": "channel"
+    },
+    {
+      "enabled": true,
+      "mode": "direct",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-triad-builder",
+      "toAgentId": "agent-triad-reviewer",
+      "groupId": "",
+      "when": "always",
+      "matchRule": "",
+      "flowCondition": "always",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "label": "Builder -> Reviewer",
+      "id": "channel-triad-2",
+      "type": "channel"
+    }
+  ],
+  "endpointRegistry": {
+    "enabled": false,
+    "includeLocalAgents": true,
+    "selection": "priority",
+    "defaultTimeoutMs": 120000,
+    "maxConsecutiveFailures": 2,
+    "cooldownMs": 20000,
+    "agentRoleMap": {},
+    "workers": [],
+    "roles": {}
+  }
+}
