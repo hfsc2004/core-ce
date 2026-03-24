@@ -67,7 +67,7 @@ window.createMoeChatVoiceActivityOps = function createMoeChatVoiceActivityOps(ct
         if (ctx.isProcessing?.()) return;
         const pending = String(elements.input?.value || '').trim();
         if (!pending) return;
-        ctx.sendMessage?.();
+        ctx.sendMessage?.({ source: 'auto' });
       },
       onStatus: (text) => ctx.addSystemMessage?.(text),
       onError: (text) => ctx.addSystemMessage?.(`Voice: ${text}`),

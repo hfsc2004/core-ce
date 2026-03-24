@@ -177,6 +177,9 @@
             if (sanitized !== activeStream.content) {
               activeStream.content = sanitized;
             }
+            if (activeStream.localOnly === true && !String(activeStream.content || '').startsWith('{local} ')) {
+              activeStream.content = `{local} ${String(activeStream.content || '').trim()}`;
+            }
 
             if (activeStream.contentDiv && activeStream.content) {
               finalizeStreamingMessage(activeStream.contentDiv, activeStream.content);
@@ -203,7 +206,8 @@
 
             if (activeStream.userMessage && activeStream.content) {
               appendConversationPair(activeStream.userMessage, activeStream.content, {
-                skipTts: true
+                skipTts: true,
+                skipRelay: activeStream.localOnly === true
               });
             }
 

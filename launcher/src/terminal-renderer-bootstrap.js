@@ -55,6 +55,8 @@
           getCurrentModel: ctx.getCurrentModel,
           setCurrentModel: ctx.setCurrentModel,
           getTerminalPort: ctx.getTerminalPort,
+          getTerminalWindowId: ctx.getTerminalWindowId,
+          getTerminalIdentityLabel: ctx.getTerminalIdentityLabel,
           getProvider: ctx.getProvider,
           setProvider: ctx.setProvider,
           getProviderBaseUrl: ctx.getProviderBaseUrl,
@@ -313,7 +315,7 @@
         ctx.addSystemMessage(`📋 System prompt: ${sp.substring(0, 100)}${sp.length > 100 ? '...' : ''}`);
       }
       ctx.addSystemMessage('Type your message and press Enter or click Send.');
-      ctx.addSystemMessage('Commands: /help, /clear, /models, /system, /temp, /save, /load, /switch, /show, /port, /attach, /attachments, /detach, /clearattachments');
+      ctx.addSystemMessage('Commands: /help, /clear, /models, /system, /temp, /local, /room, /save, /load, /switch, /show, /port, /attach, /attachments, /detach, /clearattachments');
 
       ctx.loadSessionMemoryPreferences().then(() => ctx.loadInputRecallHistory());
       setTimeout(() => ctx.verifyGPUUsage(), 3000);

@@ -335,8 +335,18 @@
 
     async function sendMessage() {
       const userInput = getUserInput();
-      const message = String(userInput?.value || '').trim();
+      let message = String(userInput?.value || '').trim();
       if (!message) return;
+      let localOnly = false;
+      if (/^\/local(?:\s+|$)/i.test(message)) {
+        localOnly = true;
+        message = message.replace(/^\/local\s*/i, '').trim();
+        if (!message) {
+          addErrorMessage('Usage: /local <message>');
+          if (userInput) userInput.value = '';
+          return;
+        }
+      }
 
       addInputRecallEntry(message);
 
@@ -353,6 +363,9 @@
 
       setWaitingState(true);
       setThinkingStatusText('Preparing request');
+      if (localOnly) {
+        addSystemMessage('Local-only turn: response will stay in this terminal.');
+      }
       addMessage('user', message);
 
       const messages = [];
@@ -392,11 +405,14 @@
           const result = await streamViaProvider(providerRuntime, messages);
           if (result.success) {
             const assistantMessage = sanitizeQwenSelfDialogue(result.message || '');
+            const finalAssistantMessage = localOnly
+              ? `{local} ${assistantMessage}`
+              : assistantMessage;
             const active = getActiveStream();
             if (active && active.contentDiv) {
-              finalizeStreamingMessage(active.contentDiv, assistantMessage);
+              finalizeStreamingMessage(active.contentDiv, finalAssistantMessage);
             }
-            appendConversationPair(message, assistantMessage);
+            appendConversationPair(message, finalAssistantMessage, { skipRelay: localOnly });
           } else if (result.stopped) {
             addSystemMessage('⏹️ Generation stopped.');
           } else {
@@ -433,8 +449,9 @@
               }
             });
             if (rlmResult && rlmResult.handled) {
-              addMessage('assistant', rlmResult.answer);
-              appendConversationPair(message, rlmResult.answer);
+              const rlmAnswer = localOnly ? `{local} ${rlmResult.answer}` : rlmResult.answer;
+              addMessage('assistant', rlmAnswer);
+              appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
               const cov = rlmResult?.toolResult?.output?.coverage;
               const coverageNote = cov && Number.isFinite(cov.processedRatio)
                 ? ` coverage=${Math.round(cov.processedRatio * 100)}% (${cov.processedChunks}/${cov.totalChunks} chunks)`
@@ -475,8 +492,9 @@
             try {
               const rlmResult = await rlm.runSingleStep(message, getConversationHistory(), getSystemPrompt() || '');
               if (rlmResult && rlmResult.handled) {
-                addMessage('assistant', rlmResult.answer);
-                appendConversationPair(message, rlmResult.answer);
+                const rlmAnswer = localOnly ? `{local} ${rlmResult.answer}` : rlmResult.answer;
+                addMessage('assistant', rlmAnswer);
+                appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
                 const cov = rlmResult?.toolResult?.output?.coverage;
                 const coverageNote = cov && Number.isFinite(cov.processedRatio)
                   ? ` coverage=${Math.round(cov.processedRatio * 100)}% (${cov.processedChunks}/${cov.totalChunks} chunks)`
@@ -526,6 +544,7 @@
           content: '',
           contentDiv: assistantContentDiv,
           userMessage: message,
+          localOnly,
           port: getTerminalPort(),
           ttsPreviewSpoken: false
         });
@@ -568,8 +587,11 @@
 
         if (result.success && result.response && result.response.message) {
           const assistantMessage = sanitizeQwenSelfDialogue(result.response.message.content);
-          addMessage('assistant', assistantMessage);
-          appendConversationPair(message, assistantMessage);
+          const finalAssistantMessage = localOnly
+            ? `{local} ${assistantMessage}`
+            : assistantMessage;
+          addMessage('assistant', finalAssistantMessage);
+          appendConversationPair(message, finalAssistantMessage, { skipRelay: localOnly });
         } else {
           addErrorMessage('Failed to get response from Ollama');
         }

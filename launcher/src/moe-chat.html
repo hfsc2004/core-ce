@@ -428,7 +428,8 @@
 
     #attach-btn,
     #voice-btn,
-    #voice-mode-btn {
+    #voice-mode-btn,
+    #floor-btn {
       display: inline-flex;
       align-items: center;
       gap: 5px;
@@ -446,16 +447,30 @@
 
     #attach-btn:hover:not(:disabled),
     #voice-btn:hover:not(:disabled),
-    #voice-mode-btn:hover:not(:disabled) {
+    #voice-mode-btn:hover:not(:disabled),
+    #floor-btn:hover:not(:disabled) {
       border-color: rgba(88, 166, 255, 0.35);
       color: var(--pc-text);
     }
 
     #attach-btn:disabled,
     #voice-btn:disabled,
-    #voice-mode-btn:disabled {
+    #voice-mode-btn:disabled,
+    #floor-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
+    }
+
+    #floor-btn.active {
+      border-color: rgba(88, 166, 255, 0.5);
+      background: rgba(88, 166, 255, 0.14);
+      color: #d8ebff;
+    }
+
+    #floor-btn.pending {
+      border-color: rgba(255, 193, 7, 0.5);
+      background: rgba(255, 193, 7, 0.14);
+      color: #ffe08c;
     }
 
     #voice-btn.recording {
@@ -660,6 +675,7 @@
     <button id="clear-attach-btn" title="Clear attached file">Clear</button>
     <button id="voice-btn" disabled title="Voice-to-text (right-click to switch provider)">Voice Off</button>
     <button id="voice-mode-btn" disabled title="Voice mode: PTT (manual Send)">PTT</button>
+    <button id="floor-btn" title="Let current turn finish, then pause auto sends so you can speak first">Request Floor</button>
     <button id="send-btn" disabled>Send</button>
   </div>
 
