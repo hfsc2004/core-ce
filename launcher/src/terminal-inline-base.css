@@ -315,9 +315,11 @@ body {
 #config-panel {
   position: fixed;
   top: 69px;
+  bottom: 35px;
   left: 0;
   width: 520px;
-  max-height: calc(100vh - 104px);
+  height: auto;
+  max-height: none;
   overflow-y: auto;
   background: var(--term-bg-secondary);
   border: 1px solid rgba(88, 166, 255, 0.2);
@@ -374,6 +376,12 @@ body {
   display: flex;
   gap: 8px;
   margin-top: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--term-bg-secondary);
+  padding-top: 6px;
+  border-top: 1px solid rgba(88, 166, 255, 0.14);
 }
 
 .config-panel-actions button {

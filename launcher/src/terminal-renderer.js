@@ -13,6 +13,11 @@
   let activeStream = null;
   let streamStopRequested = false;
   let temperature = 0.7;
+  let provider = 'ollama';
+  let providerBaseUrl = '';
+  let providerApiKey = '';
+  let providerModelId = '';
+  let llamaCppModelPath = '';
   let currentModel = null;
   let terminalPort = 52434;
   let attachmentSessionId = 'terminal-default';
@@ -50,6 +55,7 @@
   let top_p = null;
   let top_k = null;
   let num_ctx = null;
+  let num_gpu = null;
   let num_predict = null;
   let repeat_penalty = null;
   let seed = null;
@@ -72,6 +78,7 @@
   let speechEngineProfileKey = '';
   let speechChunkProfile = { preview: 140, segment: 220, tail: 240 };
   let terminalWindowId = null;
+  const GLOBAL_PROVIDER_PREFS_KEY = 'psf_terminal_provider_defaults';
   let meshStateUnsubscribe = null;
   let meshRefreshTimer = null;
   let meshSyncInProgress = false;
@@ -326,18 +333,34 @@
     function persistTerminalModelConfig() {
       if (!prefs || typeof prefs.saveModelConfig !== 'function') return;
       const modelKey = String(currentModel || '').trim();
-      if (!modelKey) return;
-      prefs.saveModelConfig(modelKey, {
+      const payload = {
+        provider,
+        provider_base_url: providerBaseUrl,
+        provider_api_key: providerApiKey,
+        provider_model_id: providerModelId,
+        llama_cpp_model_path: llamaCppModelPath,
         systemPrompt,
         temperature,
         top_p,
         top_k,
         num_ctx,
+        num_gpu,
         num_predict,
         repeat_penalty,
         seed,
         stop: stopSequences
-      });
+      };
+      try {
+        localStorage.setItem(GLOBAL_PROVIDER_PREFS_KEY, JSON.stringify({
+          provider: payload.provider,
+          provider_base_url: payload.provider_base_url,
+          provider_api_key: payload.provider_api_key,
+          provider_model_id: payload.provider_model_id,
+          llama_cpp_model_path: payload.llama_cpp_model_path
+        }));
+      } catch (_) {}
+      if (!modelKey) return;
+      prefs.saveModelConfig(modelKey, payload);
     }
     if (!speechController && window.TerminalSpeech && typeof window.TerminalSpeech.createTerminalSpeechController === 'function') {
       speechController = window.TerminalSpeech.createTerminalSpeechController({
@@ -434,12 +457,24 @@
       getSystemPrompt: () => systemPrompt,
       setTemperature: (value) => { temperature = value; },
       getTemperature: () => temperature,
+      setProvider: (value) => { provider = String(value || 'ollama').trim().toLowerCase() || 'ollama'; },
+      getProvider: () => provider,
+      setProviderBaseUrl: (value) => { providerBaseUrl = String(value || '').trim(); },
+      getProviderBaseUrl: () => providerBaseUrl,
+      setProviderApiKey: (value) => { providerApiKey = String(value || ''); },
+      getProviderApiKey: () => providerApiKey,
+      setProviderModelId: (value) => { providerModelId = String(value || '').trim(); },
+      getProviderModelId: () => providerModelId,
+      setLlamaCppModelPath: (value) => { llamaCppModelPath = String(value || '').trim(); },
+      getLlamaCppModelPath: () => llamaCppModelPath,
       setTopP: (value) => { top_p = value; },
       getTopP: () => top_p,
       setTopK: (value) => { top_k = value; },
       getTopK: () => top_k,
       setNumCtx: (value) => { num_ctx = value; },
       getNumCtx: () => num_ctx,
+      setNumGpu: (value) => { num_gpu = value; },
+      getNumGpu: () => num_gpu,
       setNumPredict: (value) => { num_predict = value; },
       getNumPredict: () => num_predict,
       setRepeatPenalty: (value) => { repeat_penalty = value; },
@@ -552,6 +587,31 @@
       }
     });
 
+    if (prefs && typeof prefs.loadModelConfig === 'function') {
+      try {
+        const globalRaw = localStorage.getItem(GLOBAL_PROVIDER_PREFS_KEY);
+        const globalPrefs = globalRaw ? JSON.parse(globalRaw) : null;
+        if (globalPrefs && typeof globalPrefs === 'object') {
+          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider')) terminalConfig.provider = String(globalPrefs.provider || terminalConfig.provider || 'ollama');
+          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_base_url')) terminalConfig.baseUrl = String(globalPrefs.provider_base_url || terminalConfig.baseUrl || '');
+          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_api_key')) terminalConfig.apiKey = String(globalPrefs.provider_api_key || terminalConfig.apiKey || '');
+          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_model_id')) terminalConfig.providerModel = String(globalPrefs.provider_model_id || terminalConfig.providerModel || '');
+          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'llama_cpp_model_path')) terminalConfig.llamaCppModelPath = String(globalPrefs.llama_cpp_model_path || terminalConfig.llamaCppModelPath || '');
+        }
+      } catch (_) {}
+      const preKey = String(terminalConfig?.modelName || '').trim();
+      if (preKey) {
+        const preSaved = prefs.loadModelConfig(preKey);
+        if (preSaved && typeof preSaved === 'object') {
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'provider')) terminalConfig.provider = String(preSaved.provider || terminalConfig.provider || 'ollama');
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'provider_base_url')) terminalConfig.baseUrl = String(preSaved.provider_base_url || terminalConfig.baseUrl || '');
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'provider_api_key')) terminalConfig.apiKey = String(preSaved.provider_api_key || terminalConfig.apiKey || '');
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'provider_model_id')) terminalConfig.providerModel = String(preSaved.provider_model_id || terminalConfig.providerModel || '');
+          if (Object.prototype.hasOwnProperty.call(preSaved, 'llama_cpp_model_path')) terminalConfig.llamaCppModelPath = String(preSaved.llama_cpp_model_path || terminalConfig.llamaCppModelPath || '');
+        }
+      }
+    }
+
     initController.initializeTerminal(terminalConfig, initOptions);
     terminalWindowId = Number(terminalConfig?.terminalWindowId || 0) || null;
     initializeTerminalMesh();
@@ -559,10 +619,16 @@
       const savedModelCfg = prefs.loadModelConfig(currentModel);
       if (savedModelCfg && typeof savedModelCfg === 'object') {
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'systemPrompt')) systemPrompt = savedModelCfg.systemPrompt;
+        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'provider')) provider = String(savedModelCfg.provider || 'ollama').trim().toLowerCase() || 'ollama';
+        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'provider_base_url')) providerBaseUrl = String(savedModelCfg.provider_base_url || '').trim();
+        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'provider_api_key')) providerApiKey = String(savedModelCfg.provider_api_key || '');
+        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'provider_model_id')) providerModelId = String(savedModelCfg.provider_model_id || '').trim();
+        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'llama_cpp_model_path')) llamaCppModelPath = String(savedModelCfg.llama_cpp_model_path || '').trim();
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'temperature')) temperature = savedModelCfg.temperature;
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'top_p')) top_p = savedModelCfg.top_p;
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'top_k')) top_k = savedModelCfg.top_k;
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'num_ctx')) num_ctx = savedModelCfg.num_ctx;
+        if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'num_gpu')) num_gpu = savedModelCfg.num_gpu;
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'num_predict')) num_predict = savedModelCfg.num_predict;
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'repeat_penalty')) repeat_penalty = savedModelCfg.repeat_penalty;
         if (Object.prototype.hasOwnProperty.call(savedModelCfg, 'seed')) seed = savedModelCfg.seed;

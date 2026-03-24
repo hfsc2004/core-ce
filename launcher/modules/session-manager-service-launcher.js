@@ -216,6 +216,11 @@ function createSessionServiceLauncher(deps = {}) {
         metadata: {
           backend: 'llama-cpp',
           modelPath: startResult.modelPath || options.modelPath || null,
+          gpuLayers: Number.isFinite(Number(options.gpuLayers)) ? Number(options.gpuLayers) : null,
+          forceCpu: options.forceCpu === true,
+          splitMode: options.splitMode || null,
+          mainGpuIndex: Number.isFinite(Number(options.mainGpuIndex)) ? Number(options.mainGpuIndex) : null,
+          cudaVisibleDevices: options.cudaVisibleDevices || null,
           serviceType: serviceType,
           startedVia: 'startLlamaCppForService'
         }

@@ -10,6 +10,16 @@
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => null;
     const setCurrentModel = typeof deps?.setCurrentModel === 'function' ? deps.setCurrentModel : (() => {});
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
+    const getProvider = typeof deps?.getProvider === 'function' ? deps.getProvider : () => 'ollama';
+    const setProvider = typeof deps?.setProvider === 'function' ? deps.setProvider : (() => {});
+    const getProviderBaseUrl = typeof deps?.getProviderBaseUrl === 'function' ? deps.getProviderBaseUrl : () => '';
+    const setProviderBaseUrl = typeof deps?.setProviderBaseUrl === 'function' ? deps.setProviderBaseUrl : (() => {});
+    const getProviderApiKey = typeof deps?.getProviderApiKey === 'function' ? deps.getProviderApiKey : () => '';
+    const setProviderApiKey = typeof deps?.setProviderApiKey === 'function' ? deps.setProviderApiKey : (() => {});
+    const getProviderModelId = typeof deps?.getProviderModelId === 'function' ? deps.getProviderModelId : () => '';
+    const setProviderModelId = typeof deps?.setProviderModelId === 'function' ? deps.setProviderModelId : (() => {});
+    const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
+    const setLlamaCppModelPath = typeof deps?.setLlamaCppModelPath === 'function' ? deps.setLlamaCppModelPath : (() => {});
     const getSystemPrompt = typeof deps?.getSystemPrompt === 'function' ? deps.getSystemPrompt : () => null;
     const setSystemPrompt = typeof deps?.setSystemPrompt === 'function' ? deps.setSystemPrompt : (() => {});
     const getTemperature = typeof deps?.getTemperature === 'function' ? deps.getTemperature : () => 0.7;
@@ -20,6 +30,8 @@
     const setTopK = typeof deps?.setTopK === 'function' ? deps.setTopK : (() => {});
     const getNumCtx = typeof deps?.getNumCtx === 'function' ? deps.getNumCtx : () => null;
     const setNumCtx = typeof deps?.setNumCtx === 'function' ? deps.setNumCtx : (() => {});
+    const getNumGpu = typeof deps?.getNumGpu === 'function' ? deps.getNumGpu : () => null;
+    const setNumGpu = typeof deps?.setNumGpu === 'function' ? deps.setNumGpu : (() => {});
     const getNumPredict = typeof deps?.getNumPredict === 'function' ? deps.getNumPredict : () => null;
     const setNumPredict = typeof deps?.setNumPredict === 'function' ? deps.setNumPredict : (() => {});
     const getRepeatPenalty = typeof deps?.getRepeatPenalty === 'function' ? deps.getRepeatPenalty : () => null;
@@ -97,11 +109,17 @@
         const data = {
           model: getCurrentModel(),
           port: getTerminalPort(),
+          provider: getProvider(),
+          provider_base_url: getProviderBaseUrl(),
+          provider_api_key: getProviderApiKey(),
+          provider_model_id: getProviderModelId(),
+          llama_cpp_model_path: getLlamaCppModelPath(),
           systemPrompt: getSystemPrompt(),
           temperature: getTemperature(),
           top_p: getTopP(),
           top_k: getTopK(),
           num_ctx: getNumCtx(),
+          num_gpu: getNumGpu(),
           num_predict: getNumPredict(),
           repeat_penalty: getRepeatPenalty(),
           seed: getSeed(),
@@ -143,11 +161,17 @@
           return;
         }
         setCurrentModel(data.model || getCurrentModel());
+        setProvider(data.provider || 'ollama');
+        setProviderBaseUrl(data.provider_base_url || '');
+        setProviderApiKey(data.provider_api_key || '');
+        setProviderModelId(data.provider_model_id || '');
+        setLlamaCppModelPath(data.llama_cpp_model_path || '');
         setSystemPrompt(data.systemPrompt || null);
         setTemperature(data.temperature || 0.7);
         setTopP(data.top_p !== undefined ? data.top_p : null);
         setTopK(data.top_k !== undefined ? data.top_k : null);
         setNumCtx(data.num_ctx !== undefined ? data.num_ctx : null);
+        setNumGpu(data.num_gpu !== undefined ? data.num_gpu : null);
         setNumPredict(data.num_predict !== undefined ? data.num_predict : null);
         setRepeatPenalty(data.repeat_penalty !== undefined ? data.repeat_penalty : null);
         setSeed(data.seed !== undefined ? data.seed : null);

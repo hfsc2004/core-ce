@@ -14,6 +14,11 @@
       ctx.setCurrentModel((terminalConfig.modelName && terminalConfig.modelName !== 'unknown') ? terminalConfig.modelName : null);
       ctx.setTerminalPort(terminalConfig.port);
       ctx.setAttachmentSessionId(`terminal-${terminalConfig.port}`);
+      ctx.setProvider(terminalConfig.provider || 'ollama');
+      ctx.setProviderBaseUrl(terminalConfig.baseUrl || '');
+      ctx.setProviderApiKey(terminalConfig.apiKey || '');
+      ctx.setProviderModelId(terminalConfig.providerModel || '');
+      ctx.setLlamaCppModelPath(terminalConfig.llamaCppModelPath || '');
 
       if (terminalConfig.systemPrompt) {
         ctx.setSystemPrompt(terminalConfig.systemPrompt);
@@ -26,6 +31,7 @@
       if (terminalConfig.top_p !== null) ctx.setTopP(terminalConfig.top_p);
       if (terminalConfig.top_k !== null) ctx.setTopK(terminalConfig.top_k);
       if (terminalConfig.num_ctx !== null) ctx.setNumCtx(terminalConfig.num_ctx);
+      if (terminalConfig.num_gpu !== null) ctx.setNumGpu(terminalConfig.num_gpu);
       if (terminalConfig.num_predict !== null) ctx.setNumPredict(terminalConfig.num_predict);
       if (terminalConfig.repeat_penalty !== null) ctx.setRepeatPenalty(terminalConfig.repeat_penalty);
       if (terminalConfig.seed !== null) ctx.setSeed(terminalConfig.seed);
@@ -55,11 +61,17 @@
         const runtimeController = window.TerminalRuntime.createRuntimeController({
           getCurrentModel: ctx.getCurrentModel,
           getTerminalPort: ctx.getTerminalPort,
+          getProvider: ctx.getProvider,
+          getProviderBaseUrl: ctx.getProviderBaseUrl,
+          getProviderApiKey: ctx.getProviderApiKey,
+          getProviderModelId: ctx.getProviderModelId,
+          getLlamaCppModelPath: ctx.getLlamaCppModelPath,
           getConfig: ctx.getConfig,
           getTemperature: ctx.getTemperature,
           getTopP: ctx.getTopP,
           getTopK: ctx.getTopK,
           getNumCtx: ctx.getNumCtx,
+          getNumGpu: ctx.getNumGpu,
           getNumPredict: ctx.getNumPredict,
           getRepeatPenalty: ctx.getRepeatPenalty,
           getSeed: ctx.getSeed,
@@ -100,8 +112,28 @@
         getCurrentModel: ctx.getCurrentModel,
         setCurrentModel: ctx.setCurrentModel,
         getTerminalPort: ctx.getTerminalPort,
+        getProvider: ctx.getProvider,
+        setProvider: ctx.setProvider,
+        getProviderBaseUrl: ctx.getProviderBaseUrl,
+        setProviderBaseUrl: ctx.setProviderBaseUrl,
+        getProviderApiKey: ctx.getProviderApiKey,
+        setProviderApiKey: ctx.setProviderApiKey,
+        getProviderModelId: ctx.getProviderModelId,
+        setProviderModelId: ctx.setProviderModelId,
+        getLlamaCppModelPath: ctx.getLlamaCppModelPath,
+        setLlamaCppModelPath: ctx.setLlamaCppModelPath,
         getSystemPrompt: ctx.getSystemPrompt,
         setSystemPrompt: ctx.setSystemPrompt,
+        getProvider: ctx.getProvider,
+        setProvider: ctx.setProvider,
+        getProviderBaseUrl: ctx.getProviderBaseUrl,
+        setProviderBaseUrl: ctx.setProviderBaseUrl,
+        getProviderApiKey: ctx.getProviderApiKey,
+        setProviderApiKey: ctx.setProviderApiKey,
+        getProviderModelId: ctx.getProviderModelId,
+        setProviderModelId: ctx.setProviderModelId,
+        getLlamaCppModelPath: ctx.getLlamaCppModelPath,
+        setLlamaCppModelPath: ctx.setLlamaCppModelPath,
         getRlmAssisted: ctx.getRlmAssisted,
         setRlmAssisted: ctx.setRlmAssisted,
         getRlmVerboseTrace: ctx.getRlmVerboseTrace,
@@ -128,6 +160,8 @@
         setTopK: ctx.setTopK,
         getNumCtx: ctx.getNumCtx,
         setNumCtx: ctx.setNumCtx,
+        getNumGpu: ctx.getNumGpu,
+        setNumGpu: ctx.setNumGpu,
         getNumPredict: ctx.getNumPredict,
         setNumPredict: ctx.setNumPredict,
         getRepeatPenalty: ctx.getRepeatPenalty,
@@ -213,6 +247,8 @@
         addSystemMessage: ctx.addSystemMessage,
         getCurrentModel: ctx.getCurrentModel,
         getTerminalPort: ctx.getTerminalPort,
+        getProvider: ctx.getProvider,
+        getProviderBaseUrl: ctx.getProviderBaseUrl,
         getSystemPrompt: ctx.getSystemPrompt,
         loadSessionMemoryPreferences: ctx.loadSessionMemoryPreferences,
         loadInputRecallHistory: ctx.loadInputRecallHistory,

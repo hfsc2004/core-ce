@@ -272,6 +272,7 @@ async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlP
       if (params.top_p !== undefined) url += `&top_p=${params.top_p}`;
       if (params.top_k !== undefined) url += `&top_k=${params.top_k}`;
       if (params.num_ctx !== undefined) url += `&num_ctx=${params.num_ctx}`;
+      if (params.num_gpu !== undefined) url += `&num_gpu=${params.num_gpu}`;
       if (params.num_predict !== undefined) url += `&num_predict=${params.num_predict}`;
       if (params.repeat_penalty !== undefined) url += `&repeat_penalty=${params.repeat_penalty}`;
       if (params.seed !== undefined) url += `&seed=${params.seed}`;

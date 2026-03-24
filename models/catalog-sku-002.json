@@ -1,6 +1,6 @@
 {
   "version": "1.1.2",
-  "last_updated": "2026-03-17",
+  "last_updated": "2026-03-24",
   "sku_id": "sku-002",
   "sku_name": "Enthusiast Bundle",
   "storage": "512GB",
@@ -1467,8 +1467,8 @@
           "sha256": "474ecaf1284aa6ff3273fb796c3cba55d2ee33ec0d8c63464fbd84500a9a462d",
           "size_mb": 2560,
           "file_size_bytes": null,
-          "projector_url": "https://huggingface.co/Qwen/Qwen3-VL-4B-Thinking-GGUF/resolve/main/mmproj-Qwen3VL-4B-Thinking-F16.gguf?download=true",
-          "projector_filename": "Qwen3-VL-4B-Thinking-GGUF",
+          "projector_url": "https://huggingface.co/Qwen/Qwen3-VL-4B-Thinking-GGUF/resolve/main/mmproj-Qwen3VL-4B-Thinking-Q8_0.gguf?download=true",
+          "projector_filename": "mmproj-Qwen3VL-4B-Thinking-Q8_0.gguf",
           "quantization": "Q4_K_M",
           "context_length": 262144,
           "parameter_count": null,
@@ -1487,11 +1487,11 @@
           "copyright": null,
           "parameters": "4B",
           "ollama_model": null,
-          "base_model_url": null,
-          "hidden_size": null,
-          "num_layers": null,
-          "num_kv_heads": null,
-          "num_attention_heads": null,
+          "base_model_url": "https://huggingface.co/Qwen/Qwen3-VL-4B-Thinking-GGUF",
+          "hidden_size": 4096,
+          "num_layers": 32,
+          "num_kv_heads": 32,
+          "num_attention_heads": 32,
           "artifacts": [
             {
               "id": "primary",
@@ -1551,7 +1551,13 @@
               "performance": 0.2,
               "reliability": 0.15
             }
-          }
+          },
+          "supports_stt": false,
+          "supports_tts": false,
+          "checksums": {
+            "main": "474ecaf1284aa6ff3273fb796c3cba55d2ee33ec0d8c63464fbd84500a9a462d"
+          },
+          "projector_sha256": null
         },
         {
           "id": "qwen3-vl-8b-instruct-i1-gguf",

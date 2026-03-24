@@ -8,9 +8,12 @@
 
   function createModelCommandHelpers(deps) {
     const getElectronAPI = typeof deps?.getElectronAPI === 'function' ? deps.getElectronAPI : () => (window.electronAPI || null);
+    const getProvider = typeof deps?.getProvider === 'function' ? deps.getProvider : () => 'ollama';
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => null;
     const setCurrentModel = typeof deps?.setCurrentModel === 'function' ? deps.setCurrentModel : (() => {});
+    const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
+    const setLlamaCppModelPath = typeof deps?.setLlamaCppModelPath === 'function' ? deps.setLlamaCppModelPath : (() => {});
     const addSystemMessage = typeof deps?.addSystemMessage === 'function' ? deps.addSystemMessage : (() => {});
     const addErrorMessage = typeof deps?.addErrorMessage === 'function' ? deps.addErrorMessage : (() => {});
     const clearConversationHistory = typeof deps?.clearConversationHistory === 'function' ? deps.clearConversationHistory : (() => {});
@@ -111,8 +114,21 @@
 
     async function listModels() {
       try {
+        const provider = String(getProvider() || 'ollama').trim().toLowerCase();
         addSystemMessage('📋 Fetching available models...');
         const api = getElectronAPI();
+        if (provider === 'llama.cpp') {
+          const result = await api.terminalListLlamaCppModels();
+          if (result.success && Array.isArray(result.models) && result.models.length > 0) {
+            addSystemMessage(`Found ${result.models.length} GGUF model(s):`);
+            result.models.forEach((model) => {
+              addSystemMessage(`  • ${model.pathRel} (${formatBytes(model.sizeBytes)})`);
+            });
+          } else {
+            addSystemMessage('No GGUF models found on disk');
+          }
+          return;
+        }
         const result = await api.getDownloadedModelsWithBlobs();
         if (result.success && result.models && result.models.length > 0) {
           addSystemMessage(`Found ${result.models.length} models:`);
@@ -133,6 +149,53 @@
 
       try {
         const api = getElectronAPI();
+        const provider = String(getProvider() || 'ollama').trim().toLowerCase();
+        if (provider === 'llama.cpp') {
+          const result = await api.terminalListLlamaCppModels();
+          if (result?.success && Array.isArray(result.models) && result.models.length > 0) {
+            select.innerHTML = '';
+            const currentModel = String(getCurrentModel() || '').trim();
+            const currentPath = String(getLlamaCppModelPath() || '').trim();
+            let foundMatch = false;
+            let firstModelName = null;
+            let firstModelPath = '';
+            for (const model of result.models) {
+              const modelName = String(model?.name || '').trim();
+              const modelPath = String(model?.pathAbs || '').trim();
+              if (!modelName || !modelPath) continue;
+              if (!firstModelName) {
+                firstModelName = modelName;
+                firstModelPath = modelPath;
+              }
+              const option = document.createElement('option');
+              option.value = modelName;
+              option.textContent = String(model.pathRel || model.filename || modelName);
+              option.dataset.llamaPath = modelPath;
+              if (
+                (currentPath && (modelPath === currentPath)) ||
+                (!currentPath && currentModel && modelName === currentModel)
+              ) {
+                option.selected = true;
+                foundMatch = true;
+                setCurrentModel(modelName);
+                setLlamaCppModelPath(modelPath);
+                persistSelectedModel(modelName);
+              }
+              select.appendChild(option);
+            }
+            if (!foundMatch && firstModelName) {
+              setCurrentModel(firstModelName);
+              setLlamaCppModelPath(firstModelPath);
+              select.value = firstModelName;
+              persistSelectedModel(firstModelName);
+              addSystemMessage(`No llama.cpp model selected - auto-selected: ${firstModelName}`);
+            }
+            return;
+          }
+          select.innerHTML = '<option value="">No GGUF models available</option>';
+          return;
+        }
+
         const result = await api.ollamaListModels({ port: port || getTerminalPort() });
         if (result.success && result.models && result.models.length > 0) {
           select.innerHTML = '';
@@ -178,10 +241,23 @@
     function handleModelChange(event) {
       const newModel = event?.target?.value;
       if (!newModel) return;
+      const provider = String(getProvider() || 'ollama').trim().toLowerCase();
+      if (provider === 'llama.cpp') {
+        const optionEl = event?.target?.selectedOptions?.[0];
+        const newPath = String(optionEl?.dataset?.llamaPath || '').trim();
+        if (newPath) setLlamaCppModelPath(newPath);
+      }
       setCurrentModel(newModel);
       persistSelectedModel(newModel);
-      addSystemMessage(`🔄 Switched to model: ${newModel}`);
-      prewarmSelectedModel(newModel);
+      if (provider === 'llama.cpp') {
+        addSystemMessage(`🔄 Selected GGUF model: ${newModel}`);
+        if (String(getLlamaCppModelPath() || '').trim()) {
+          addSystemMessage(`   Path: ${String(getLlamaCppModelPath() || '').trim()}`);
+        }
+      } else {
+        addSystemMessage(`🔄 Switched to model: ${newModel}`);
+        prewarmSelectedModel(newModel);
+      }
       clearConversationHistory();
     }
 

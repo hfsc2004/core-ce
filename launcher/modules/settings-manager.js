@@ -36,6 +36,23 @@ const DEFAULT_THEME = {
 
 const DEFAULT_SETTINGS = {
   huggingface_token: '',
+  api_keys: {
+    openai_compatible: {
+      base_url: '',
+      api_key: '',
+      model_id: ''
+    },
+    vllm: {
+      base_url: '',
+      api_key: '',
+      model_id: ''
+    },
+    exllamav2: {
+      base_url: '',
+      api_key: '',
+      model_id: ''
+    }
+  },
   theme: { ...DEFAULT_THEME },
   inference_backend: 'ollama',
   service_network_policy: 'privacy',
@@ -106,7 +123,43 @@ function loadSettings(projectRoot) {
       const data = fs.readFileSync(settingsPath, 'utf8');
       const settings = JSON.parse(data);
       logger.debug('[Settings] Loaded settings from:', settingsPath);
-      return { ...DEFAULT_SETTINGS, ...settings };
+      return {
+        ...DEFAULT_SETTINGS,
+        ...settings,
+        api_keys: {
+          ...DEFAULT_SETTINGS.api_keys,
+          ...(settings.api_keys || {}),
+          openai_compatible: {
+            ...DEFAULT_SETTINGS.api_keys.openai_compatible,
+            ...((settings.api_keys && settings.api_keys.openai_compatible) || {})
+          },
+          vllm: {
+            ...DEFAULT_SETTINGS.api_keys.vllm,
+            ...((settings.api_keys && settings.api_keys.vllm) || {})
+          },
+          exllamav2: {
+            ...DEFAULT_SETTINGS.api_keys.exllamav2,
+            ...((settings.api_keys && settings.api_keys.exllamav2) || {})
+          }
+        },
+        theme: { ...DEFAULT_SETTINGS.theme, ...((settings && settings.theme) || {}) },
+        voice_to_text: {
+          ...DEFAULT_SETTINGS.voice_to_text,
+          ...((settings && settings.voice_to_text) || {}),
+          hf: {
+            ...DEFAULT_SETTINGS.voice_to_text.hf,
+            ...(((settings && settings.voice_to_text) || {}).hf || {})
+          },
+          localTransformers: {
+            ...DEFAULT_SETTINGS.voice_to_text.localTransformers,
+            ...(((settings && settings.voice_to_text) || {}).localTransformers || {})
+          },
+          catalogRefs: {
+            ...DEFAULT_SETTINGS.voice_to_text.catalogRefs,
+            ...(((settings && settings.voice_to_text) || {}).catalogRefs || {})
+          }
+        }
+      };
     }
   } catch (err) {
     logger.error('[Settings] Error loading settings:', err.message);

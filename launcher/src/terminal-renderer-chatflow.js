@@ -21,6 +21,11 @@
     const appendConversationPair = typeof deps?.appendConversationPair === 'function' ? deps.appendConversationPair : (() => {});
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => null;
     const buildOllamaOptions = typeof deps?.buildOllamaOptions === 'function' ? deps.buildOllamaOptions : (() => ({}));
+    const getProvider = typeof deps?.getProvider === 'function' ? deps.getProvider : () => 'ollama';
+    const getProviderBaseUrl = typeof deps?.getProviderBaseUrl === 'function' ? deps.getProviderBaseUrl : () => '';
+    const getProviderApiKey = typeof deps?.getProviderApiKey === 'function' ? deps.getProviderApiKey : () => '';
+    const getProviderModelId = typeof deps?.getProviderModelId === 'function' ? deps.getProviderModelId : () => '';
+    const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
     const addAssistantShell = typeof deps?.addAssistantShell === 'function' ? deps.addAssistantShell : (() => null);
     const setActiveStream = typeof deps?.setActiveStream === 'function' ? deps.setActiveStream : (() => {});
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
@@ -48,6 +53,98 @@
       max_evidence_hits: 'Stopped at evidence-sampling limit. Increase profile or enable Advanced budgets.',
       max_recursion_depth: 'Stopped at reasoning-depth limit. Increase profile or enable Advanced budgets.'
     };
+    function normalizeProvider(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      if (raw === 'llamacpp') return 'llama.cpp';
+      return raw || 'ollama';
+    }
+    function defaultBaseUrl(provider) {
+      if (provider === 'llama.cpp') return 'http://127.0.0.1:8080';
+      if (provider === 'vllm') return 'http://127.0.0.1:8000';
+      if (provider === 'openai-compatible') return 'http://127.0.0.1:8000';
+      return '';
+    }
+    function resolveProviderRuntime() {
+      const provider = normalizeProvider(getProvider());
+      const baseUrl = String(getProviderBaseUrl() || '').trim() || defaultBaseUrl(provider);
+      const apiKey = String(getProviderApiKey() || '').trim();
+      const providerModel = String(getProviderModelId() || '').trim();
+      const llamaCppModelPath = String(getLlamaCppModelPath() || '').trim();
+      return { provider, baseUrl, apiKey, providerModel, llamaCppModelPath };
+    }
+    function buildOpenAIStyleMessages(messages = []) {
+      return (Array.isArray(messages) ? messages : []).map((m) => ({
+        role: String(m?.role || 'user'),
+        content: String(m?.content || '')
+      }));
+    }
+    async function sendViaProvider(providerRuntime, messages = []) {
+      const options = buildOllamaOptions();
+      const model = String(providerRuntime.providerModel || getCurrentModel() || '').trim();
+      const api = getElectronAPI();
+      let endpointBase = String(providerRuntime.baseUrl || '').trim().replace(/\/+$/, '');
+      const headers = { 'Content-Type': 'application/json' };
+      if (providerRuntime.apiKey) headers.Authorization = `Bearer ${providerRuntime.apiKey}`;
+
+      if (providerRuntime.provider === 'exllamav2') {
+        return { success: false, message: 'Provider "exllamav2" is not implemented yet in PSF Terminal.' };
+      }
+      if (!endpointBase && providerRuntime.provider !== 'ollama') {
+        return { success: false, message: `Provider "${providerRuntime.provider}" requires Base URL.` };
+      }
+      if ((providerRuntime.provider === 'vllm' || providerRuntime.provider === 'openai-compatible') && !model) {
+        return { success: false, message: `Provider "${providerRuntime.provider}" requires a model id (select model or set Provider Model ID).` };
+      }
+
+      if (providerRuntime.provider === 'llama.cpp') {
+        if (!api || typeof api.ensureTerminalLlamaCppSession !== 'function') {
+          return { success: false, message: 'BMOC llama.cpp session API is unavailable in this build.' };
+        }
+        const sessionResult = await api.ensureTerminalLlamaCppSession({
+          modelPath: providerRuntime.llamaCppModelPath,
+          contextSize: options?.num_ctx,
+          gpuLayers: options?.num_gpu
+        });
+        if (!sessionResult?.success) {
+          return {
+            success: false,
+            message: sessionResult?.message || 'Failed to start BMOC llama.cpp terminal session.'
+          };
+        }
+        const port = Number(sessionResult.port || sessionResult.ollamaPort || 0);
+        endpointBase = String(sessionResult.baseUrl || (port > 0 ? `http://127.0.0.1:${port}` : '')).trim().replace(/\/+$/, '');
+      }
+
+      if (providerRuntime.provider === 'llama.cpp' || providerRuntime.provider === 'vllm' || providerRuntime.provider === 'openai-compatible') {
+        const body = {
+          model: model || 'local-model',
+          messages: buildOpenAIStyleMessages(messages),
+          temperature: options.temperature
+        };
+        if (options.top_p !== undefined) body.top_p = options.top_p;
+        if (options.top_k !== undefined) body.top_k = options.top_k;
+        if (options.num_predict !== undefined) body.max_tokens = options.num_predict;
+        if (options.stop !== undefined) body.stop = options.stop;
+        const response = await fetch(`${endpointBase}/v1/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body)
+        });
+        const text = await response.text();
+        if (!response.ok) {
+          return { success: false, message: `HTTP ${response.status} - ${text}` };
+        }
+        let parsed = {};
+        try { parsed = JSON.parse(text || '{}'); } catch {
+          return { success: false, message: 'Provider returned non-JSON response.' };
+        }
+        const content = String(parsed?.choices?.[0]?.message?.content || '').trim();
+        if (!content) return { success: false, message: 'No assistant content returned by provider.' };
+        return { success: true, message: content };
+      }
+
+      return { success: false, message: `Unsupported provider: ${providerRuntime.provider}` };
+    }
 
     function shouldRunRlm(message) {
       const text = String(message || '').trim();
@@ -123,6 +220,27 @@
       }
 
       if (userInput) userInput.value = '';
+
+      const providerRuntime = resolveProviderRuntime();
+      if (providerRuntime.provider !== 'ollama') {
+        setThinkingStatusText(`Calling ${providerRuntime.provider}`);
+        try {
+          const result = await sendViaProvider(providerRuntime, messages);
+          if (result.success) {
+            const assistantMessage = sanitizeQwenSelfDialogue(result.message || '');
+            addMessage('assistant', assistantMessage);
+            appendConversationPair(message, assistantMessage);
+          } else {
+            addErrorMessage(`Provider error: ${result.message || 'unknown error'}`);
+          }
+        } catch (error) {
+          addErrorMessage(`Provider error: ${error?.message || String(error)}`);
+        } finally {
+          setWaitingState(false);
+          focusInput();
+        }
+        return;
+      }
 
       if (getRlmAssisted() === true && shouldRunRlm(message)) {
         setThinkingStatusText('Running RLM tools');

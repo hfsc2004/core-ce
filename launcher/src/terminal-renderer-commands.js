@@ -12,6 +12,16 @@
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => null;
     const setCurrentModel = typeof deps?.setCurrentModel === 'function' ? deps.setCurrentModel : (() => {});
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
+    const getProvider = typeof deps?.getProvider === 'function' ? deps.getProvider : () => 'ollama';
+    const setProvider = typeof deps?.setProvider === 'function' ? deps.setProvider : (() => {});
+    const getProviderBaseUrl = typeof deps?.getProviderBaseUrl === 'function' ? deps.getProviderBaseUrl : () => '';
+    const setProviderBaseUrl = typeof deps?.setProviderBaseUrl === 'function' ? deps.setProviderBaseUrl : (() => {});
+    const getProviderApiKey = typeof deps?.getProviderApiKey === 'function' ? deps.getProviderApiKey : () => '';
+    const setProviderApiKey = typeof deps?.setProviderApiKey === 'function' ? deps.setProviderApiKey : (() => {});
+    const getProviderModelId = typeof deps?.getProviderModelId === 'function' ? deps.getProviderModelId : () => '';
+    const setProviderModelId = typeof deps?.setProviderModelId === 'function' ? deps.setProviderModelId : (() => {});
+    const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
+    const setLlamaCppModelPath = typeof deps?.setLlamaCppModelPath === 'function' ? deps.setLlamaCppModelPath : (() => {});
     const getTemperature = typeof deps?.getTemperature === 'function' ? deps.getTemperature : () => 0.7;
     const setTemperatureValue = typeof deps?.setTemperatureValue === 'function' ? deps.setTemperatureValue : (() => {});
     const getTopP = typeof deps?.getTopP === 'function' ? deps.getTopP : () => null;
@@ -20,6 +30,8 @@
     const setTopK = typeof deps?.setTopK === 'function' ? deps.setTopK : (() => {});
     const getNumCtx = typeof deps?.getNumCtx === 'function' ? deps.getNumCtx : () => null;
     const setNumCtx = typeof deps?.setNumCtx === 'function' ? deps.setNumCtx : (() => {});
+    const getNumGpu = typeof deps?.getNumGpu === 'function' ? deps.getNumGpu : () => null;
+    const setNumGpu = typeof deps?.setNumGpu === 'function' ? deps.setNumGpu : (() => {});
     const getNumPredict = typeof deps?.getNumPredict === 'function' ? deps.getNumPredict : () => null;
     const getRepeatPenalty = typeof deps?.getRepeatPenalty === 'function' ? deps.getRepeatPenalty : () => null;
     const setRepeatPenalty = typeof deps?.setRepeatPenalty === 'function' ? deps.setRepeatPenalty : (() => {});
@@ -110,9 +122,12 @@
     const modelHelpers = modelHelpersFactory
       ? modelHelpersFactory({
           getElectronAPI,
+          getProvider,
           getTerminalPort,
           getCurrentModel,
           setCurrentModel,
+          getLlamaCppModelPath,
+          setLlamaCppModelPath,
           addSystemMessage,
           addErrorMessage,
           clearConversationHistory,
@@ -133,7 +148,10 @@
     function updateConfigPanelBounds() {
       const panel = document.getElementById('config-panel');
       if (!panel) return;
-      const maxHeight = Math.max(220, window.innerHeight - 90);
+      const panelTop = Number(panel.getBoundingClientRect().top || 69);
+      const bottomSafePx = 35; // status bar clearance
+      const maxHeight = Math.max(220, Math.floor(window.innerHeight - panelTop - bottomSafePx));
+      panel.style.height = `${maxHeight}px`;
       panel.style.maxHeight = `${maxHeight}px`;
       panel.style.overflowY = 'auto';
     }
@@ -145,9 +163,11 @@
       if (panel.style.display === 'none') {
         updateConfigPanelBounds();
         const tempInput = document.getElementById('cfg-temperature');
+        const providerInput = document.getElementById('cfg-provider');
         const topPInput = document.getElementById('cfg-top-p');
         const topKInput = document.getElementById('cfg-top-k');
         const numCtxInput = document.getElementById('cfg-num-ctx');
+        const numGpuInput = document.getElementById('cfg-num-gpu');
         const repeatInput = document.getElementById('cfg-repeat-penalty');
         const systemInput = document.getElementById('cfg-system-prompt');
         const rlmInput = document.getElementById('cfg-rlm-assisted');
@@ -164,10 +184,12 @@
         const llmNamingInput = document.getElementById('cfg-export-llm-naming');
         const budgets = getRlmBudgets() || {};
 
+        if (providerInput) providerInput.value = String(getProvider() || 'ollama');
         if (tempInput) tempInput.value = getTemperature() || 0.7;
         if (topPInput) topPInput.value = getTopP() || 0.9;
         if (topKInput) topKInput.value = getTopK() || 40;
         if (numCtxInput) numCtxInput.value = getNumCtx() || 4096;
+        if (numGpuInput) numGpuInput.value = getNumGpu() !== null ? getNumGpu() : 0;
         if (repeatInput) repeatInput.value = getRepeatPenalty() || 1.1;
         if (systemInput) systemInput.value = getSystemPrompt() || '';
         if (rlmInput) rlmInput.checked = getRlmAssisted() === true;
@@ -202,11 +224,13 @@
       updateConfigPanelBounds();
     });
 
-    function applyConfig() {
+    async function applyConfig() {
       const tempInput = document.getElementById('cfg-temperature');
+      const providerInput = document.getElementById('cfg-provider');
       const topPInput = document.getElementById('cfg-top-p');
       const topKInput = document.getElementById('cfg-top-k');
       const numCtxInput = document.getElementById('cfg-num-ctx');
+      const numGpuInput = document.getElementById('cfg-num-gpu');
       const repeatInput = document.getElementById('cfg-repeat-penalty');
       const systemInput = document.getElementById('cfg-system-prompt');
       const rlmInput = document.getElementById('cfg-rlm-assisted');
@@ -222,10 +246,15 @@
       const rlmMaxEvidenceInput = document.getElementById('cfg-rlm-max-evidence-hits');
       const llmNamingInput = document.getElementById('cfg-export-llm-naming');
 
+      if (providerInput) setProvider(providerInput.value || 'ollama');
       if (tempInput) setTemperatureValue(parseFloat(tempInput.value) || 0.7);
       if (topPInput) setTopP(parseFloat(topPInput.value) || null);
       if (topKInput) setTopK(parseInt(topKInput.value, 10) || null);
       if (numCtxInput) setNumCtx(parseInt(numCtxInput.value, 10) || null);
+      if (numGpuInput) {
+        const parsedNumGpu = parseInt(numGpuInput.value, 10);
+        setNumGpu(Number.isFinite(parsedNumGpu) ? parsedNumGpu : null);
+      }
       if (repeatInput) setRepeatPenalty(parseFloat(repeatInput.value) || null);
       if (systemInput) setSystemPromptValue(systemInput.value || null);
       if (rlmInput) setRlmAssisted(rlmInput.checked === true);
@@ -249,9 +278,10 @@
       }
       if (llmNamingInput) setLlmAssistedFileNaming(llmNamingInput.checked === true);
       persistTerminalModelConfig();
+      await populateModelDropdown(getTerminalPort());
 
       const budgets = getRlmBudgets() || {};
-      addSystemMessage(`⚙️ Configuration applied: temp=${getTemperature()}, top_p=${getTopP()}, top_k=${getTopK()}, ctx=${getNumCtx()}, rlm=${getRlmAssisted() ? 'on' : 'off'}, rlm_profile=${normalizeProfile(getRlmProfile())}, rlm_quality=${getRlmQuality()}, rlm_verbose=${getRlmVerboseTrace() ? 'on' : 'off'}, rlm_shared_attachments=${getRlmIncludeSharedAttachments() ? 'on' : 'off'}, rlm_advanced_budgets=${getRlmAdvancedBudgets() ? 'on' : 'off'}, llm_assisted_file_naming=${getLlmAssistedFileNaming() ? 'on' : 'off'}, rlm_budget={tools:${budgets.maxToolCalls},depth:${budgets.maxRecursionDepth},chunks:${budgets.maxChunksProcessed},runtime_ms:${budgets.maxRuntimeMs},evidence:${budgets.maxEvidenceHits}}`);
+      addSystemMessage(`⚙️ Configuration applied: provider=${getProvider()}, temp=${getTemperature()}, top_p=${getTopP()}, top_k=${getTopK()}, ctx=${getNumCtx()}, num_gpu=${getNumGpu()}, rlm=${getRlmAssisted() ? 'on' : 'off'}, rlm_profile=${normalizeProfile(getRlmProfile())}, rlm_quality=${getRlmQuality()}, rlm_verbose=${getRlmVerboseTrace() ? 'on' : 'off'}, rlm_shared_attachments=${getRlmIncludeSharedAttachments() ? 'on' : 'off'}, rlm_advanced_budgets=${getRlmAdvancedBudgets() ? 'on' : 'off'}, llm_assisted_file_naming=${getLlmAssistedFileNaming() ? 'on' : 'off'}, rlm_budget={tools:${budgets.maxToolCalls},depth:${budgets.maxRecursionDepth},chunks:${budgets.maxChunksProcessed},runtime_ms:${budgets.maxRuntimeMs},evidence:${budgets.maxEvidenceHits}}`);
       toggleConfig();
     }
 
@@ -316,12 +346,14 @@
       const current = getCurrentModel();
       const sys = getSystemPrompt();
       addSystemMessage('Current settings:');
+      addSystemMessage(`  Provider: ${String(getProvider() || 'ollama')}`);
       addSystemMessage(`  Model: ${current}`);
       addSystemMessage(`  Port: ${getTerminalPort()}`);
       addSystemMessage(`  Temperature: ${getTemperature()}`);
       if (getTopP() !== null) addSystemMessage(`  Top-P: ${getTopP()}`);
       if (getTopK() !== null) addSystemMessage(`  Top-K: ${getTopK()}`);
       if (getNumCtx() !== null) addSystemMessage(`  Context Length: ${getNumCtx()}`);
+      if (getNumGpu() !== null) addSystemMessage(`  GPU Layers: ${getNumGpu()}`);
       if (getNumPredict() !== null) addSystemMessage(`  Max Tokens: ${getNumPredict()}`);
       if (getRepeatPenalty() !== null) addSystemMessage(`  Repeat Penalty: ${getRepeatPenalty()}`);
       if (getSeed() !== null) addSystemMessage(`  Seed: ${getSeed()}`);

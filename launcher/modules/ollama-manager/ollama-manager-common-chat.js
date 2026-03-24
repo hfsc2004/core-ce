@@ -42,6 +42,7 @@ function createCommonChatApi(deps = {}) {
       if (options.top_p !== undefined) ollamaOptions.top_p = options.top_p;
       if (options.top_k !== undefined) ollamaOptions.top_k = options.top_k;
       if (options.num_ctx !== undefined) ollamaOptions.num_ctx = options.num_ctx;
+      if (options.num_gpu !== undefined) ollamaOptions.num_gpu = options.num_gpu;
       if (options.num_predict !== undefined) ollamaOptions.num_predict = options.num_predict;
       if (options.repeat_penalty !== undefined) ollamaOptions.repeat_penalty = options.repeat_penalty;
       if (options.seed !== undefined) ollamaOptions.seed = options.seed;
@@ -88,6 +89,7 @@ function createCommonChatApi(deps = {}) {
       if (options.top_p !== undefined) ollamaOptions.top_p = options.top_p;
       if (options.top_k !== undefined) ollamaOptions.top_k = options.top_k;
       if (options.num_ctx !== undefined) ollamaOptions.num_ctx = options.num_ctx;
+      if (options.num_gpu !== undefined) ollamaOptions.num_gpu = options.num_gpu;
       if (options.num_predict !== undefined) ollamaOptions.num_predict = options.num_predict;
       if (options.repeat_penalty !== undefined) ollamaOptions.repeat_penalty = options.repeat_penalty;
       if (options.seed !== undefined) ollamaOptions.seed = options.seed;
