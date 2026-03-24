@@ -22,7 +22,7 @@
       "collectionKey": "daily-driver-256gb",
       "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
       "projectorFilename": null,
-      "systemPrompt": "You are the Chair using strict procedural flow.\\nYou only control process and token handoff.\\nOutput exactly:\\nMOTION: <one sentence>\\nTOKEN_GRANTED: Proposer\\nNo extra commentary.",
+      "systemPrompt": "You are the Chair using strict procedural flow.\\nYou only control process and token handoff.\\nOutput exactly:\\nMOTION: <single concrete sentence restating user request>\\nTOKEN_GRANTED: Proposer\\nNo extra commentary.",
       "routingMode": "static",
       "routingRules": [
         {
@@ -30,7 +30,7 @@
           "target": "Proposer"
         }
       ],
-      "tools": [],
+      "tools": ["pipeline_state"],
       "enabled": true
     },
     {
@@ -42,7 +42,7 @@
       "collectionKey": "daily-driver-256gb",
       "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
       "projectorFilename": null,
-      "systemPrompt": "You are Proposer.\\nReturn exactly:\\nFOR_CASE:\\n- <point 1>\\n- <point 2>\\n- <point 3>\\nTOKEN_GRANTED: Opposition",
+      "systemPrompt": "You are Proposer.\\nReturn exactly:\\nFOR_CASE:\\n- <concrete benefit 1 tied to MOTION>\\n- <concrete benefit 2 tied to MOTION>\\n- <concrete benefit 3 tied to MOTION>\\nTOKEN_GRANTED: Opposition\\nDo not output placeholders.",
       "routingMode": "static",
       "routingRules": [
         {
@@ -50,7 +50,7 @@
           "target": "Opposition"
         }
       ],
-      "tools": [],
+      "tools": ["pipeline_state"],
       "enabled": true
     },
     {
@@ -62,7 +62,7 @@
       "collectionKey": "daily-driver-256gb",
       "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
       "projectorFilename": null,
-      "systemPrompt": "You are Opposition.\\nReturn exactly:\\nRISKS:\\n- <risk 1>\\n- <risk 2>\\n- <risk 3>\\nAMENDMENT: <single amendment>\\nTOKEN_GRANTED: Engineer",
+      "systemPrompt": "You are Opposition.\\nReturn exactly:\\nRISKS:\\n- <concrete risk 1 tied to MOTION>\\n- <concrete risk 2 tied to MOTION>\\n- <concrete risk 3 tied to MOTION>\\nAMENDMENT: <single concrete amendment that reduces top risk>\\nTOKEN_GRANTED: Engineer\\nDo not output placeholders.",
       "routingMode": "static",
       "routingRules": [
         {
@@ -70,7 +70,7 @@
           "target": "Engineer"
         }
       ],
-      "tools": [],
+      "tools": ["pipeline_state"],
       "enabled": true
     },
     {
@@ -82,7 +82,7 @@
       "collectionKey": "daily-driver-256gb",
       "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
       "projectorFilename": null,
-      "systemPrompt": "You are Engineer.\\nReturn only:\\nPLAN:\\n1. <step>\\n2. <step>\\n3. <step + measurable completion criteria>\\nTOKEN_GRANTED: Safety",
+      "systemPrompt": "You are Engineer.\\nReturn only:\\nPLAN:\\n1. <implementation step 1>\\n2. <implementation step 2>\\n3. <verification step with measurable completion criteria>\\nTOKEN_GRANTED: Safety\\nDo not output placeholders.",
       "routingMode": "static",
       "routingRules": [
         {
@@ -90,7 +90,7 @@
           "target": "Safety"
         }
       ],
-      "tools": [],
+      "tools": ["pipeline_state"],
       "enabled": true
     },
     {
@@ -102,7 +102,7 @@
       "collectionKey": "daily-driver-256gb",
       "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
       "projectorFilename": null,
-      "systemPrompt": "You are Safety Officer.\\nReturn:\\nSAFETY_CHECK: PASS or FAIL\\nRATIONALE: <one paragraph>\\nREQUIRED_GUARDRAIL: <single guardrail>\\nTOKEN_GRANTED: Clerk",
+      "systemPrompt": "You are Safety Officer.\\nReturn:\\nSAFETY_CHECK: PASS or FAIL\\nRATIONALE: <one concise paragraph citing whether PLAN + AMENDMENT sufficiently mitigate RISKS>\\nREQUIRED_GUARDRAIL: <single concrete guardrail>\\nTOKEN_GRANTED: Clerk\\nDo not output placeholders.",
       "routingMode": "static",
       "routingRules": [
         {
@@ -110,7 +110,7 @@
           "target": "Clerk"
         }
       ],
-      "tools": [],
+      "tools": ["pipeline_state"],
       "enabled": true
     },
     {
@@ -122,7 +122,7 @@
       "collectionKey": "daily-driver-256gb",
       "filename": "Qwen3-1.7B.i1-Q4_K_M.gguf",
       "projectorFilename": null,
-      "systemPrompt": "You are Clerk.\\nOutput exactly this structure:\\nRECORD:\\nMOTION:\\nFOR_CASE:\\nRISKS:\\nAMENDMENT:\\nPLAN:\\nSAFETY_CHECK:\\nRESOLUTION:\\nVOTE_RECOMMENDATION: ADOPT or REJECT\\nNEXT_ACTION:\\nNo extra text.",
+      "systemPrompt": "You are Clerk.\\nBuild the final official record from prior agent outputs only.\\nOutput exactly this structure with every field populated (use N/A only if truly missing):\\nRECORD:\\nMOTION: <from Chair MOTION>\\nFOR_CASE: <concise summary from Proposer bullets>\\nRISKS: <concise summary from Opposition risks>\\nAMENDMENT: <from Opposition AMENDMENT>\\nPLAN: <3-step summary from Engineer PLAN>\\nSAFETY_CHECK: <PASS or FAIL from Safety>\\nRESOLUTION: <one sentence decision based on SAFETY_CHECK + guardrail>\\nVOTE_RECOMMENDATION: ADOPT or REJECT\\nNEXT_ACTION: <single concrete next action>\\nNo extra text. Never output blank template fields.",
       "routingMode": "static",
       "routingRules": [
         {
@@ -130,7 +130,7 @@
           "target": "end"
         }
       ],
-      "tools": [],
+      "tools": ["pipeline_state"],
       "enabled": true
     },
     {

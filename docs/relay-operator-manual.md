@@ -3,6 +3,9 @@
 ## Purpose
 This manual defines how to run PSF Relay pipelines predictably in deterministic mode, with clear targeting, binding resolution, execution behavior, and verification steps.
 
+Related:
+- `docs/pipeline-state-manual.md` for permissioned inter-agent variable handoff (`PIPE_STATE_SET` / `PIPE_STATE_GET`).
+
 ## 1. Pipeline Intent Syntax
 Use explicit target language in prompts.
 
@@ -127,4 +130,3 @@ When reporting an issue, always capture:
 - Target, port, host
 - Full compile/upload/runtime output
 - Observed behavior vs expected behavior
-
