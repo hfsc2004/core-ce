@@ -12,7 +12,74 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
   const codingTerminalBackend = deps.codingTerminalBackend;
   const dialog = deps.dialog;
   const getMainWindow = typeof deps.getMainWindow === 'function' ? deps.getMainWindow : () => null;
+  const terminalSessionRegistry = deps.terminalSessionRegistry instanceof Map ? deps.terminalSessionRegistry : new Map();
   const terminalMeshLinks = new Map(); // windowId -> peerWindowId
+
+  async function closeTrackedTerminalSession(windowId) {
+    const ownerWindowId = Number(windowId || 0);
+    if (!ownerWindowId) return false;
+    const tracked = terminalSessionRegistry.get(ownerWindowId);
+    if (!tracked || !tracked.sessionId) return false;
+    const sessionId = String(tracked.sessionId || '').trim();
+    if (!sessionId) {
+      terminalSessionRegistry.delete(ownerWindowId);
+      return false;
+    }
+    const PortPool = require('../port-pool/port-pool-ollama');
+    console.log(`[BMOC] Terminal close requested window=${ownerWindowId} session=${sessionId} backend=${String(tracked.backend || 'unknown')}`);
+    try {
+      await sessionManager.closeSession(sessionId, { ollama: PortPool });
+      console.log(`[BMOC] Terminal close completed window=${ownerWindowId} session=${sessionId}`);
+      terminalSessionRegistry.delete(ownerWindowId);
+      return true;
+    } catch (err) {
+      console.warn(`[BMOC] Terminal close failed window=${ownerWindowId} session=${sessionId}: ${err?.message || err}`);
+      terminalSessionRegistry.delete(ownerWindowId);
+      return false;
+    }
+  }
+
+  async function closeWindowOwnedTerminalSessions(windowId, backendFilter = 'all') {
+    const ownerWindowId = Number(windowId || 0);
+    if (!ownerWindowId || !sessionManager?.getActiveSessionsForService) return;
+    const sessions = sessionManager.getActiveSessionsForService('terminal') || [];
+    if (!Array.isArray(sessions) || sessions.length === 0) return;
+    const PortPool = require('../port-pool/port-pool-ollama');
+    const normalizedFilter = String(backendFilter || 'all').trim().toLowerCase();
+    for (const session of sessions) {
+      const sessionId = String(session?.sessionId || '').trim();
+      if (!sessionId) continue;
+      const backend = String(session?.metadata?.backend || 'ollama').toLowerCase() || 'ollama';
+      if (normalizedFilter !== 'all' && backend !== normalizedFilter) continue;
+      const owner = Number(session?.metadata?.ownerWindowId || 0);
+      if (!owner || owner !== ownerWindowId) continue;
+      try {
+        await sessionManager.closeSession(sessionId, { ollama: PortPool });
+        if (ownerWindowId && terminalSessionRegistry.get(ownerWindowId)?.sessionId === sessionId) {
+          terminalSessionRegistry.delete(ownerWindowId);
+        }
+      } catch (_) {
+        // best effort
+      }
+    }
+  }
+
+  async function closeAllTerminalLlamaCppSessions() {
+    if (!sessionManager?.getActiveSessionsForService) return;
+    const sessions = sessionManager.getActiveSessionsForService('terminal') || [];
+    if (!Array.isArray(sessions) || sessions.length === 0) return;
+    const PortPool = require('../port-pool/port-pool-ollama');
+    for (const session of sessions) {
+      const sessionId = String(session?.sessionId || '').trim();
+      if (!sessionId) continue;
+      if (String(session?.metadata?.backend || '').toLowerCase() !== 'llama-cpp') continue;
+      try {
+        await sessionManager.closeSession(sessionId, { ollama: PortPool });
+      } catch (_) {
+        // best effort
+      }
+    }
+  }
 
   function parseTerminalWindowMeta(win) {
     const fallback = {
@@ -263,7 +330,12 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
   // Keep mesh state clean if terminal windows are closed.
   for (const win of BrowserWindow.getAllWindows()) {
     if (!isTerminalWindow(win)) continue;
-    win.once('closed', () => {
+    win.once('closed', async () => {
+      await closeTrackedTerminalSession(win.id);
+      await closeWindowOwnedTerminalSessions(win.id, 'all');
+      if (listTerminalWindows().length === 0) {
+        await closeAllTerminalLlamaCppSessions();
+      }
       clearLinkFor(win.id);
       broadcastMeshState();
     });
@@ -278,7 +350,12 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
       if (!win || win.isDestroyed()) return;
       const attach = () => {
         if (!isTerminalWindow(win)) return;
-        win.once('closed', () => {
+        win.once('closed', async () => {
+          await closeTrackedTerminalSession(win.id);
+          await closeWindowOwnedTerminalSessions(win.id, 'all');
+          if (listTerminalWindows().length === 0) {
+            await closeAllTerminalLlamaCppSessions();
+          }
           clearLinkFor(win.id);
           broadcastMeshState();
         });

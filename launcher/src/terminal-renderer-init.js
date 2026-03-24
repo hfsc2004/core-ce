@@ -112,6 +112,7 @@
         getCurrentModel: ctx.getCurrentModel,
         setCurrentModel: ctx.setCurrentModel,
         getTerminalPort: ctx.getTerminalPort,
+        setTerminalPort: ctx.setTerminalPort,
         getProvider: ctx.getProvider,
         setProvider: ctx.setProvider,
         getProviderBaseUrl: ctx.getProviderBaseUrl,

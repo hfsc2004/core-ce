@@ -20,7 +20,9 @@
     const formatBytes = typeof deps?.formatBytes === 'function' ? deps.formatBytes : ((v) => `${v || 0} B`);
 
     const LAST_MODEL_KEY = 'psf_terminal_last_model';
+    const LAST_MODEL_PROVIDER_KEY = 'psf_terminal_last_model_provider';
     const SETTINGS_MODEL_PATH = ['uiState', 'psfTerminal', 'lastModel'];
+    const SETTINGS_PROVIDER_MODELS_PATH = ['uiState', 'psfTerminal', 'lastModelByProvider'];
 
     function getLastModelStorageKey() {
       const port = Number(getTerminalPort());
@@ -30,10 +32,20 @@
       return LAST_MODEL_KEY;
     }
 
+    function getProviderModelStorageKey() {
+      const provider = String(getProvider() || 'ollama').trim().toLowerCase() || 'ollama';
+      const port = Number(getTerminalPort());
+      if (Number.isFinite(port) && port > 0) {
+        return `${LAST_MODEL_PROVIDER_KEY}_${provider}_${port}`;
+      }
+      return `${LAST_MODEL_PROVIDER_KEY}_${provider}`;
+    }
+
     function persistSelectedModel(modelName) {
       const value = String(modelName || '').trim();
       if (!value) return;
       try {
+        localStorage.setItem(getProviderModelStorageKey(), value);
         localStorage.setItem(getLastModelStorageKey(), value);
         localStorage.setItem(LAST_MODEL_KEY, value);
       } catch (_) {}
@@ -51,6 +63,12 @@
           next.uiState.psfTerminal = (next.uiState.psfTerminal && typeof next.uiState.psfTerminal === 'object')
             ? { ...next.uiState.psfTerminal }
             : {};
+          const provider = String(getProvider() || 'ollama').trim().toLowerCase() || 'ollama';
+          next.uiState.psfTerminal.lastModelByProvider =
+            (next.uiState.psfTerminal.lastModelByProvider && typeof next.uiState.psfTerminal.lastModelByProvider === 'object')
+              ? { ...next.uiState.psfTerminal.lastModelByProvider }
+              : {};
+          next.uiState.psfTerminal.lastModelByProvider[provider] = value;
           next.uiState.psfTerminal.lastModel = value;
           return api.saveSettings(next);
         })
@@ -68,18 +86,23 @@
 
     async function loadPersistedModel() {
       const api = getElectronAPI();
+      const provider = String(getProvider() || 'ollama').trim().toLowerCase() || 'ollama';
       if (api && typeof api.getSettings === 'function') {
         try {
           const settings = await api.getSettings();
+          const providerSettingsModel = readStringPath(settings, [...SETTINGS_PROVIDER_MODELS_PATH, provider]);
+          if (providerSettingsModel) return providerSettingsModel;
           const settingsModel = readStringPath(settings, SETTINGS_MODEL_PATH);
           if (settingsModel) return settingsModel;
         } catch (_) {}
       }
       try {
-        const global = String(localStorage.getItem(LAST_MODEL_KEY) || '').trim();
-        if (global) return global;
+        const providerScoped = String(localStorage.getItem(getProviderModelStorageKey()) || '').trim();
+        if (providerScoped) return providerScoped;
         const scoped = String(localStorage.getItem(getLastModelStorageKey()) || '').trim();
         if (scoped) return scoped;
+        const global = String(localStorage.getItem(LAST_MODEL_KEY) || '').trim();
+        if (global) return global;
       } catch (_) {}
       return '';
     }
@@ -156,6 +179,8 @@
             select.innerHTML = '';
             const currentModel = String(getCurrentModel() || '').trim();
             const currentPath = String(getLlamaCppModelPath() || '').trim();
+            const persisted = await loadPersistedModel();
+            const persistedBaseName = String(persisted || '').trim().replace(/\.gguf$/i, '');
             let foundMatch = false;
             let firstModelName = null;
             let firstModelPath = '';
@@ -173,7 +198,8 @@
               option.dataset.llamaPath = modelPath;
               if (
                 (currentPath && (modelPath === currentPath)) ||
-                (!currentPath && currentModel && modelName === currentModel)
+                (!currentPath && currentModel && modelName === currentModel) ||
+                (!currentPath && !currentModel && persistedBaseName && modelName === persistedBaseName)
               ) {
                 option.selected = true;
                 foundMatch = true;

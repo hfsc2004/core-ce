@@ -28,6 +28,8 @@
     const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
     const addAssistantShell = typeof deps?.addAssistantShell === 'function' ? deps.addAssistantShell : (() => null);
     const setActiveStream = typeof deps?.setActiveStream === 'function' ? deps.setActiveStream : (() => {});
+    const getChatDisplay = typeof deps?.getChatDisplay === 'function' ? deps.getChatDisplay : () => null;
+    const finalizeStreamingMessage = typeof deps?.finalizeStreamingMessage === 'function' ? deps.finalizeStreamingMessage : (() => {});
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
     const getElectronAPI = typeof deps?.getElectronAPI === 'function' ? deps.getElectronAPI : () => (window.electronAPI || null);
     const sanitizeQwenSelfDialogue = typeof deps?.sanitizeQwenSelfDialogue === 'function' ? deps.sanitizeQwenSelfDialogue : ((v) => String(v || ''));
@@ -77,6 +79,160 @@
         role: String(m?.role || 'user'),
         content: String(m?.content || '')
       }));
+    }
+    function extractProviderDelta(parsed = {}) {
+      const choice = parsed?.choices?.[0] || {};
+      const delta = choice?.delta;
+      if (delta && typeof delta.content === 'string') return delta.content;
+      if (choice?.message && typeof choice.message.content === 'string') return choice.message.content;
+      if (typeof parsed?.content === 'string') return parsed.content;
+      if (typeof parsed?.text === 'string') return parsed.text;
+      return '';
+    }
+    async function streamViaProvider(providerRuntime, messages = []) {
+      const options = buildOllamaOptions();
+      const model = String(providerRuntime.providerModel || getCurrentModel() || '').trim();
+      const api = getElectronAPI();
+      let endpointBase = String(providerRuntime.baseUrl || '').trim().replace(/\/+$/, '');
+      const headers = { 'Content-Type': 'application/json' };
+      if (providerRuntime.apiKey) headers.Authorization = `Bearer ${providerRuntime.apiKey}`;
+
+      if (providerRuntime.provider === 'exllamav2') {
+        return { success: false, message: 'Provider "exllamav2" is not implemented yet in PSF Terminal.' };
+      }
+      if (!endpointBase && providerRuntime.provider !== 'ollama') {
+        return { success: false, message: `Provider "${providerRuntime.provider}" requires Base URL.` };
+      }
+      if ((providerRuntime.provider === 'vllm' || providerRuntime.provider === 'openai-compatible') && !model) {
+        return { success: false, message: `Provider "${providerRuntime.provider}" requires a model id (select model or set Provider Model ID).` };
+      }
+
+      if (providerRuntime.provider === 'llama.cpp') {
+        if (!api || typeof api.ensureTerminalLlamaCppSession !== 'function') {
+          return { success: false, message: 'BMOC llama.cpp session API is unavailable in this build.' };
+        }
+        const sessionResult = await api.ensureTerminalLlamaCppSession({
+          modelPath: providerRuntime.llamaCppModelPath,
+          contextSize: options?.num_ctx,
+          gpuLayers: options?.num_gpu
+        });
+        if (!sessionResult?.success) {
+          return {
+            success: false,
+            message: sessionResult?.message || 'Failed to start BMOC llama.cpp terminal session.'
+          };
+        }
+        const port = Number(sessionResult.port || sessionResult.ollamaPort || 0);
+        endpointBase = String(sessionResult.baseUrl || (port > 0 ? `http://127.0.0.1:${port}` : '')).trim().replace(/\/+$/, '');
+      }
+
+      const body = {
+        model: model || 'local-model',
+        messages: buildOpenAIStyleMessages(messages),
+        temperature: options.temperature,
+        stream: true
+      };
+      if (options.top_p !== undefined) body.top_p = options.top_p;
+      if (options.top_k !== undefined) body.top_k = options.top_k;
+      if (options.num_predict !== undefined) body.max_tokens = options.num_predict;
+      if (options.stop !== undefined) body.stop = options.stop;
+
+      const assistantContentDiv = addAssistantShell();
+      const abortController = new AbortController();
+      setActiveStream({
+        content: '',
+        contentDiv: assistantContentDiv,
+        userMessage: messages[messages.length - 1]?.content || '',
+        port: getTerminalPort(),
+        provider: providerRuntime.provider,
+        abortController
+      });
+
+      let response;
+      try {
+        response = await fetch(`${endpointBase}/v1/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+          signal: abortController.signal
+        });
+      } catch (err) {
+        if (abortController.signal.aborted || getStreamStopRequested()) {
+          return { success: false, stopped: true, message: 'Generation stopped.' };
+        }
+        return { success: false, message: err?.message || String(err) };
+      }
+      if (!response.ok) {
+        const text = await response.text();
+        return { success: false, message: `HTTP ${response.status} - ${text}` };
+      }
+      if (!response.body || typeof response.body.getReader !== 'function') {
+        const text = await response.text();
+        let parsed = {};
+        try { parsed = JSON.parse(text || '{}'); } catch {}
+        const content = String(parsed?.choices?.[0]?.message?.content || '').trim();
+        if (!content) return { success: false, message: 'No assistant content returned by provider.' };
+        return { success: true, message: content };
+      }
+
+      const decoder = new TextDecoder();
+      const reader = response.body.getReader();
+      let buffer = '';
+      let full = '';
+      let doneSeen = false;
+      try {
+        while (true) {
+          if (getStreamStopRequested()) {
+            abortController.abort();
+            break;
+          }
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let lineBreak;
+          while ((lineBreak = buffer.indexOf('\n')) >= 0) {
+            let line = buffer.slice(0, lineBreak);
+            buffer = buffer.slice(lineBreak + 1);
+            line = line.trim();
+            if (!line) continue;
+            if (line.startsWith('data:')) line = line.slice(5).trim();
+            if (!line) continue;
+            if (line === '[DONE]') {
+              doneSeen = true;
+              break;
+            }
+            let parsed;
+            try {
+              parsed = JSON.parse(line);
+            } catch (_) {
+              continue;
+            }
+            const delta = extractProviderDelta(parsed);
+            if (!delta) continue;
+            full += delta;
+            const active = getActiveStream();
+            if (active && active.contentDiv) active.contentDiv.textContent = full;
+            const chat = getChatDisplay();
+            if (chat) chat.scrollTop = chat.scrollHeight;
+          }
+          if (doneSeen) break;
+        }
+      } catch (err) {
+        if (!abortController.signal.aborted && !getStreamStopRequested()) {
+          return { success: false, message: err?.message || String(err) };
+        }
+      } finally {
+        try { reader.releaseLock(); } catch (_) {}
+      }
+
+      const content = String(full || '').trim();
+      if (getStreamStopRequested()) {
+        return { success: false, stopped: true, message: 'Generation stopped.' };
+      }
+      if (!content) {
+        return { success: false, message: 'No assistant content returned by provider.' };
+      }
+      return { success: true, message: content };
     }
     async function sendViaProvider(providerRuntime, messages = []) {
       const options = buildOllamaOptions();
@@ -225,18 +381,25 @@
       if (providerRuntime.provider !== 'ollama') {
         setThinkingStatusText(`Calling ${providerRuntime.provider}`);
         try {
-          const result = await sendViaProvider(providerRuntime, messages);
+          const result = await streamViaProvider(providerRuntime, messages);
           if (result.success) {
             const assistantMessage = sanitizeQwenSelfDialogue(result.message || '');
-            addMessage('assistant', assistantMessage);
+            const active = getActiveStream();
+            if (active && active.contentDiv) {
+              finalizeStreamingMessage(active.contentDiv, assistantMessage);
+            }
             appendConversationPair(message, assistantMessage);
+          } else if (result.stopped) {
+            addSystemMessage('⏹️ Generation stopped.');
           } else {
             addErrorMessage(`Provider error: ${result.message || 'unknown error'}`);
           }
         } catch (error) {
           addErrorMessage(`Provider error: ${error?.message || String(error)}`);
         } finally {
+          setActiveStream(null);
           setWaitingState(false);
+          setStreamStopRequested(false);
           focusInput();
         }
         return;

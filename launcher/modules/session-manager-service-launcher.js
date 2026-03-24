@@ -215,6 +215,7 @@ function createSessionServiceLauncher(deps = {}) {
         ollamaPID: startResult.pid,
         metadata: {
           backend: 'llama-cpp',
+          ownerWindowId: Number.isFinite(Number(options.ownerWindowId)) ? Number(options.ownerWindowId) : null,
           modelPath: startResult.modelPath || options.modelPath || null,
           gpuLayers: Number.isFinite(Number(options.gpuLayers)) ? Number(options.gpuLayers) : null,
           forceCpu: options.forceCpu === true,

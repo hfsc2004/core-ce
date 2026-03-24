@@ -12,6 +12,7 @@ function createSessionStateManager(deps = {}) {
 
   const isProcessRunning = processUtils.isProcessRunning || (async () => false);
   const killProcess = processUtils.killProcess || (async () => false);
+  const killProcessesOnPort = processUtils.killProcessesOnPort || (async () => false);
 
   const normalizeServiceType = sessionUtils.normalizeServiceType || ((v) => String(v || ''));
   const generateSessionId = sessionUtils.generateSessionId || ((type) => `${String(type || 'session')}-${Date.now()}`);
@@ -154,10 +155,13 @@ function createSessionStateManager(deps = {}) {
 
       if (session.ollamaPID) {
         await killProcess(session.ollamaPID, 'Ollama');
-
-        if (session.ollamaPort && portPools && portPools.ollama) {
-          portPools.ollama.releasePort(session.ollamaPort);
-        }
+      }
+      // For llama.cpp, enforce a port-level sweep too (covers stale PID cases).
+      if (String(session?.metadata?.backend || '').toLowerCase() === 'llama-cpp' && session.ollamaPort) {
+        await killProcessesOnPort(session.ollamaPort, 'llama-server');
+      }
+      if (session.ollamaPort && portPools && portPools.ollama) {
+        portPools.ollama.releasePort(session.ollamaPort);
       }
 
       delete activeSessions[sessionId];
