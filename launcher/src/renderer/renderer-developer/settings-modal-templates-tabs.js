@@ -203,15 +203,21 @@ function getHardwareTabHTML() {
       </p>
 
       <h4 style="margin:12px 0 8px 0; color:#ddd;">Microphone Input</h4>
-      <div style="display:grid; grid-template-columns: 1fr auto auto; gap:10px; align-items:end;">
+      <div style="display:grid; grid-template-columns: 1fr auto auto; gap:10px; align-items:center;">
         <div>
           <label style="color:#aaa; font-size:12px;">Input Device</label>
+          <div style="margin:6px 0 8px;">
+            <label style="display:inline-flex; align-items:center; gap:8px; color:#bfc9d4; font-size:12px; cursor:pointer;">
+              <input id="settings-hardware-use-default-mic" type="checkbox" checked onchange="SettingsModal.toggleHardwareMicDefault(this.checked)">
+              <span>Use system default microphone</span>
+            </label>
+          </div>
           <select id="settings-hardware-mic-device" class="settings-input">
-            <option value="">System Default Microphone</option>
+            <option value="" selected>System Default Microphone</option>
           </select>
         </div>
-        <button class="btn-secondary" onclick="SettingsModal.refreshHardwareMicrophones()">Refresh</button>
-        <button class="btn-primary" onclick="SettingsModal.saveHardwareSettings()">Save Hardware</button>
+        <button class="btn-secondary" style="height:38px; margin:24px 0 0 0; display:inline-flex; align-items:center; justify-content:center; line-height:1; padding:0 16px; box-sizing:border-box; box-shadow:none;" onclick="SettingsModal.refreshHardwareMicrophones()">Refresh</button>
+        <button class="btn-primary" style="height:38px; margin:24px 0 0 0; display:inline-flex; align-items:center; justify-content:center; line-height:1; padding:0 16px; box-sizing:border-box; box-shadow:none; border:1px solid transparent;" onclick="SettingsModal.saveHardwareSettings()">Apply</button>
       </div>
       <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
         <button id="settings-hardware-mic-test-btn" class="btn-secondary" onclick="SettingsModal.testHardwareMicrophone()">Test Mic</button>

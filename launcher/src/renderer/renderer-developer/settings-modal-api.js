@@ -69,6 +69,7 @@ window.SettingsModal = {
   testSpeechOutput,
   loadHardwareSettings,
   refreshHardwareMicrophones,
+  toggleHardwareMicDefault,
   saveHardwareSettings,
   testHardwareMicrophone,
   stopHardwareMicrophoneTest,
@@ -142,6 +143,7 @@ window.showTtsDeviceHelp = window.SettingsModal.showTtsDeviceHelp;
 window.testSpeechOutput = window.SettingsModal.testSpeechOutput;
 window.loadHardwareSettings = window.SettingsModal.loadHardwareSettings;
 window.refreshHardwareMicrophones = window.SettingsModal.refreshHardwareMicrophones;
+window.toggleHardwareMicDefault = window.SettingsModal.toggleHardwareMicDefault;
 window.saveHardwareSettings = window.SettingsModal.saveHardwareSettings;
 window.testHardwareMicrophone = window.SettingsModal.testHardwareMicrophone;
 window.toggleGpuMonitor = window.SettingsModal.toggleGpuMonitor;

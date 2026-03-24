@@ -59,7 +59,22 @@ function setMicSelectOptions(selectId, devices, selectedValue) {
     html += `<option value="${escapedValue}">${label}</option>`;
   }
   select.innerHTML = html;
-  select.value = String(selectedValue || '').trim();
+  const desired = String(selectedValue || '').trim();
+  const hasDesired = desired !== '' && safeDevices.some((d) => String(d?.deviceId || '').trim() === desired);
+  select.value = hasDesired ? desired : '';
+}
+
+function toggleHardwareMicDefault(forceChecked) {
+  const useDefaultEl = document.getElementById('settings-hardware-use-default-mic');
+  const select = document.getElementById('settings-hardware-mic-device');
+  if (!select) return;
+  const useDefault = typeof forceChecked === 'boolean'
+    ? forceChecked
+    : Boolean(useDefaultEl?.checked);
+  if (useDefaultEl) useDefaultEl.checked = useDefault;
+  select.disabled = useDefault;
+  select.style.opacity = useDefault ? '0.65' : '1';
+  if (useDefault) select.value = '';
 }
 
 async function listAvailableMicrophones() {
@@ -138,6 +153,8 @@ async function loadHardwareSettings() {
     const selectedId = String(result?.config?.hardware?.inputDeviceId || '').trim();
     const devices = await listAvailableMicrophones();
     setMicSelectOptions('settings-hardware-mic-device', devices, selectedId);
+    const hasSelected = selectedId !== '' && devices.some((d) => String(d?.deviceId || '').trim() === selectedId);
+    toggleHardwareMicDefault(!hasSelected);
     if (statusEl) {
       statusEl.textContent = '';
       statusEl.style.color = '#888';
@@ -177,7 +194,9 @@ async function saveHardwareSettings() {
       throw new Error('Voice settings API unavailable.');
     }
     const select = document.getElementById('settings-hardware-mic-device');
-    const inputDeviceId = String(select?.value || '').trim();
+    const useDefaultEl = document.getElementById('settings-hardware-use-default-mic');
+    const useDefault = Boolean(useDefaultEl?.checked);
+    const inputDeviceId = useDefault ? '' : String(select?.value || '').trim();
     const result = await window.electronAPI.voiceToTextSetConfig({
       hardware: { inputDeviceId }
     });
@@ -209,7 +228,9 @@ async function testHardwareMicrophone() {
     }
 
     const select = document.getElementById('settings-hardware-mic-device');
-    const selectedDeviceId = String(select?.value || '').trim();
+    const useDefaultEl = document.getElementById('settings-hardware-use-default-mic');
+    const useDefault = Boolean(useDefaultEl?.checked);
+    const selectedDeviceId = useDefault ? '' : String(select?.value || '').trim();
     const constraints = selectedDeviceId
       ? { audio: { deviceId: { exact: selectedDeviceId } } }
       : { audio: true };
