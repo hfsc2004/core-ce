@@ -10,10 +10,55 @@ function renderChannelRow(channel, index) {
   const isExpanded = expanded.includes(channel.id) || expandedMoeItem === channel.id;
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
-  const flowCondition = channel.flowCondition || 'always';
+  const flowCondition = String(channel.when || channel.flowCondition || 'always').toLowerCase();
+  const mode = String(channel.mode || 'direct').toLowerCase();
+  const matchRule = String(channel.matchRule || '');
   const retryCount = Number.isInteger(Number(channel.retryCount)) ? Number(channel.retryCount) : 0;
   const timeoutMs = Number.isFinite(Number(channel.timeoutMs)) ? Number(channel.timeoutMs) : 120000;
   const onFailure = channel.onFailure === 'continue' ? 'continue' : 'stop';
+  const fromAgentId = String(channel.fromAgentId || '');
+  const toAgentId = String(channel.toAgentId || '');
+  const groupId = String(channel.groupId || '');
+  const agentItems = Array.isArray(window.modelOrderingState?.moeItems)
+    ? window.modelOrderingState.moeItems.filter((item) => item?.type === 'agent')
+    : [];
+  const safeHtml = (text) => {
+    if (typeof window.escapeHtml === 'function') return window.escapeHtml(String(text ?? ''));
+    return String(text ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  };
+  const fromOptions = [
+    `<option value="" ${!fromAgentId ? 'selected' : ''}>Auto (previous agent)</option>`,
+    ...agentItems.map((agent) => {
+      const selected = fromAgentId === String(agent.id) ? 'selected' : '';
+      return `<option value="${safeHtml(agent.id)}" ${selected}>${safeHtml(agent.name || agent.id)}</option>`;
+    })
+  ].join('');
+  const toOptions = [
+    `<option value="" ${!toAgentId ? 'selected' : ''}>Auto (routing target)</option>`,
+    ...agentItems.map((agent) => {
+      const selected = toAgentId === String(agent.id) ? 'selected' : '';
+      return `<option value="${safeHtml(agent.id)}" ${selected}>${safeHtml(agent.name || agent.id)}</option>`;
+    })
+  ].join('');
+  const groupMembers = (groupId && agentItems.length > 0)
+    ? agentItems
+      .map((agent) => {
+        const agentGroups = Array.isArray(agent.groups) ? agent.groups.map((g) => String(g || '').trim()) : [];
+        const checked = agentGroups.includes(groupId);
+        return `
+          <label onclick="event.stopPropagation()" style="display:inline-flex; align-items:center; gap:6px; color:#b8c7d9; font-size:11px; border:1px solid rgba(255,165,0,0.35); border-radius:999px; padding:3px 8px; background:rgba(255,165,0,0.08);">
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleChannelGroupMember('${channel.id}', '${agent.id}', this.checked)">
+            <span>${safeHtml(agent.name || agent.id)}</span>
+          </label>
+        `;
+      })
+      .join('')
+    : '';
 
   return `
     <div class="moe-item moe-channel ${isExpanded ? 'expanded' : ''}" data-moe-id="${channel.id}" data-moe-type="channel" data-index="${index}"
@@ -47,13 +92,43 @@ function renderChannelRow(channel, index) {
       </div>
       ${isExpanded ? `
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,165,0,0.2);">
+        <label style="color:#888; font-size:11px;">From</label>
+        <select onchange="updateChannelFromAgent('${channel.id}', this.value)" onclick="event.stopPropagation()"
+                style="min-width:170px; padding:3px 8px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
+          ${fromOptions}
+        </select>
+        <label style="color:#888; font-size:11px;">Mode</label>
+        <select onchange="updateChannelMode('${channel.id}', this.value)" onclick="event.stopPropagation()"
+                style="min-width:120px; padding:3px 8px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
+          <option value="direct" ${mode === 'direct' ? 'selected' : ''}>Direct</option>
+          <option value="broadcast" ${mode === 'broadcast' ? 'selected' : ''}>Broadcast</option>
+          <option value="group" ${mode === 'group' ? 'selected' : ''}>Group</option>
+        </select>
+        ${mode === 'direct' ? `
+          <label style="color:#888; font-size:11px;">To</label>
+          <select onchange="updateChannelToAgent('${channel.id}', this.value)" onclick="event.stopPropagation()"
+                  style="min-width:170px; padding:3px 8px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
+            ${toOptions}
+          </select>
+        ` : ''}
+        ${mode === 'group' ? `
+          <label style="color:#888; font-size:11px;">Group</label>
+          <input type="text" value="${safeHtml(groupId)}" placeholder="e.g. policy-council" onclick="event.stopPropagation()"
+                 onchange="updateChannelGroupId('${channel.id}', this.value)"
+                 style="width:170px; padding:3px 6px; background: rgba(255,255,255,0.08); border:1px solid #555; border-radius:4px; color:#fff;">
+        ` : ''}
         <label style="color:#888; font-size:11px;">Flow</label>
-        <select onchange="updateChannelFlowCondition('${channel.id}', this.value)" onclick="event.stopPropagation()"
+        <select onchange="updateChannelWhen('${channel.id}', this.value)" onclick="event.stopPropagation()"
                 style="padding:3px 8px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
           <option value="always" ${flowCondition === 'always' ? 'selected' : ''}>Always</option>
           <option value="on_success" ${flowCondition === 'on_success' ? 'selected' : ''}>On Success</option>
           <option value="on_failure" ${flowCondition === 'on_failure' ? 'selected' : ''}>On Failure</option>
+          <option value="on_match" ${flowCondition === 'on_match' ? 'selected' : ''}>On Match</option>
         </select>
+        <label style="color:#888; font-size:11px;">Match</label>
+        <input type="text" value="${safeHtml(matchRule)}" placeholder="contains:token or regex:/.../" onclick="event.stopPropagation()"
+               onchange="updateChannelMatchRule('${channel.id}', this.value)"
+               style="width:220px; padding:3px 6px; background: rgba(255,255,255,0.08); border:1px solid #555; border-radius:4px; color:#fff;">
         <label style="color:#888; font-size:11px;">Retry</label>
         <input type="number" min="0" max="10" value="${retryCount}" onclick="event.stopPropagation()"
                onchange="updateChannelRetryCount('${channel.id}', this.value)"
@@ -68,7 +143,16 @@ function renderChannelRow(channel, index) {
           <option value="stop" ${onFailure === 'stop' ? 'selected' : ''}>Stop</option>
           <option value="continue" ${onFailure === 'continue' ? 'selected' : ''}>Continue</option>
         </select>
+        ${mode === 'broadcast' ? `<span style="color:#6fa8dc; font-size:11px;">Broadcast target: all enabled agents except sender</span>` : ''}
       </div>
+      ${mode === 'group' ? `
+        <div style="display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,165,0,0.25);">
+          <span style="color:#888; font-size:11px; min-width:95px;">Group Members</span>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${groupMembers || `<span style="color:#777; font-size:11px;">Set Group name to manage members.</span>`}
+          </div>
+        </div>
+      ` : ''}
       ` : ''}
     </div>
   `;

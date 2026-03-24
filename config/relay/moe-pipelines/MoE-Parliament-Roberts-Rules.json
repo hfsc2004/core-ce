@@ -1,0 +1,211 @@
+{
+  "version": "1.0",
+  "lastModified": "2026-03-24T17:42:50.961Z",
+  "items": [
+    {
+      "id": "agent-1774382700001-chair",
+      "type": "agent",
+      "name": "Chair",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are the Chair using a strict Robert's Rules style flow.\\nYour job is process control only.\\n1) Read the user request as a motion.\\n2) Restate it in one sentence beginning with 'MOTION:'.\\n3) Assign next step to Proposer.\\nDo not solve the task. Keep output <= 80 words.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Proposer"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382700002-proposer",
+      "type": "agent",
+      "name": "Proposer",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are the Proposer.\\nWrite the affirmative case for the motion in three short bullets:\\n- value proposition\\n- implementation outline\\n- expected outcome\\nEnd with exactly: 'FOR THE MOTION'.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Opposition"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382700003-opposition",
+      "type": "agent",
+      "name": "Opposition",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are Opposition.\\nProvide exactly three risks or objections (technical, operational, safety).\\nThen provide one amendment line beginning with 'AMENDMENT:'.\\nKeep concise.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Engineer"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382700004-engineer",
+      "type": "agent",
+      "name": "Engineer",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are Engineer.\\nTurn the debate into an executable plan.\\nReturn only:\\nPLAN:\\n1. ...\\n2. ...\\n3. ...\\nInclude concrete success criteria in step 3.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Safety"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382700005-safety",
+      "type": "agent",
+      "name": "Safety",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are Safety Officer.\\nValidate the proposed plan.\\nReturn:\\nSAFETY CHECK:\\n- Pass/Fail\\n- Why\\n- Required guardrail\\nIf fail, provide a minimal fix.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Clerk"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382700006-clerk",
+      "type": "agent",
+      "name": "Clerk",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are the Clerk and must output the official record.\\nOutput in this exact structure:\\nRECORD:\\nMOTION:\\nDEBATE SUMMARY:\\nAMENDMENT:\\nRESOLUTION:\\nVOTE RECOMMENDATION: ADOPT or REJECT\\nNEXT ACTION:\\nBe decisive and concise.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "end"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-1",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382700001-chair",
+      "toAgentId": "agent-1774382700002-proposer",
+      "label": "Chair -> Proposer",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-2",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382700002-proposer",
+      "toAgentId": "agent-1774382700003-opposition",
+      "label": "Proposer -> Opposition",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-3",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382700003-opposition",
+      "toAgentId": "agent-1774382700004-engineer",
+      "label": "Opposition -> Engineer",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-4",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382700004-engineer",
+      "toAgentId": "agent-1774382700005-safety",
+      "label": "Engineer -> Safety",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-5",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382700005-safety",
+      "toAgentId": "agent-1774382700006-clerk",
+      "label": "Safety -> Clerk",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    }
+  ],
+  "endpointRegistry": {
+    "enabled": false,
+    "includeLocalAgents": true,
+    "selection": "priority",
+    "defaultTimeoutMs": 120000,
+    "maxConsecutiveFailures": 2,
+    "cooldownMs": 20000,
+    "agentRoleMap": {},
+    "roles": {}
+  }
+}

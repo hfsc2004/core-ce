@@ -100,6 +100,7 @@ if (!window.createAgent) {
       systemPrompt: '',
       routingMode: 'dynamic',
       routingRules: [],
+      groups: [],
       rlmAssist: false,
       rlmAttachmentBucketId: '',
       rlmAttachmentSessionId: '',
@@ -119,8 +120,18 @@ if (!window.createChannel) {
     return {
       id: `channel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'channel',
+      mode: 'direct',
       direction: direction,
+      fromAgentId: '',
+      toAgentId: '',
+      groupId: '',
       label: '',
+      when: 'always',
+      matchRule: '',
+      flowCondition: 'always',
+      retryCount: 0,
+      timeoutMs: 120000,
+      onFailure: 'stop',
       enabled: true
     };
   };

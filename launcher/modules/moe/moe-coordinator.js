@@ -16,6 +16,8 @@ const {
   buildRoutingConfigMap,
   resolveNextAgentIndex,
   getChannelPoliciesForAgentEdges,
+  getEdgePolicyForTransition,
+  resolveChannelConstrainedNext,
   shouldPassThroughEdge
 } = require('./moe-coordinator-routing');
 const {
@@ -146,10 +148,15 @@ async function routeMessage(userMessage, options = {}) {
   }
 
   const deploymentStatus = deploymentManager?.getStatus?.() || null;
-  const channelPolicies = getChannelPoliciesForAgentEdges(agents.length, deploymentStatus, REQUEST_TIMEOUT);
+  const orderedAgentIds = agents.map((agent) => agent.id);
+  const channelPolicyContext = getChannelPoliciesForAgentEdges(
+    agents.length,
+    deploymentStatus,
+    REQUEST_TIMEOUT,
+    orderedAgentIds
+  );
   const routingConfigByAgentId = buildRoutingConfigMap(deploymentStatus?.config?.items, agents);
   const endpointRegistry = buildEndpointRegistry(deploymentStatus?.config, agents);
-  const orderedAgentIds = agents.map((agent) => agent.id);
   const maxHops = Math.max(8, agents.length * 4);
 
   const trace = {
@@ -184,6 +191,8 @@ async function routeMessage(userMessage, options = {}) {
   let previousStepSuccess = true;
   let currentAgentIndex = 0;
   let previousAgentIndex = -1;
+  let previousAgentId = null;
+  let pendingEdgePolicy = DEFAULT_CHANNEL_POLICY;
   let hops = 0;
 
   try {
@@ -191,7 +200,7 @@ async function routeMessage(userMessage, options = {}) {
       const agent = agents[currentAgentIndex];
       const isLast = (currentAgentIndex === agents.length - 1);
       const edgePolicy = previousAgentIndex >= 0
-        ? (channelPolicies[previousAgentIndex] || DEFAULT_CHANNEL_POLICY)
+        ? (pendingEdgePolicy || getEdgePolicyForTransition(channelPolicyContext, previousAgentId, agent.id, previousAgentIndex))
         : DEFAULT_CHANNEL_POLICY;
 
       if (previousAgentIndex >= 0 && !shouldPassThroughEdge(edgePolicy, previousStepSuccess)) {
@@ -266,10 +275,21 @@ async function routeMessage(userMessage, options = {}) {
       if (!response.success) {
         previousStepSuccess = false;
         if (edgePolicy.onFailure === 'continue') {
-          const sequentialIndex = currentAgentIndex + 1 < agents.length ? currentAgentIndex + 1 : null;
-          if (!Number.isInteger(sequentialIndex)) break;
+      const failConstrained = resolveChannelConstrainedNext({
+        channelContext: channelPolicyContext,
+        currentAgentId: agent.id,
+        proposedNextIndex: (currentAgentIndex + 1 < agents.length) ? currentAgentIndex + 1 : null,
+        orderedAgentIds,
+        agents,
+        currentInput: step.input,
+        currentOutput: String(response.error || ''),
+        previousStepSuccess: false
+      });
+          if (!Number.isInteger(failConstrained.nextIndex)) break;
           previousAgentIndex = currentAgentIndex;
-          currentAgentIndex = sequentialIndex;
+          previousAgentId = agent.id;
+          pendingEdgePolicy = failConstrained.edgePolicy || DEFAULT_CHANNEL_POLICY;
+          currentAgentIndex = failConstrained.nextIndex;
           continue;
         }
         trace.error = `Agent ${agent.name} failed: ${response.error}`;
@@ -290,10 +310,26 @@ async function routeMessage(userMessage, options = {}) {
         routingConfigByAgentId
       });
       step.route = routeDecision;
-
-      if (!Number.isInteger(routeDecision.nextIndex)) break;
+      const constrained = resolveChannelConstrainedNext({
+        channelContext: channelPolicyContext,
+        currentAgentId: agent.id,
+        proposedNextIndex: routeDecision.nextIndex,
+        orderedAgentIds,
+        agents,
+        currentInput: step.input,
+        currentOutput: response.content,
+        previousStepSuccess: true
+      });
+      step.channel = {
+        reason: constrained.reason,
+        fromAgentId: agent.id,
+        toAgentId: Number.isInteger(constrained.nextIndex) ? orderedAgentIds[constrained.nextIndex] : null
+      };
+      if (!Number.isInteger(constrained.nextIndex)) break;
       previousAgentIndex = currentAgentIndex;
-      currentAgentIndex = routeDecision.nextIndex;
+      previousAgentId = agent.id;
+      pendingEdgePolicy = constrained.edgePolicy || DEFAULT_CHANNEL_POLICY;
+      currentAgentIndex = constrained.nextIndex;
     }
 
     if (hops >= maxHops) {

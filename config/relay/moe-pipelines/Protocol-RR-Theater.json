@@ -1,0 +1,222 @@
+{
+  "version": "1.0",
+  "lastModified": "2026-03-24T17:42:50.961Z",
+  "protocol": {
+    "type": "rr-theater",
+    "mode": "deterministic+style",
+    "description": "Same governance flow as RR-Core with theatrical parliamentary language style.",
+    "tokenPolicy": {
+      "enabled": true,
+      "initialHolder": "Chair",
+      "maxTurnsPerRole": 1,
+      "allowInterruptions": false
+    }
+  },
+  "items": [
+    {
+      "id": "agent-1774382702001-chair",
+      "type": "agent",
+      "name": "Chair",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are the Chair in theatrical parliamentary tone.\\nSpeak with formal flourish but remain concise.\\nOutput exactly:\\nMOTION: <one sentence>\\nTOKEN_GRANTED: Proposer",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Proposer"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382702002-proposer",
+      "type": "agent",
+      "name": "Proposer",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are Proposer. Use formal parliamentary tone (e.g., 'Esteemed council').\\nOutput exactly:\\nFOR_CASE:\\n- <point 1>\\n- <point 2>\\n- <point 3>\\nTOKEN_GRANTED: Opposition",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Opposition"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382702003-opposition",
+      "type": "agent",
+      "name": "Opposition",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are Opposition. Use civil, formal rebuttal style.\\nOutput exactly:\\nRISKS:\\n- <risk 1>\\n- <risk 2>\\n- <risk 3>\\nAMENDMENT: <single amendment>\\nTOKEN_GRANTED: Engineer",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Engineer"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382702004-engineer",
+      "type": "agent",
+      "name": "Engineer",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are Engineer. Keep theatrical tone in one short opening line only, then technical plan.\\nOutput exactly:\\nPLAN:\\n1. <step>\\n2. <step>\\n3. <step + measurable completion criteria>\\nTOKEN_GRANTED: Safety",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Safety"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382702005-safety",
+      "type": "agent",
+      "name": "Safety",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are Safety Officer. Formal tone, strict criteria.\\nReturn:\\nSAFETY_CHECK: PASS or FAIL\\nRATIONALE: <one paragraph>\\nREQUIRED_GUARDRAIL: <single guardrail>\\nTOKEN_GRANTED: Clerk",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "Clerk"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "agent-1774382702006-clerk",
+      "type": "agent",
+      "name": "Clerk",
+      "modelId": "smollm2-135m",
+      "modelName": "SmolLM2 135M Instruct",
+      "collectionKey": "quick-start-128gb",
+      "filename": "smollm2-135m.gguf",
+      "projectorFilename": null,
+      "systemPrompt": "You are Clerk. Final record in formal parliamentary diction.\\nOutput exactly:\\nRECORD:\\nMOTION:\\nFOR_CASE:\\nRISKS:\\nAMENDMENT:\\nPLAN:\\nSAFETY_CHECK:\\nRESOLUTION:\\nVOTE_RECOMMENDATION: ADOPT or REJECT\\nNEXT_ACTION:\\nNo extra text.",
+      "routingMode": "static",
+      "routingRules": [
+        {
+          "match": "*",
+          "target": "end"
+        }
+      ],
+      "tools": [],
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-1",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382702001-chair",
+      "toAgentId": "agent-1774382702002-proposer",
+      "label": "Chair -> Proposer",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-2",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382702002-proposer",
+      "toAgentId": "agent-1774382702003-opposition",
+      "label": "Proposer -> Opposition",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-3",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382702003-opposition",
+      "toAgentId": "agent-1774382702004-engineer",
+      "label": "Opposition -> Engineer",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-4",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382702004-engineer",
+      "toAgentId": "agent-1774382702005-safety",
+      "label": "Engineer -> Safety",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    },
+    {
+      "id": "channel-1774374170961-5",
+      "type": "channel",
+      "direction": "unidirectional",
+      "fromAgentId": "agent-1774382702005-safety",
+      "toAgentId": "agent-1774382702006-clerk",
+      "label": "Safety -> Clerk",
+      "when": "always",
+      "flowCondition": "always",
+      "matchRule": "",
+      "retryCount": 0,
+      "timeoutMs": 120000,
+      "onFailure": "stop",
+      "enabled": true
+    }
+  ],
+  "endpointRegistry": {
+    "enabled": false,
+    "includeLocalAgents": true,
+    "selection": "priority",
+    "defaultTimeoutMs": 120000,
+    "maxConsecutiveFailures": 2,
+    "cooldownMs": 20000,
+    "agentRoleMap": {},
+    "roles": {}
+  }
+}

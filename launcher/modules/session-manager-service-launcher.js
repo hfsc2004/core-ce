@@ -173,6 +173,8 @@ function createSessionServiceLauncher(deps = {}) {
           startResult = await llamaCppManager.startLlamaServerOnPort(appPath, {
             port,
             modelPath: options.modelPath,
+            modelName: options.modelName,
+            chatTemplate: options.chatTemplate,
             contextSize: options.contextSize,
             threads: options.threads,
             parallel: options.parallel,
@@ -217,6 +219,9 @@ function createSessionServiceLauncher(deps = {}) {
           backend: 'llama-cpp',
           ownerWindowId: Number.isFinite(Number(options.ownerWindowId)) ? Number(options.ownerWindowId) : null,
           modelPath: startResult.modelPath || options.modelPath || null,
+          modelName: options.modelName || null,
+          chatTemplate: startResult.chatTemplate || options.chatTemplate || null,
+          chatTemplateSource: startResult.chatTemplateSource || (options.chatTemplate ? 'explicit' : 'none'),
           gpuLayers: Number.isFinite(Number(options.gpuLayers)) ? Number(options.gpuLayers) : null,
           forceCpu: options.forceCpu === true,
           splitMode: options.splitMode || null,
@@ -237,6 +242,8 @@ function createSessionServiceLauncher(deps = {}) {
         sessionId,
         port: startPort,
         pid: startResult.pid,
+        chatTemplate: startResult.chatTemplate || options.chatTemplate || null,
+        chatTemplateSource: startResult.chatTemplateSource || (options.chatTemplate ? 'explicit' : 'none'),
         message: `llama.cpp started on port ${startPort} for ${serviceType}`
       };
     } catch (err) {

@@ -167,7 +167,9 @@ function registerOpsHandlers(ipcMain, deps = {}) {
 
     const ownerWindow = event && event.sender ? BrowserWindow.fromWebContents(event.sender) : null;
     const ownerWindowId = Number(ownerWindow?.id || 0) || null;
-    const modelPath = String(payload?.modelPath || '').trim();
+    let modelPath = String(payload?.modelPath || '').trim();
+    let modelName = String(payload?.modelName || '').trim();
+    const chatTemplate = String(payload?.chatTemplate || '').trim();
     const gpuInfo = getGpuInfo() || null;
     const nvidiaDetected = String(gpuInfo?.accelerationType || '').toLowerCase() === 'nvidia';
     const requestedGpuLayersRaw = Number(payload?.gpuLayers);
@@ -187,6 +189,10 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         if (ownerWindowId && sessionOwnerWindowId && sessionOwnerWindowId !== ownerWindowId) continue;
         const sessionModelPath = String(session?.metadata?.modelPath || '').trim();
         if (modelPath && sessionModelPath && sessionModelPath !== modelPath) continue;
+        const sessionModelName = String(session?.metadata?.modelName || '').trim().toLowerCase();
+        if (modelName && sessionModelName && sessionModelName !== modelName.toLowerCase()) continue;
+        const sessionTemplate = String(session?.metadata?.chatTemplate || '').trim();
+        if (chatTemplate && sessionTemplate && sessionTemplate !== chatTemplate) continue;
         if (requireGpuSession) {
           const sessionForceCpu = session?.metadata?.forceCpu === true;
           const sessionGpuLayers = Number(session?.metadata?.gpuLayers);
@@ -212,16 +218,31 @@ function registerOpsHandlers(ipcMain, deps = {}) {
           sessionId: session?.sessionId || null,
           reused: true,
           modelPath: sessionModelPath || null,
+          chatTemplate: String(session?.metadata?.chatTemplate || '').trim() || null,
           baseUrl: `http://127.0.0.1:${port}`
         };
       }
     }
 
     if (!modelPath) {
-      return {
-        success: false,
-        message: 'BMOC llama.cpp startup requires a GGUF model path. Set "llama.cpp model path" in Terminal settings.'
-      };
+      try {
+        const discovered = listTerminalLlamaCppModels();
+        const first = Array.isArray(discovered?.models) ? discovered.models[0] : null;
+        const autoPath = String(first?.pathAbs || '').trim();
+        const autoName = String(first?.name || '').trim();
+        if (autoPath) {
+          modelPath = autoPath;
+          if (!modelName && autoName) modelName = autoName;
+        }
+      } catch (_) {
+        // Fall through to explicit error below.
+      }
+      if (!modelPath) {
+        return {
+          success: false,
+          message: 'No GGUF model found in local catalog storage. Download at least one GGUF model first.'
+        };
+      }
     }
 
     await cleanupTerminalLlamaCppSessions();
@@ -229,6 +250,8 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const startResult = await sessionManager.startLlamaCppForService('terminal', appDir, {
       ownerWindowId,
       modelPath,
+      modelName: modelName || null,
+      chatTemplate: chatTemplate || null,
       contextSize: Number.isFinite(Number(payload?.contextSize)) ? Number(payload.contextSize) : undefined,
       threads: Number.isFinite(Number(payload?.threads)) ? Number(payload.threads) : undefined,
       parallel: Number.isFinite(Number(payload?.parallel)) ? Number(payload.parallel) : undefined,
@@ -260,6 +283,8 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       sessionId: startResult.sessionId || null,
       reused: false,
       modelPath,
+      modelName: modelName || null,
+      chatTemplate: String(startResult?.chatTemplate || chatTemplate || '').trim() || null,
       baseUrl: port > 0 ? `http://127.0.0.1:${port}` : ''
     };
   }

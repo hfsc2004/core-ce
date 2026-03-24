@@ -15,6 +15,11 @@ const os = require('os');
 const http = require('http');
 const { spawn, execFileSync } = require('child_process');
 
+let catalogTemplateCache = {
+  cacheKey: '',
+  tokenMap: new Map()
+};
+
 function getPlatformTag() {
   const p = os.platform();
   const a = os.arch();
@@ -58,6 +63,182 @@ function resolveModelPath(appDir, modelPath) {
   return path.resolve(path.join(appDir, '..'), raw);
 }
 
+function getTemplateDirectory(appDir) {
+  const platformTag = getPlatformTag();
+  if (!platformTag) return null;
+  return path.join(appDir, '..', 'binaries', 'llama.cpp', platformTag, 'models', 'templates');
+}
+
+function resolveKnownTemplatePath(appDir, fileName) {
+  const templateDir = getTemplateDirectory(appDir);
+  if (!templateDir) return null;
+  const candidate = path.join(templateDir, String(fileName || '').trim());
+  if (!String(fileName || '').trim()) return null;
+  return fs.existsSync(candidate) ? candidate : null;
+}
+
+function normalizeModelToken(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return '';
+  return raw.replace(/\.gguf$/i, '');
+}
+
+function normalizeTemplateValue(appDir, value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  if (path.isAbsolute(raw)) return raw;
+  if (/\.jinja$/i.test(raw)) {
+    const resolved = resolveKnownTemplatePath(appDir, raw);
+    return resolved || raw;
+  }
+  return raw;
+}
+
+function getCatalogModelEntries(catalog) {
+  if (!catalog || typeof catalog !== 'object') return [];
+  if (Array.isArray(catalog.models)) return catalog.models;
+  const out = [];
+  const collections = catalog.collections;
+  if (collections && typeof collections === 'object') {
+    if (Array.isArray(collections)) {
+      collections.forEach((collection) => {
+        if (Array.isArray(collection?.models)) out.push(...collection.models);
+      });
+    } else {
+      Object.values(collections).forEach((collection) => {
+        if (Array.isArray(collection?.models)) out.push(...collection.models);
+      });
+    }
+  }
+  return out;
+}
+
+function buildCatalogTemplateTokenMap(appDir) {
+  const modelsDir = path.join(appDir, '..', 'models');
+  let catalogFiles = [];
+  try {
+    catalogFiles = fs.readdirSync(modelsDir)
+      .filter((name) => /^catalog-.*\.json$/i.test(String(name || '')))
+      .sort();
+  } catch (_) {
+    return new Map();
+  }
+
+  const statsKey = catalogFiles.map((name) => {
+    try {
+      const stat = fs.statSync(path.join(modelsDir, name));
+      return `${name}:${Number(stat.mtimeMs || 0)}:${Number(stat.size || 0)}`;
+    } catch (_) {
+      return `${name}:0:0`;
+    }
+  }).join('|');
+  if (catalogTemplateCache.cacheKey === statsKey && catalogTemplateCache.tokenMap instanceof Map) {
+    return catalogTemplateCache.tokenMap;
+  }
+
+  const tokenMap = new Map();
+  const templateFields = ['chat_template', 'chatTemplate', 'llama_cpp_chat_template', 'llamaCppChatTemplate'];
+  for (const fileName of catalogFiles) {
+    const fullPath = path.join(modelsDir, fileName);
+    let parsed = null;
+    try {
+      parsed = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+    } catch (_) {
+      continue;
+    }
+    const entries = getCatalogModelEntries(parsed);
+    for (const entry of entries) {
+      if (!entry || typeof entry !== 'object') continue;
+      const explicitTemplateRaw = templateFields
+        .map((field) => entry[field])
+        .find((v) => String(v || '').trim().length > 0);
+      if (!explicitTemplateRaw) continue;
+      const templateValue = normalizeTemplateValue(appDir, explicitTemplateRaw);
+      if (!templateValue) continue;
+
+      const tokens = new Set();
+      const primaryCandidates = [
+        entry.id,
+        entry.name,
+        entry.filename,
+        entry.download_url,
+        entry.base_model_url
+      ];
+      primaryCandidates.forEach((candidate) => {
+        const token = normalizeModelToken(candidate);
+        if (token) tokens.add(token);
+        if (String(candidate || '').includes('/')) {
+          const base = normalizeModelToken(path.basename(String(candidate || '')));
+          if (base) tokens.add(base);
+        }
+      });
+      const artifacts = Array.isArray(entry.artifacts) ? entry.artifacts : [];
+      artifacts.forEach((artifact) => {
+        const token = normalizeModelToken(artifact?.filename);
+        if (token) tokens.add(token);
+      });
+
+      for (const token of tokens) {
+        if (!tokenMap.has(token)) {
+          tokenMap.set(token, templateValue);
+        }
+      }
+    }
+  }
+
+  catalogTemplateCache = {
+    cacheKey: statsKey,
+    tokenMap
+  };
+  return tokenMap;
+}
+
+function resolveCatalogTemplate(appDir, options = {}) {
+  const tokenMap = buildCatalogTemplateTokenMap(appDir);
+  if (!(tokenMap instanceof Map) || tokenMap.size === 0) return null;
+
+  const modelPath = String(options.modelPath || '').trim();
+  const modelName = String(options.modelName || '').trim();
+  const probeTokens = [
+    modelName,
+    path.basename(modelPath || ''),
+    path.basename(modelPath || '').replace(/\.gguf$/i, '')
+  ]
+    .map((value) => normalizeModelToken(value))
+    .filter(Boolean);
+
+  for (const token of probeTokens) {
+    const hit = tokenMap.get(token);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function inferChatTemplate(appDir, options = {}) {
+  const explicit = String(options.chatTemplate || '').trim();
+  if (explicit) {
+    return { value: explicit, source: 'explicit' };
+  }
+
+  const catalogTemplate = resolveCatalogTemplate(appDir, options);
+  if (catalogTemplate) {
+    return { value: catalogTemplate, source: 'catalog' };
+  }
+
+  const modelPath = String(options.modelPath || '').trim();
+  const modelName = String(options.modelName || '').trim();
+  const identity = `${modelName} ${path.basename(modelPath || '')}`.toLowerCase();
+  if (!identity) return { value: null, source: 'none' };
+
+  // Keep heuristics minimal. Family-wide forced templates can degrade output badly.
+  // Prefer model metadata (catalog override) or explicit user/operator override.
+  if (/tinyllama/.test(identity)) {
+    return { value: 'chatml', source: 'auto:builtin:chatml' };
+  }
+
+  return { value: null, source: 'none' };
+}
+
 function pingEndpoint(url, timeoutMs = 2000) {
   return new Promise((resolve) => {
     const req = http.get(url, (res) => {
@@ -96,6 +277,8 @@ async function startLlamaServerOnPort(appDir, options = {}) {
   const {
     port,
     modelPath,
+    modelName,
+    chatTemplate,
     contextSize = 8192,
     threads = 0,
     gpuLayers = null,
@@ -130,6 +313,15 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     '--ctx-size', String(Math.max(256, Number(contextSize) || 8192)),
     '--parallel', String(Math.max(1, Number(parallel) || 1))
   ];
+
+  const templateResolved = inferChatTemplate(appDir, {
+    chatTemplate,
+    modelPath: resolvedModelPath,
+    modelName
+  });
+  if (templateResolved.value) {
+    args.push('--chat-template', String(templateResolved.value));
+  }
 
   if (Number(threads) > 0) {
     args.push('--threads', String(Math.max(1, Number(threads))));
@@ -215,7 +407,9 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     pid: child.pid,
     port,
     process: child,
-    modelPath: resolvedModelPath
+    modelPath: resolvedModelPath,
+    chatTemplate: templateResolved.value || null,
+    chatTemplateSource: templateResolved.source || 'none'
   };
 }
 

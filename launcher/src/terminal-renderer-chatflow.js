@@ -113,6 +113,7 @@
         }
         const sessionResult = await api.ensureTerminalLlamaCppSession({
           modelPath: providerRuntime.llamaCppModelPath,
+          modelName: model || '',
           contextSize: options?.num_ctx,
           gpuLayers: options?.num_gpu
         });
@@ -121,6 +122,9 @@
             success: false,
             message: sessionResult?.message || 'Failed to start BMOC llama.cpp terminal session.'
           };
+        }
+        if (sessionResult?.reused === false && String(sessionResult?.chatTemplate || '').trim()) {
+          addSystemMessage(`llama.cpp chat template: ${String(sessionResult.chatTemplate)}`);
         }
         const port = Number(sessionResult.port || sessionResult.ollamaPort || 0);
         endpointBase = String(sessionResult.baseUrl || (port > 0 ? `http://127.0.0.1:${port}` : '')).trim().replace(/\/+$/, '');
@@ -258,6 +262,7 @@
         }
         const sessionResult = await api.ensureTerminalLlamaCppSession({
           modelPath: providerRuntime.llamaCppModelPath,
+          modelName: model || '',
           contextSize: options?.num_ctx,
           gpuLayers: options?.num_gpu
         });
@@ -266,6 +271,9 @@
             success: false,
             message: sessionResult?.message || 'Failed to start BMOC llama.cpp terminal session.'
           };
+        }
+        if (sessionResult?.reused === false && String(sessionResult?.chatTemplate || '').trim()) {
+          addSystemMessage(`llama.cpp chat template: ${String(sessionResult.chatTemplate)}`);
         }
         const port = Number(sessionResult.port || sessionResult.ollamaPort || 0);
         endpointBase = String(sessionResult.baseUrl || (port > 0 ? `http://127.0.0.1:${port}` : '')).trim().replace(/\/+$/, '');
