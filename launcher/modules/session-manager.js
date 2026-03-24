@@ -55,6 +55,7 @@ const serviceLauncher = createSessionServiceLauncher({
 
 const moe = createSessionManagerMoe({
   startOllamaForService,
+  startLlamaCppForService,
   closeSession,
   registerSession: (config) => sessionState.registerSession(config),
   getSession: (sessionId) => sessionState.getSession(sessionId),

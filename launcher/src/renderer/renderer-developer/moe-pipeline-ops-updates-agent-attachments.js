@@ -31,6 +31,15 @@ function assignModelToAgent(agentId, modelId) {
   renderModelOrdering();
 }
 
+function updateAgentProvider(agentId, provider) {
+  const agent = window.modelOrderingState.moeItems.find(i => i.id === agentId && i.type === 'agent');
+  if (!agent) return;
+  const normalized = String(provider || '').trim().toLowerCase() === 'llama.cpp' ? 'llama.cpp' : 'ollama';
+  agent.provider = normalized;
+  console.log('[MoE] Updated agent provider:', agentId, normalized);
+  renderModelOrdering();
+}
+
 function toggleAgentRoutingMode(agentId) {
   const agent = window.modelOrderingState.moeItems.find(i => i.id === agentId && i.type === 'agent');
   if (agent) {
@@ -467,6 +476,7 @@ function openMoeRoutingHelp() {
 }
 
 window.assignModelToAgent = assignModelToAgent;
+window.updateAgentProvider = updateAgentProvider;
 window.toggleAgentRoutingMode = toggleAgentRoutingMode;
 window.toggleAgentRlmAssist = toggleAgentRlmAssist;
 window.openMoeAttachmentManager = openMoeAttachmentManager;

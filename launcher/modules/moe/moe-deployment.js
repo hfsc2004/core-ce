@@ -20,6 +20,8 @@
 
 const moeEndpoint = require('./moe-endpoint');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const settingsManager = require('../settings-manager');
 const networkHost = require('../network-host');
 const createIngressTools = require('./moe-deployment-ingress');
@@ -32,6 +34,7 @@ let activeDeployment = null;
 
 let bmoc = {
   startOllamaForService: null,
+  startLlamaCppForService: null,
   closeSession: null,
   registerSession: null,
   getSession: null,
@@ -43,6 +46,8 @@ let bmoc = {
 let coordinatorBridge = {
   routeMoEMessage: null
 };
+let catalogModelRuntimeIndex = null;
+const DEFAULT_LLAMA_GPU_LAYERS = 999;
 const ingressTools = createIngressTools({
   http,
   settingsManager,
@@ -65,6 +70,138 @@ function initialize(bmocFunctions) {
   coordinatorBridge.routeMoEMessage =
     typeof bmocFunctions?.routeMoEMessage === 'function' ? bmocFunctions.routeMoEMessage : null;
   console.log('[MoE Deployment] Initialized with BMOC functions');
+}
+
+function normalizeModelToken(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function loadCatalogModelRuntimeIndex(appPath) {
+  if (catalogModelRuntimeIndex) return catalogModelRuntimeIndex;
+  const map = new Map();
+  const modelRoots = [
+    path.join(appPath, '..', 'models', 'catalog-master.json')
+  ];
+  for (const fullPath of modelRoots) {
+    if (!fs.existsSync(fullPath)) continue;
+    let parsed = null;
+    try {
+      parsed = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+    } catch (_) {
+      continue;
+    }
+    const collections = parsed?.collections && typeof parsed.collections === 'object'
+      ? Object.entries(parsed.collections)
+      : [];
+    for (const [collectionKey, collection] of collections) {
+      const models = Array.isArray(collection?.models) ? collection.models : [];
+      for (const model of models) {
+        const key = normalizeModelToken(model?.id);
+        if (!key) continue;
+        const runtimeTag = String(model?.ollama_model || '').trim();
+        const filename = String(model?.filename || '').trim();
+        const fileStem = filename.replace(/\.gguf$/i, '').trim();
+        map.set(key, {
+          runtimeTag: runtimeTag || null,
+          filename: filename || null,
+          collectionKey: String(collectionKey || '').trim() || null,
+          fileStem: fileStem || null,
+          modelName: String(model?.name || '').trim() || null
+        });
+      }
+    }
+  }
+  catalogModelRuntimeIndex = map;
+  return catalogModelRuntimeIndex;
+}
+
+function resolveAgentRuntimeModelTag(agent, appPath) {
+  const rawModelId = String(agent?.modelId || '').trim();
+  const rawModelName = String(agent?.modelName || '').trim();
+  const rawFilenameStem = String(agent?.filename || '').replace(/\.gguf$/i, '').trim();
+
+  // Already a direct Ollama tag
+  if (rawModelId.includes(':')) {
+    return {
+      runtimeModelTag: rawModelId,
+      catalogModelId: rawModelId,
+      source: 'direct-tag'
+    };
+  }
+
+  const index = loadCatalogModelRuntimeIndex(appPath);
+  const idxHit = index.get(normalizeModelToken(rawModelId));
+  if (idxHit?.runtimeTag) {
+    return {
+      runtimeModelTag: idxHit.runtimeTag,
+      catalogModelId: rawModelId || null,
+      source: 'catalog-ollama-model'
+    };
+  }
+
+  // Fallbacks when catalog lacks ollama_model.
+  if (rawFilenameStem) {
+    return {
+      runtimeModelTag: rawFilenameStem,
+      catalogModelId: rawModelId || null,
+      source: 'filename-stem'
+    };
+  }
+  if (rawModelName) {
+    return {
+      runtimeModelTag: rawModelName,
+      catalogModelId: rawModelId || null,
+      source: 'model-name'
+    };
+  }
+  return {
+    runtimeModelTag: rawModelId,
+    catalogModelId: rawModelId || null,
+    source: 'model-id'
+  };
+}
+
+function normalizeAgentProvider(agent = {}) {
+  const explicit = String(agent?.provider || '').trim().toLowerCase();
+  if (explicit === 'llama.cpp') return 'llama.cpp';
+  if (explicit === 'ollama') return 'ollama';
+  const modelId = String(agent?.modelId || '').trim().toLowerCase();
+  const filename = String(agent?.filename || '').trim().toLowerCase();
+  if (modelId.includes('gguf') || filename.endsWith('.gguf')) return 'llama.cpp';
+  return 'ollama';
+}
+
+function resolveModelPathFromCatalog(agent, appPath) {
+  const modelsRoot = path.join(appPath, '..', 'models');
+  const index = loadCatalogModelRuntimeIndex(appPath);
+  const hit = index.get(normalizeModelToken(agent?.modelId));
+  const filename = String(agent?.filename || hit?.filename || '').trim();
+  if (!filename) return null;
+
+  const candidatePaths = [];
+  const collectionKey = String(agent?.collectionKey || hit?.collectionKey || '').trim();
+  if (collectionKey) {
+    candidatePaths.push(path.join(modelsRoot, collectionKey, filename));
+  }
+  candidatePaths.push(path.join(modelsRoot, filename));
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+
+  // Slow fallback: search one collection level deep by exact filename.
+  try {
+    const children = fs.readdirSync(modelsRoot, { withFileTypes: true });
+    for (const child of children) {
+      if (!child?.isDirectory?.()) continue;
+      const candidate = path.join(modelsRoot, child.name, filename);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  } catch (_) {
+    // Keep fail-fast; caller raises explicit error when null.
+  }
+
+  return null;
 }
 
 // ============================================================================
@@ -150,39 +287,94 @@ async function deployPipeline(pipelineConfig, appPath, gpuInfo) {
 }
 
 /**
- * Deploy a single agent via BMOC
- * 
- * NO PULLING - models are already wrapped and ready.
- * Just start Ollama and wait for it to be ready.
+ * Deploy a single agent via BMOC.
+ * Provider-specific startup:
+ * - ollama: start Ollama and route /api/chat
+ * - llama.cpp: start llama-server with resolved GGUF path and route /v1/chat/completions
  */
 async function deployAgent(agent, appPath, gpuInfo) {
-  console.log(`[MoE Deployment]    🤖 ${agent.name} (model: ${agent.modelName || agent.modelId})`);
-  
-  // 1. Start Ollama via BMOC
-  const t1 = Date.now();
-  const result = await bmoc.startOllamaForService('moe-agent', appPath, gpuInfo);
-  console.log(`[MoE Deployment]    ⏱️ BMOC start: ${Date.now() - t1}ms`);
-  
-  if (!result.success) {
-    throw new Error(`Failed to start Ollama for ${agent.name}: ${result.message}`);
+  const provider = normalizeAgentProvider(agent);
+  const resolvedModel = resolveAgentRuntimeModelTag(agent, appPath);
+  const resolvedModelPath = provider === 'llama.cpp'
+    ? resolveModelPathFromCatalog(agent, appPath)
+    : null;
+
+  if (provider === 'llama.cpp' && !resolvedModelPath) {
+    throw new Error(
+      `Agent "${agent.name}" requires a GGUF file for llama.cpp, but no local model file was found ` +
+      `for "${agent.modelName || agent.modelId || 'unknown model'}".`
+    );
   }
-  
-  console.log(`[MoE Deployment]    Port ${result.ollamaPort}, PID ${result.ollamaPID}`);
-  
-  // 2. Create endpoint
-  const endpoint = moeEndpoint.createLocalEndpoint(result.ollamaPort);
-  
-  // 3. Register agent (model is already there - no pull needed!)
+
+  console.log(
+    `[MoE Deployment]    🤖 ${agent.name} (${provider}) ` +
+    `(model: ${agent.modelName || agent.modelId})` +
+    ` -> runtime tag: ${resolvedModel.runtimeModelTag} [${resolvedModel.source}]`
+  );
+  if (provider === 'llama.cpp') {
+    console.log(`[MoE Deployment]    📦 llama.cpp model path: ${resolvedModelPath}`);
+  }
+
+  const t1 = Date.now();
+  let endpoint = null;
+  let sessionId = null;
+  let port = null;
+  let pid = null;
+  let chatTemplate = null;
+  let chatTemplateSource = 'none';
+
+  if (provider === 'llama.cpp') {
+    if (typeof bmoc.startLlamaCppForService !== 'function') {
+      throw new Error('BMOC startLlamaCppForService is unavailable for Relay deploy.');
+    }
+    const result = await bmoc.startLlamaCppForService('moe-agent', appPath, {
+      modelPath: resolvedModelPath,
+      modelName: agent.modelName || agent.modelId || path.basename(String(resolvedModelPath || '')),
+      gpuLayers: Number.isFinite(Number(agent?.gpuLayers))
+        ? Number(agent.gpuLayers)
+        : DEFAULT_LLAMA_GPU_LAYERS,
+      forceCpu: agent?.forceCpu === true,
+      contextSize: Number.isFinite(Number(agent?.contextSize)) ? Number(agent.contextSize) : 8192,
+      threads: Number.isFinite(Number(agent?.threads)) ? Number(agent.threads) : 0,
+      parallel: Number.isFinite(Number(agent?.parallel)) ? Number(agent.parallel) : 1
+    });
+    if (!result?.success) {
+      throw new Error(`Failed to start llama.cpp for ${agent.name}: ${result?.message || 'unknown error'}`);
+    }
+    sessionId = result.sessionId;
+    port = Number(result.port);
+    pid = result.pid;
+    chatTemplate = result.chatTemplate || null;
+    chatTemplateSource = result.chatTemplateSource || 'none';
+    endpoint = moeEndpoint.createLocalEndpoint(port);
+  } else {
+    const result = await bmoc.startOllamaForService('moe-agent', appPath, gpuInfo);
+    if (!result?.success) {
+      throw new Error(`Failed to start Ollama for ${agent.name}: ${result?.message || 'unknown error'}`);
+    }
+    sessionId = result.sessionId;
+    port = Number(result.ollamaPort);
+    pid = result.ollamaPID;
+    endpoint = moeEndpoint.createLocalEndpoint(port);
+  }
+
+  console.log(`[MoE Deployment]    ⏱️ BMOC start: ${Date.now() - t1}ms`);
+  console.log(`[MoE Deployment]    Port ${port}, PID ${pid}`);
+
   activeDeployment.agents[agent.id] = {
-    sessionId: result.sessionId,
+    sessionId,
     name: agent.name,
     role: String(agent.role || agent.routingRole || '').trim() || null,
-    modelId: agent.modelId,  // Use exact name from catalog
-    catalogModelId: agent.modelId,
+    provider,
+    modelId: resolvedModel.runtimeModelTag,
+    catalogModelId: resolvedModel.catalogModelId || agent.modelId,
     modelName: agent.modelName,
+    modelPath: resolvedModelPath || null,
+    chatTemplate,
+    chatTemplateSource,
     endpoint,
-    port: result.ollamaPort,
-    pid: result.ollamaPID,
+    port,
+    pid,
     routingMode: agent.routingMode,
     routingRules: Array.isArray(agent.routingRules) ? agent.routingRules : [],
     rlmAssist: agent.rlmAssist === true,
@@ -191,18 +383,17 @@ async function deployAgent(agent, appPath, gpuInfo) {
     tools: agent.tools || [],
     status: 'starting'
   };
-  
-  // 4. Wait for Ollama to be ready (it will see the already-wrapped model)
+
   const t2 = Date.now();
-  const ready = await waitForOllama(result.ollamaPort, 10000);
-  console.log(`[MoE Deployment]    ⏱️ Ollama ready: ${Date.now() - t2}ms`);
-  
+  const ready = await waitForProvider(provider, port, 10000);
+  console.log(`[MoE Deployment]    ⏱️ ${provider} ready: ${Date.now() - t2}ms`);
+
   if (ready) {
     activeDeployment.agents[agent.id].status = 'ready';
     console.log(`[MoE Deployment]    ✅ ${agent.name} ready`);
   } else {
     activeDeployment.agents[agent.id].status = 'timeout';
-    console.warn(`[MoE Deployment]    ⚠️ ${agent.name} - Ollama not responding`);
+    console.warn(`[MoE Deployment]    ⚠️ ${agent.name} - ${provider} not responding`);
   }
 }
 
@@ -225,6 +416,30 @@ async function waitForOllama(port, timeoutMs = 10000) {
     await new Promise(r => setTimeout(r, 250));
   }
   return false;
+}
+
+async function waitForProvider(provider, port, timeoutMs = 10000) {
+  const p = String(provider || '').trim().toLowerCase();
+  if (p === 'llama.cpp') {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const ok = await new Promise((resolve) => {
+          const req = require('http').get(`http://127.0.0.1:${port}/health`, (res) => {
+            resolve(res.statusCode >= 200 && res.statusCode < 500);
+          });
+          req.on('error', () => resolve(false));
+          req.setTimeout(1000, () => { req.destroy(); resolve(false); });
+        });
+        if (ok) return true;
+      } catch (_) {
+        // retry
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    return false;
+  }
+  return waitForOllama(port, timeoutMs);
 }
 
 // ============================================================================

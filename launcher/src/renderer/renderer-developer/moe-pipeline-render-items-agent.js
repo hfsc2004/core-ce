@@ -10,6 +10,14 @@ function renderAgentRow(agent, index, modelsForDropdown) {
   const isExpanded = expanded.includes(agent.id) || expandedMoeItem === agent.id;
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
+  const provider = String(agent.provider || '').trim().toLowerCase() === 'llama.cpp' ? 'llama.cpp' : 'ollama';
+  const filteredModels = (Array.isArray(modelsForDropdown) ? modelsForDropdown : []).filter((m) => {
+    const runtimes = Array.isArray(m?.runtimes) ? m.runtimes.map((value) => String(value || '').trim().toLowerCase()) : [];
+    const hasOllamaRuntime = runtimes.includes('ollama') || String(m?.ollamaModel || '').trim().length > 0;
+    const hasLlamaRuntime = runtimes.includes('llama.cpp') || /\.gguf$/i.test(String(m?.filename || '').trim());
+    return provider === 'llama.cpp' ? hasLlamaRuntime : hasOllamaRuntime;
+  });
+  const selectedMissing = !!agent.modelId && !filteredModels.some((m) => m.id === agent.modelId);
   const counts = (window.modelOrderingState?.moeAttachmentCounts?.byAgentId || {})[agent.id] || {};
   const agentCount = Number(counts.agentCount || 0);
   const sharedCount = Number(counts.sharedCount || 0);
@@ -34,15 +42,30 @@ function renderAgentRow(agent, index, modelsForDropdown) {
               onmouseover="this.style.borderBottomColor='${theme.accent}'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(agent.name)}</span>
         <div style="flex: 1; display: flex; align-items: center; justify-content: flex-start; gap: 8px;">
           <span style="color: #888;">→</span>
+          <select onchange="updateAgentProvider('${agent.id}', this.value)" onclick="event.stopPropagation()"
+                  title="Inference provider for this agent"
+                  style="padding: 6px 8px; background: rgba(255,255,255,0.1); border: 1px solid #333; border-radius: 4px; color: #fff; min-width: 110px; max-width: 110px; font-size: 11px;">
+            <option value="ollama" ${provider === 'ollama' ? 'selected' : ''}>Ollama</option>
+            <option value="llama.cpp" ${provider === 'llama.cpp' ? 'selected' : ''}>llama.cpp</option>
+          </select>
           <select onchange="assignModelToAgent('${agent.id}', this.value)" onclick="event.stopPropagation()"
                   style="padding: 6px 10px; background: rgba(255,255,255,0.1); border: 1px solid #333; border-radius: 4px; color: #fff; width: 240px; min-width: 240px; max-width: 240px;">
             <option value="" ${!agent.modelId ? 'selected' : ''}>-- Select Model --</option>
-            ${modelsForDropdown.map((m) => {
-              const notDownloaded = showAllModels && !m.isDownloaded;
-              const suffix = notDownloaded ? ' (not downloaded)' : '';
-              const disabled = notDownloaded ? 'disabled' : '';
-              const style = notDownloaded ? 'color: #666;' : '';
-              return `<option value="${m.id}" ${agent.modelId === m.id ? 'selected' : ''} ${disabled} style="${style}">${m.name}${suffix}</option>`;
+            ${selectedMissing ? `<option value="${escapeBinding(agent.modelId)}" selected>(current selection unavailable for ${provider})</option>` : ''}
+            ${filteredModels.map((m) => {
+              const unavailable = showAllModels
+                ? (provider === 'llama.cpp' ? !m.isDownloaded : !m.isReady)
+                : (provider === 'llama.cpp' ? !m.isDownloaded : !m.isReady);
+              const suffix = unavailable
+                ? (provider === 'llama.cpp' ? ' (not downloaded)' : (!m.isDownloaded ? ' (not downloaded)' : ' (not wrapped)'))
+                : '';
+              const disabled = unavailable ? 'disabled' : '';
+              const style = unavailable ? 'color: #666;' : '';
+              const runtimeHint = provider === 'llama.cpp'
+                ? `GGUF: ${String(m.filename || '').trim() || 'unknown'}`
+                : `Ollama: ${String(m.ollamaModel || '').trim() || 'unknown-tag'}`;
+              const label = `${m.name} [${runtimeHint}]`;
+              return `<option value="${m.id}" ${agent.modelId === m.id ? 'selected' : ''} ${disabled} style="${style}">${label}${suffix}</option>`;
             }).join('')}
           </select>
           <div style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px;">

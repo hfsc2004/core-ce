@@ -65,6 +65,19 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function sanitizeAgentOutputForHandoff(value) {
+  let text = String(value || '');
+  if (!text) return '';
+  // Prevent recursive prompt-echo loops across hops.
+  text = text.replace(
+    /\n*Previous agents in the chain have provided the following context:[\s\S]*$/i,
+    ''
+  );
+  // UI marker occasionally echoed by weaker models.
+  text = text.replace(/\n*Handoff payload \(input to this agent\)[\s\S]*$/i, '');
+  return text.trim();
+}
+
 function rememberLastIrgExecution({ contract, gatewayConfig } = {}) {
   if (!contract || !gatewayConfig) return;
   lastIrgReplay = {
@@ -75,6 +88,18 @@ function rememberLastIrgExecution({ contract, gatewayConfig } = {}) {
 }
 
 async function routeMessage(userMessage, options = {}) {
+  const emitProgress = (payload = {}) => {
+    if (typeof options?.onRouteProgress !== 'function') return;
+    try {
+      options.onRouteProgress({
+        ...payload,
+        progressTag: String(payload?.progressTag || options?.progressTag || '').trim()
+      });
+    } catch {
+      // ignore progress callback failures
+    }
+  };
+
   if (!deploymentManager || !deploymentManager.isActive()) {
     return { success: false, error: 'No active MoE deployment' };
   }
@@ -217,6 +242,14 @@ async function routeMessage(userMessage, options = {}) {
       }
 
       hops += 1;
+      emitProgress({
+        event: 'agent-start',
+        agentId: agent.id,
+        agentName: agent.name,
+        modelName: agent.modelName || agent.modelId || '',
+        index: currentAgentIndex,
+        total: agents.length
+      });
 
       const rlmAssistContext = await buildAgentRlmAssistContext({
         agent,
@@ -243,8 +276,25 @@ async function routeMessage(userMessage, options = {}) {
 
       const stepStart = Date.now();
       const resolvedExecution = resolveExecutionTarget(agent, endpointRegistry);
-      const response = await transport.callAgentWithPolicy(resolvedExecution.agent, messages, edgePolicy);
+      const response = await transport.callAgentWithPolicy(
+        resolvedExecution.agent,
+        messages,
+        edgePolicy,
+        {
+          onToken: (chunk) => {
+            emitProgress({
+              event: 'agent-token',
+              agentId: agent.id,
+              agentName: agent.name,
+              index: currentAgentIndex,
+              total: agents.length,
+              chunk: String(chunk || '')
+            });
+          }
+        }
+      );
       const stepDuration = Date.now() - stepStart;
+      const normalizedOutput = sanitizeAgentOutputForHandoff(response?.content);
       if (resolvedExecution.worker && endpointRegistry?.enabled) {
         endpointRegistry.reportResult(resolvedExecution.worker.id, {
           success: !!response?.success,
@@ -258,7 +308,7 @@ async function routeMessage(userMessage, options = {}) {
         agentName: agent.name,
         modelName: agent.modelName,
         input: String(currentContext || '').substring(0, 200),
-        output: response.content,
+        output: normalizedOutput || response.content,
         durationMs: stepDuration,
         success: response.success,
         attempts: response.attempts || 1,
@@ -267,6 +317,15 @@ async function routeMessage(userMessage, options = {}) {
         rlmAssistContextChars: rlmAssistContext.length
       };
       trace.steps.push(step);
+      emitProgress({
+        event: 'agent-complete',
+        agentId: agent.id,
+        agentName: agent.name,
+        index: currentAgentIndex,
+        total: agents.length,
+        durationMs: stepDuration,
+        success: !!response.success
+      });
 
       if (options.onAgentResponse) {
         options.onAgentResponse(step, currentAgentIndex, agents.length);
@@ -296,15 +355,15 @@ async function routeMessage(userMessage, options = {}) {
         return { success: false, trace, error: trace.error };
       }
 
-      previousResponses.push({ agent: agent.name, response: response.content });
-      currentContext = response.content;
+      previousResponses.push({ agent: agent.name, response: normalizedOutput || response.content });
+      currentContext = normalizedOutput || response.content;
       previousStepSuccess = true;
 
       const routeDecision = resolveNextAgentIndex({
         currentAgent: agent,
         currentAgentIndex,
         currentInput: step.input,
-        currentOutput: response.content,
+        currentOutput: normalizedOutput || response.content,
         agents,
         orderedAgentIds,
         routingConfigByAgentId
@@ -317,7 +376,7 @@ async function routeMessage(userMessage, options = {}) {
         orderedAgentIds,
         agents,
         currentInput: step.input,
-        currentOutput: response.content,
+        currentOutput: normalizedOutput || response.content,
         previousStepSuccess: true
       });
       step.channel = {

@@ -88,6 +88,7 @@ window.createMoeChatPipelineOps = function createMoeChatPipelineOps(ctx = {}) {
         updatePipelineFlow();
 
         setStatus('connected', `Ready • ${list.length} agents`);
+        ctx.messageOps?.appendActivityLine?.(`[Deploy] Pipeline connected with ${list.length} agent(s).`, 'success');
         if (elements?.input) elements.input.disabled = false;
         if (elements?.sendBtn) elements.sendBtn.disabled = false;
         if (elements?.attachBtn) elements.attachBtn.disabled = false;
@@ -102,6 +103,7 @@ window.createMoeChatPipelineOps = function createMoeChatPipelineOps(ctx = {}) {
         ctx.startEsp32TelemetryPolling?.();
       } else {
         setStatus('disconnected', 'Not deployed');
+        ctx.messageOps?.appendActivityLine?.('[Deploy] Pipeline is not deployed.', 'warn');
         if (elements?.attachBtn) elements.attachBtn.disabled = true;
         if (elements?.voiceBtn) elements.voiceBtn.disabled = true;
         if (elements?.voiceModeBtn) elements.voiceModeBtn.disabled = true;
@@ -111,6 +113,7 @@ window.createMoeChatPipelineOps = function createMoeChatPipelineOps(ctx = {}) {
     } catch (err) {
       console.error('[MoE Chat] Status check failed:', err);
       setStatus('error', 'Connection error');
+      ctx.messageOps?.appendActivityLine?.(`[Deploy] Connection error: ${err.message}`, 'error');
       ctx.addSystemMessage?.('Error: ' + err.message);
       ctx.stopEsp32TelemetryPolling?.();
     }

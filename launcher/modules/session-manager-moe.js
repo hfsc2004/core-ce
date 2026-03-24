@@ -14,6 +14,7 @@ const {
 
 function createSessionManagerMoe(deps = {}) {
   const startOllamaForService = deps.startOllamaForService;
+  const startLlamaCppForService = deps.startLlamaCppForService;
   const closeSession = deps.closeSession;
   const registerSession = deps.registerSession;
   const getSession = deps.getSession;
@@ -29,6 +30,7 @@ function createSessionManagerMoe(deps = {}) {
     try {
       moeDeployment.initialize({
         startOllamaForService,
+        startLlamaCppForService,
         closeSession,
         registerSession,
         getSession,

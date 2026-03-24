@@ -55,6 +55,12 @@ function validateItem(item, index) {
       if (!item.name) {
         errors.push(`${prefix}: agent missing name`);
       }
+      if (item.provider != null) {
+        const provider = String(item.provider).trim().toLowerCase();
+        if (provider !== 'ollama' && provider !== 'llama.cpp') {
+          errors.push(`${prefix}: invalid provider '${item.provider}'`);
+        }
+      }
       if (item.routingMode && !VALID_ROUTING_MODES.includes(item.routingMode)) {
         errors.push(`${prefix}: invalid routingMode '${item.routingMode}'`);
       }

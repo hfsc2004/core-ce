@@ -270,6 +270,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // MoE Communication APIs
   routeMoEMessage: (message, options) => ipcRenderer.invoke('moe-route-message', message, options),
+  onMoERouteProgress: (callback) => subscribeIpc('moe-route-progress', callback),
   rerunLastMoEIrg: (options = {}) => ipcRenderer.invoke('moe-rerun-last-irg', options),
   runMoEIrgContract: (contract, options = {}) => ipcRenderer.invoke('moe-run-irg-contract', contract, options),
   sendToMoEAgent: (agentId, message, options) => ipcRenderer.invoke('moe-send-to-agent', agentId, message, options),
