@@ -28,6 +28,12 @@
       <select id="model-select">
         <option value="">Loading models...</option>
       </select>
+      <div class="terminal-link-group" title="Link this terminal to another terminal (bi-directional)">
+        <span class="terminal-link-label">Link</span>
+        <select id="terminal-peer-select">
+          <option value="">Unlinked</option>
+        </select>
+      </div>
       <button id="config-btn" onclick="TerminalApp.toggleConfig()" title="Model Configuration">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
           <circle cx="6" cy="6" r="2"/>
@@ -296,6 +302,7 @@
     const terminalConfig = {
       modelName: urlParams.get('model') || 'unknown',
       port: parseInt(urlParams.get('port')) || 52434,  // DYNAMIC PORT
+      terminalWindowId: urlParams.get('windowId') ? parseInt(urlParams.get('windowId')) : null,
       gpuType: urlParams.get('gpuType') || 'unknown',
       gpuName: urlParams.get('gpuName') || 'Unknown',
       gpuVram: urlParams.get('gpuVram') || '?',

@@ -93,6 +93,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Terminal API
   openTerminal: () => ipcRenderer.invoke('open-terminal'),
+  terminalLinkListPeers: () => ipcRenderer.invoke('terminal-link:list-peers'),
+  terminalLinkSetPeer: (peerWindowId = null) => ipcRenderer.invoke('terminal-link:set-peer', peerWindowId),
+  terminalLinkRelayMessage: (payload = {}) => ipcRenderer.invoke('terminal-link:relay-message', payload),
+  onTerminalLinkStateChanged: (callback) => subscribeIpc('terminal-link:state-changed', callback),
+  onTerminalLinkInbound: (callback) => subscribeIpc('terminal-link:inbound', callback),
   sessionMemoryAppend: (entry = {}) => ipcRenderer.invoke('session-memory:append', entry),
   sessionMemoryList: (options = {}) => ipcRenderer.invoke('session-memory:list', options),
   sessionMemorySessions: (options = {}) => ipcRenderer.invoke('session-memory:sessions', options),

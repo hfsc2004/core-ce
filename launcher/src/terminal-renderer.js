@@ -64,12 +64,20 @@
   let statusText = null;
   let gpuIcon = null;
   let gpuText = null;
+  let peerSelect = null;
   let voiceController = null;
   let speechEngine = null;
   let speechController = null;
   let lastSpeechCfg = null;
   let speechEngineProfileKey = '';
   let speechChunkProfile = { preview: 140, segment: 220, tail: 240 };
+  let terminalWindowId = null;
+  let meshStateUnsubscribe = null;
+  let meshRefreshTimer = null;
+  let meshSyncInProgress = false;
+  let linkedPeerId = null;
+  const inboundRelayQueue = [];
+  let inboundRelayBusy = false;
   const call = (controller, method, fallback, ...args) => (
     controller && typeof controller[method] === 'function' ? controller[method](...args) : fallback
   );
@@ -150,6 +158,136 @@
   function handleInputKeypress(e) { call(ioController, 'handleInputKeypress', undefined, e); }
   async function handleStopClick() { await callAsync(ioController, 'handleStopClick'); }
   async function initializeVoiceToText() { await callAsync(ioController, 'initializeVoiceToText'); }
+  function buildPeerOptionLabel(peer) {
+    const label = String(peer?.label || '').trim();
+    if (label) return label;
+    const id = Number(peer?.windowId || 0);
+    const port = Number(peer?.port || 0);
+    if (id > 0 && port > 0) return `Terminal #${id} (port ${port})`;
+    if (id > 0) return `Terminal #${id}`;
+    return 'Terminal';
+  }
+  function renderPeerOptions(state = {}) {
+    if (!peerSelect) return;
+    const peers = Array.isArray(state.peers) ? state.peers : [];
+    const selectedPeerWindowId = Number(state.linkedPeerWindowId || 0);
+    // Keep local runtime state for relay decisions.
+    linkedPeerId = selectedPeerWindowId > 0 ? selectedPeerWindowId : null;
+    const options = [`<option value="">Unlinked</option>`];
+    peers.forEach((peer) => {
+      const windowId = Number(peer?.windowId || 0);
+      if (!windowId) return;
+      const selected = selectedPeerWindowId > 0 && windowId === selectedPeerWindowId ? ' selected' : '';
+      options.push(`<option value="${windowId}"${selected}>${escapeHtml(buildPeerOptionLabel(peer))}</option>`);
+    });
+    peerSelect.innerHTML = options.join('');
+    if (selectedPeerWindowId > 0 && !peers.some((peer) => Number(peer?.windowId || 0) === selectedPeerWindowId)) {
+      peerSelect.value = '';
+    }
+    if (!peerSelect.value && selectedPeerWindowId > 0) {
+      peerSelect.value = String(selectedPeerWindowId);
+    }
+  }
+  async function refreshTerminalPeerLinks() {
+    if (!peerSelect || meshSyncInProgress) return;
+    if (!window.electronAPI || typeof window.electronAPI.terminalLinkListPeers !== 'function') return;
+    meshSyncInProgress = true;
+    try {
+      const state = await window.electronAPI.terminalLinkListPeers();
+      if (!state?.success) return;
+      terminalWindowId = Number(state.selfWindowId || terminalWindowId || 0) || terminalWindowId;
+      renderPeerOptions(state);
+    } catch (err) {
+      console.warn('[Terminal Mesh] Failed to refresh peers:', err?.message || err);
+    } finally {
+      meshSyncInProgress = false;
+    }
+  }
+  async function handlePeerSelectChange() {
+    if (!peerSelect || meshSyncInProgress) return;
+    if (!window.electronAPI || typeof window.electronAPI.terminalLinkSetPeer !== 'function') return;
+    const selectedId = Number(peerSelect.value || 0);
+    meshSyncInProgress = true;
+    try {
+      const result = await window.electronAPI.terminalLinkSetPeer(selectedId > 0 ? selectedId : null);
+      if (!result?.success) {
+        addErrorMessage(`Terminal link failed: ${result?.message || 'Unknown error'}`);
+      }
+      renderPeerOptions(result || {});
+    } catch (err) {
+      addErrorMessage(`Terminal link failed: ${err?.message || err}`);
+    } finally {
+      meshSyncInProgress = false;
+    }
+  }
+  function enqueueInboundRelay(payload = {}) {
+    const text = String(payload?.text || '').trim();
+    if (!text) return;
+    inboundRelayQueue.push({
+      text,
+      fromWindowId: Number(payload?.fromWindowId || 0) || null
+    });
+    void processInboundRelayQueue();
+  }
+  async function processInboundRelayQueue() {
+    if (inboundRelayBusy) return;
+    inboundRelayBusy = true;
+    try {
+      while (inboundRelayQueue.length > 0) {
+        if (isWaitingForResponse || activeStream) {
+          await new Promise((resolve) => setTimeout(resolve, 350));
+          continue;
+        }
+        const next = inboundRelayQueue.shift();
+        if (!next?.text) continue;
+        addSystemMessage(`Linked Terminal ${next.fromWindowId ? `#${next.fromWindowId}` : ''}: incoming message`);
+        if (userInput) userInput.value = next.text;
+        await sendMessage();
+      }
+    } finally {
+      inboundRelayBusy = false;
+    }
+  }
+  async function relayAssistantToPeer(assistantMessage) {
+    if (!linkedPeerId) return;
+    const text = String(assistantMessage || '').trim();
+    if (!text) return;
+    if (!window.electronAPI || typeof window.electronAPI.terminalLinkRelayMessage !== 'function') return;
+    try {
+      await window.electronAPI.terminalLinkRelayMessage({
+        text,
+        fromWindowId: terminalWindowId || null,
+        modelName: currentModel || 'unknown',
+        port: terminalPort || null
+      });
+    } catch (err) {
+      console.warn('[Terminal Mesh] Relay failed:', err?.message || err);
+    }
+  }
+  function initializeTerminalMesh() {
+    peerSelect = document.getElementById('terminal-peer-select');
+    if (!peerSelect) return;
+    peerSelect.addEventListener('change', handlePeerSelectChange);
+    if (window.electronAPI && typeof window.electronAPI.onTerminalLinkStateChanged === 'function') {
+      if (typeof meshStateUnsubscribe === 'function') {
+        try { meshStateUnsubscribe(); } catch (_) {}
+      }
+      meshStateUnsubscribe = window.electronAPI.onTerminalLinkStateChanged((state = {}) => {
+        if (state && Number(state.selfWindowId || 0) && terminalWindowId && Number(state.selfWindowId) !== Number(terminalWindowId)) {
+          return;
+        }
+        renderPeerOptions(state);
+      });
+    }
+    if (window.electronAPI && typeof window.electronAPI.onTerminalLinkInbound === 'function') {
+      window.electronAPI.onTerminalLinkInbound((payload = {}) => {
+        enqueueInboundRelay(payload);
+      });
+    }
+    refreshTerminalPeerLinks();
+    if (meshRefreshTimer) clearInterval(meshRefreshTimer);
+    meshRefreshTimer = setInterval(refreshTerminalPeerLinks, 2500);
+  }
   function initialize(terminalConfig) {
     if (!window.TerminalInit || typeof window.TerminalInit.createInitController !== 'function') {
       console.error('[Terminal] Init controller module not loaded.');
@@ -368,6 +506,9 @@
         if (options?.skipTts !== true) {
           void speakAssistantText(assistantMessage);
         }
+        if (options?.skipRelay !== true) {
+          void relayAssistantToPeer(assistantMessage);
+        }
       },
       isTtsDebugTraceEnabled,
       speakAssistantText,
@@ -412,6 +553,8 @@
     });
 
     initController.initializeTerminal(terminalConfig, initOptions);
+    terminalWindowId = Number(terminalConfig?.terminalWindowId || 0) || null;
+    initializeTerminalMesh();
     if (prefs && typeof prefs.loadModelConfig === 'function') {
       const savedModelCfg = prefs.loadModelConfig(currentModel);
       if (savedModelCfg && typeof savedModelCfg === 'object') {
