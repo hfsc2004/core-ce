@@ -100,6 +100,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   terminalLinkSetPeer: (peerWindowId = null) => ipcRenderer.invoke('terminal-link:set-peer', peerWindowId),
   terminalLinkSetGroupPeers: (peerWindowIds = []) => ipcRenderer.invoke('terminal-link:set-group-peers', peerWindowIds),
   terminalLinkSetLabel: (label = '') => ipcRenderer.invoke('terminal-link:set-label', label),
+  terminalLinkTokenSetEnabled: (enabled = false) => ipcRenderer.invoke('terminal-link:token-set-enabled', enabled),
+  terminalLinkTokenTakeTurn: () => ipcRenderer.invoke('terminal-link:token-take-turn'),
   terminalLinkRelayMessage: (payload = {}) => ipcRenderer.invoke('terminal-link:relay-message', payload),
   terminalLinkRelayGroupMessage: (payload = {}) => ipcRenderer.invoke('terminal-link:relay-group-message', payload),
   onTerminalLinkStateChanged: (callback) => subscribeIpc('terminal-link:state-changed', callback),
