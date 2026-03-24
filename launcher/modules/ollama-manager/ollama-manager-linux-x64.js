@@ -215,13 +215,14 @@ async function stopOllamaServer(port) {
 async function closeTerminalSession(windowId) {
   const session = sessionStore.getWindowSession(windowId);
   if (!session) {
-    console.log(`[${LOG_PREFIX}] No session found for window ${windowId}`);
-    return;
+    console.log(`[${LOG_PREFIX}] No Ollama session found for window ${windowId} (checking BMOC-owned sessions)`);
   }
 
-  console.log(`[${LOG_PREFIX}] Closing session for window ${windowId} (port ${session.port})`);
+  if (session) {
+    console.log(`[${LOG_PREFIX}] Closing session for window ${windowId} (port ${session.port})`);
+  }
 
-  if (session.process) {
+  if (session?.process) {
     const pid = session.process.pid;
     try {
       process.kill(-pid, 'SIGTERM');
@@ -235,17 +236,29 @@ async function closeTerminalSession(windowId) {
     }
   }
 
-  if (session.port) {
+  if (session?.port) {
     PortPool.releasePort(session.port);
     console.log(`[${LOG_PREFIX}] Released port ${session.port}`);
   }
 
-  if (session.sessionId) {
-    await sessionManager.closeSession(session.sessionId, { ollama: PortPool });
-  }
-
   sessionStore.deleteWindowSession(windowId);
-  console.log(`[${LOG_PREFIX}] Session closed for window ${windowId}`);
+  // Critical: close ALL BMOC terminal sessions owned by this window (ollama + llama.cpp).
+  const ownerWindowId = Number(windowId || 0);
+  const activeTerminalSessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
+  let closedCount = 0;
+  for (const active of Array.isArray(activeTerminalSessions) ? activeTerminalSessions : []) {
+    const sessionId = String(active?.sessionId || '').trim();
+    if (!sessionId) continue;
+    const owner = Number(active?.metadata?.ownerWindowId || 0);
+    if (!ownerWindowId || owner !== ownerWindowId) continue;
+    try {
+      await sessionManager.closeSession(sessionId, { ollama: PortPool });
+      closedCount += 1;
+    } catch (err) {
+      console.warn(`[${LOG_PREFIX}] Failed closing BMOC session ${sessionId} for window ${windowId}: ${err?.message || err}`);
+    }
+  }
+  console.log(`[${LOG_PREFIX}] Session closed for window ${windowId} (bmocClosed=${closedCount})`);
 }
 
 /**

@@ -8,6 +8,7 @@
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+const { BrowserWindow } = require('electron');
 const {
   checkLocalVoiceRuntime,
   installLocalVoiceRuntime,
@@ -26,6 +27,18 @@ function registerOpsHandlers(ipcMain, deps = {}) {
   const compileManager = deps.compileManager;
   const sessionManager = deps.sessionManager;
   const getGpuInfo = typeof deps.getGpuInfo === 'function' ? deps.getGpuInfo : () => null;
+  const terminalSessionRegistry = deps.terminalSessionRegistry instanceof Map ? deps.terminalSessionRegistry : new Map();
+
+  function trackTerminalSession(windowId, sessionId, backend, port) {
+    const w = Number(windowId || 0);
+    const s = String(sessionId || '').trim();
+    if (!w || !s) return;
+    terminalSessionRegistry.set(w, {
+      sessionId: s,
+      backend: String(backend || 'ollama').trim().toLowerCase() || 'ollama',
+      port: Number(port || 0) || null
+    });
+  }
 
   async function isOllamaResponsive(port) {
     const candidatePort = Number(port || 0);
@@ -122,11 +135,38 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     return sessionManager.startOllamaForService('terminal', appDir, getGpuInfo());
   }
 
-  async function ensureTerminalLlamaCppSession(payload = {}) {
+  async function closeWindowOwnedTerminalSessions(windowId, backendFilter = 'all') {
+    const ownerWindowId = Number(windowId || 0);
+    if (!ownerWindowId) return;
+    const sessions = sessionManager?.getActiveSessionsForService?.('terminal') || [];
+    if (!Array.isArray(sessions) || sessions.length === 0) return;
+    const PortPool = require('../port-pool/port-pool-ollama');
+    const normalizedFilter = String(backendFilter || 'all').trim().toLowerCase();
+    for (const session of sessions) {
+      const sessionId = String(session?.sessionId || '').trim();
+      if (!sessionId) continue;
+      const owner = Number(session?.metadata?.ownerWindowId || 0);
+      if (!owner || owner !== ownerWindowId) continue;
+      const backend = String(session?.metadata?.backend || 'ollama').trim().toLowerCase() || 'ollama';
+      if (normalizedFilter !== 'all' && backend !== normalizedFilter) continue;
+      try {
+        await sessionManager.closeSession(sessionId, { ollama: PortPool });
+        if (ownerWindowId && terminalSessionRegistry.get(ownerWindowId)?.sessionId === sessionId) {
+          terminalSessionRegistry.delete(ownerWindowId);
+        }
+      } catch (_) {
+        // best effort
+      }
+    }
+  }
+
+  async function ensureTerminalLlamaCppSession(payload = {}, event = null) {
     if (!sessionManager || typeof sessionManager.startLlamaCppForService !== 'function') {
       return { success: false, message: 'Session manager is unavailable.' };
     }
 
+    const ownerWindow = event && event.sender ? BrowserWindow.fromWebContents(event.sender) : null;
+    const ownerWindowId = Number(ownerWindow?.id || 0) || null;
     const modelPath = String(payload?.modelPath || '').trim();
     const gpuInfo = getGpuInfo() || null;
     const nvidiaDetected = String(gpuInfo?.accelerationType || '').toLowerCase() === 'nvidia';
@@ -143,6 +183,8 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       for (const session of existingSessions) {
         const backend = String(session?.metadata?.backend || '').toLowerCase();
         if (backend !== 'llama-cpp') continue;
+        const sessionOwnerWindowId = Number(session?.metadata?.ownerWindowId || 0) || null;
+        if (ownerWindowId && sessionOwnerWindowId && sessionOwnerWindowId !== ownerWindowId) continue;
         const sessionModelPath = String(session?.metadata?.modelPath || '').trim();
         if (modelPath && sessionModelPath && sessionModelPath !== modelPath) continue;
         if (requireGpuSession) {
@@ -154,6 +196,15 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         const port = Number(session?.ollamaPort || 0);
         if (port <= 0) continue;
         if (!(await isLlamaCppResponsive(port))) continue;
+        if (ownerWindowId && session?.sessionId && sessionOwnerWindowId !== ownerWindowId) {
+          try {
+            sessionManager.updateSession(session.sessionId, {
+              metadata: { ...(session.metadata || {}), ownerWindowId }
+            });
+          } catch (_) {
+            // best effort
+          }
+        }
         return {
           success: true,
           port,
@@ -176,6 +227,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     await cleanupTerminalLlamaCppSessions();
 
     const startResult = await sessionManager.startLlamaCppForService('terminal', appDir, {
+      ownerWindowId,
       modelPath,
       contextSize: Number.isFinite(Number(payload?.contextSize)) ? Number(payload.contextSize) : undefined,
       threads: Number.isFinite(Number(payload?.threads)) ? Number(payload.threads) : undefined,
@@ -198,6 +250,9 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     }
 
     const port = Number(startResult.port || startResult.ollamaPort || 0);
+    if (ownerWindowId && startResult.sessionId) {
+      trackTerminalSession(ownerWindowId, startResult.sessionId, 'llama-cpp', port);
+    }
     return {
       success: true,
       port,
@@ -219,6 +274,17 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const skipTopLevel = new Set(['blobs', 'manifests']);
     const models = [];
 
+    function isLikelyProjectorFile(fileName = '') {
+      const lower = String(fileName || '').toLowerCase();
+      if (!lower.endsWith('.gguf')) return false;
+      return (
+        lower.startsWith('mmproj') ||
+        lower.includes('mmproj') ||
+        lower.includes('projector') ||
+        lower.includes('clip-vit')
+      );
+    }
+
     function walk(dirPath, relDir = '') {
       let entries = [];
       try {
@@ -238,6 +304,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         }
         if (!entry.isFile()) continue;
         if (!/\.gguf$/i.test(entryName)) continue;
+        if (isLikelyProjectorFile(entryName)) continue;
         let statSize = 0;
         try {
           statSize = Number(fs.statSync(absPath).size || 0);
@@ -357,7 +424,66 @@ function registerOpsHandlers(ipcMain, deps = {}) {
 
   ipcMain.handle('ensure-terminal-llamacpp-session', async (event, payload = {}) => {
     try {
-      return await ensureTerminalLlamaCppSession(payload || {});
+      return await ensureTerminalLlamaCppSession(payload || {}, event);
+    } catch (err) {
+      return { success: false, message: err.message || String(err) };
+    }
+  });
+
+  ipcMain.handle('terminal-switch-provider', async (event, payload = {}) => {
+    try {
+      const ownerWindow = event && event.sender ? BrowserWindow.fromWebContents(event.sender) : null;
+      const ownerWindowId = Number(ownerWindow?.id || 0) || null;
+      if (!ownerWindowId) {
+        return { success: false, message: 'Terminal window context unavailable for provider switch.' };
+      }
+
+      const provider = String(payload?.provider || '').trim().toLowerCase();
+      if (provider !== 'ollama' && provider !== 'llama.cpp') {
+        return { success: false, message: `Unsupported provider "${provider}"` };
+      }
+
+      if (provider === 'llama.cpp') {
+        await closeWindowOwnedTerminalSessions(ownerWindowId, 'ollama');
+        const startResult = await ensureTerminalLlamaCppSession(payload || {}, event);
+        if (!startResult?.success) {
+          return { success: false, message: startResult?.message || 'Failed to start llama.cpp provider session.' };
+        }
+        return {
+          success: true,
+          provider: 'llama.cpp',
+          port: Number(startResult.port || startResult.ollamaPort || 0),
+          sessionId: startResult.sessionId || null,
+          baseUrl: startResult.baseUrl || null
+        };
+      }
+
+      await closeWindowOwnedTerminalSessions(ownerWindowId, 'llama-cpp');
+      const startResult = await sessionManager.startOllamaForService('terminal', appDir, getGpuInfo());
+      if (!startResult?.success) {
+        return { success: false, message: startResult?.message || 'Failed to start Ollama provider session.' };
+      }
+      const sessionId = String(startResult.sessionId || '').trim();
+      if (sessionId) {
+        const existing = sessionManager.getSession?.(sessionId) || null;
+        const existingMeta = (existing?.metadata && typeof existing.metadata === 'object') ? existing.metadata : {};
+        sessionManager.updateSession?.(sessionId, {
+          metadata: {
+            ...existingMeta,
+            backend: 'ollama',
+            ownerWindowId,
+            serviceType: 'terminal',
+            startedVia: 'terminal-switch-provider'
+          }
+        });
+      }
+      trackTerminalSession(ownerWindowId, sessionId, 'ollama', Number(startResult.ollamaPort || startResult.port || 0));
+      return {
+        success: true,
+        provider: 'ollama',
+        port: Number(startResult.ollamaPort || startResult.port || 0),
+        sessionId: sessionId || null
+      };
     } catch (err) {
       return { success: false, message: err.message || String(err) };
     }
@@ -414,7 +540,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         const configResult = modelConfigManager.getModelConfig(appDir, collection, modelId);
         if (configResult.success) modelConfig = configResult;
       }
-      return await ollamaManager.openOllamaTerminal(
+      const openResult = await ollamaManager.openOllamaTerminal(
         appDir,
         modelName,
         path.join(appDir, 'preload.js'),
@@ -425,6 +551,23 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         modelConfig,
         startResult?.sessionId || null
       );
+      const openedWindowId = Number(openResult?.windowId || 0);
+      const openedSessionId = String(startResult?.sessionId || '').trim();
+      if (openResult?.success && openedWindowId > 0 && openedSessionId) {
+        const existing = sessionManager.getSession?.(openedSessionId) || null;
+        const existingMeta = (existing?.metadata && typeof existing.metadata === 'object') ? existing.metadata : {};
+        sessionManager.updateSession?.(openedSessionId, {
+          metadata: {
+            ...existingMeta,
+            backend: 'ollama',
+            ownerWindowId: openedWindowId,
+            serviceType: 'terminal',
+            startedVia: existingMeta.startedVia || 'open-ollama-terminal'
+          }
+        });
+        trackTerminalSession(openedWindowId, openedSessionId, 'ollama', terminalPort);
+      }
+      return openResult;
     } catch (err) {
       return { success: false, message: err.message };
     }

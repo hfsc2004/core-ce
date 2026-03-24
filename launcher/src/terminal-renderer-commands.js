@@ -12,6 +12,7 @@
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => null;
     const setCurrentModel = typeof deps?.setCurrentModel === 'function' ? deps.setCurrentModel : (() => {});
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
+    const setTerminalPort = typeof deps?.setTerminalPort === 'function' ? deps.setTerminalPort : (() => {});
     const getProvider = typeof deps?.getProvider === 'function' ? deps.getProvider : () => 'ollama';
     const setProvider = typeof deps?.setProvider === 'function' ? deps.setProvider : (() => {});
     const getProviderBaseUrl = typeof deps?.getProviderBaseUrl === 'function' ? deps.getProviderBaseUrl : () => '';
@@ -246,7 +247,12 @@
       const rlmMaxEvidenceInput = document.getElementById('cfg-rlm-max-evidence-hits');
       const llmNamingInput = document.getElementById('cfg-export-llm-naming');
 
-      if (providerInput) setProvider(providerInput.value || 'ollama');
+      const previousProvider = String(getProvider() || 'ollama').trim().toLowerCase() || 'ollama';
+      const requestedProvider = providerInput
+        ? (String(providerInput.value || previousProvider).trim().toLowerCase() || 'ollama')
+        : previousProvider;
+
+      if (providerInput) setProvider(requestedProvider);
       if (tempInput) setTemperatureValue(parseFloat(tempInput.value) || 0.7);
       if (topPInput) setTopP(parseFloat(topPInput.value) || null);
       if (topKInput) setTopK(parseInt(topKInput.value, 10) || null);
@@ -277,6 +283,35 @@
         setRlmProfile('custom');
       }
       if (llmNamingInput) setLlmAssistedFileNaming(llmNamingInput.checked === true);
+
+      if (requestedProvider !== previousProvider) {
+        const api = getElectronAPI();
+        if (!api || typeof api.terminalSwitchProvider !== 'function') {
+          setProvider(previousProvider);
+          addErrorMessage('Provider switch API unavailable in this build.');
+          return;
+        }
+        const switchResult = await api.terminalSwitchProvider({
+          provider: requestedProvider,
+          modelPath: getLlamaCppModelPath(),
+          contextSize: getNumCtx(),
+          gpuLayers: getNumGpu()
+        });
+        if (!switchResult?.success) {
+          setProvider(previousProvider);
+          addErrorMessage(`Provider switch failed: ${switchResult?.message || 'unknown error'}`);
+          return;
+        }
+        const nextPort = Number(switchResult.port || 0);
+        if (nextPort > 0) {
+          setTerminalPort(nextPort);
+        }
+        addSystemMessage(
+          `🔁 Provider session switched to ${requestedProvider}` +
+          (nextPort > 0 ? ` on BMOC port ${nextPort}` : '')
+        );
+      }
+
       persistTerminalModelConfig();
       await populateModelDropdown(getTerminalPort());
 

@@ -8,6 +8,10 @@ const { exec } = require('child_process');
 
 const execPromise = promisify(exec);
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function listChildPids(pid) {
   if (!pid) return [];
   try {
@@ -84,13 +88,72 @@ async function killProcess(pid, name) {
         await execPromise(`kill -TERM ${pid}`);
         console.log(`[Session Manager] Killed ${name} (PID ${pid})`);
       }
+
+      // Wait briefly for graceful shutdown, then force-kill if needed.
+      let stillRunning = await isProcessRunning(pid);
+      if (stillRunning) {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          await sleep(120);
+          stillRunning = await isProcessRunning(pid);
+          if (!stillRunning) break;
+        }
+      }
+      if (stillRunning) {
+        // Kill descendants first, then process group/pid.
+        const remainingDescendants = await collectDescendantPids(pid);
+        for (const childPid of remainingDescendants.reverse()) {
+          try {
+            await execPromise(`kill -KILL ${childPid}`);
+          } catch {
+            // Already dead.
+          }
+        }
+        try {
+          process.kill(-pid, 'SIGKILL');
+          console.log(`[Session Manager] Force-killed ${name} process group (PGID ${pid})`);
+        } catch {
+          try {
+            await execPromise(`kill -KILL ${pid}`);
+            console.log(`[Session Manager] Force-killed ${name} (PID ${pid})`);
+          } catch {
+            // Already dead or inaccessible.
+          }
+        }
+      }
     }
   } catch {
     // Process already dead.
   }
 }
 
+async function killProcessesOnPort(port, name = 'Process') {
+  const targetPort = Number(port || 0);
+  if (!Number.isFinite(targetPort) || targetPort <= 0) return;
+  if (process.platform === 'win32') return;
+
+  let pids = [];
+  try {
+    const { stdout } = await execPromise(`lsof -ti:${targetPort}`);
+    pids = String(stdout || '')
+      .trim()
+      .split('\n')
+      .map((v) => Number(String(v || '').trim()))
+      .filter((v) => Number.isFinite(v) && v > 0);
+  } catch {
+    pids = [];
+  }
+
+  for (const pid of pids) {
+    try {
+      await killProcess(pid, `${name} on port ${targetPort}`);
+    } catch {
+      // best effort
+    }
+  }
+}
+
 module.exports = {
   isProcessRunning,
-  killProcess
+  killProcess,
+  killProcessesOnPort
 };

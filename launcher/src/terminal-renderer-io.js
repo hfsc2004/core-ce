@@ -108,11 +108,15 @@
     async function handleStopClick() {
       if (!ctx.getIsWaitingForResponse?.() || !ctx.getActiveStream?.()) return;
       ctx.setStreamStopRequested?.(true);
-      const ttsStreamId = ctx.getActiveStream?.()?.ttsStreamId ? String(ctx.getActiveStream().ttsStreamId) : '';
+      const active = ctx.getActiveStream?.() || null;
+      const ttsStreamId = active?.ttsStreamId ? String(active.ttsStreamId) : '';
       try {
         const vc = getVoiceController();
         if (vc && typeof vc.stopSpeech === 'function') {
           vc.stopSpeech();
+        }
+        if (active?.abortController && typeof active.abortController.abort === 'function') {
+          active.abortController.abort();
         }
         if (window.electronAPI && typeof window.electronAPI.ollamaStopStream === 'function') {
           await window.electronAPI.ollamaStopStream({ port: ctx.getTerminalPort?.() });

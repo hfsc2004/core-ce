@@ -21,6 +21,7 @@
 const { app, BrowserWindow, ipcMain, shell, dialog, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 // ============================================================================
 // MODULE IMPORTS
@@ -86,7 +87,10 @@ let gpuInfo = {
 };
 let startupTtsWarmupPromise = null;
 let isQuitting = false;
+let quitCleanupComplete = false;
+let quitCleanupPromise = null;
 let canaryMonitor = null;
+const terminalSessionRegistry = new Map(); // windowId -> { sessionId, backend, port }
 
 async function runAppShutdownCleanup() {
   try {
@@ -106,6 +110,17 @@ async function runAppShutdownCleanup() {
     await sessionManager.closeAllSessions(portPools);
   } catch (err) {
     logger.warn('Session cleanup during app quit failed:', err?.message || err);
+  }
+
+  // Final safety net: ensure orphaned llama.cpp processes are gone.
+  try {
+    if (process.platform === 'win32') {
+      execSync('taskkill /F /T /IM llama-server.exe', { stdio: 'ignore' });
+    } else {
+      execSync("pkill -9 -f 'llama-server'", { stdio: 'ignore' });
+    }
+  } catch (_) {
+    // No matching residual process (expected in healthy shutdown).
   }
 }
 
@@ -331,26 +346,38 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', async (event) => {
+  if (quitCleanupComplete) {
+    return;
+  }
+  event.preventDefault();
   if (isQuitting) {
     return;
   }
   isQuitting = true;
   logger.info('Application shutting down...');
-  event.preventDefault();
+
+  quitCleanupPromise = (async () => {
+    try {
+      if (canaryMonitor) {
+        canaryMonitor.stop();
+      }
+      await Promise.race([
+        runAppShutdownCleanup(),
+        new Promise((resolve) => setTimeout(resolve, 5000))
+      ]);
+    } catch (err) {
+      logger.error('Session cleanup error:', err);
+    }
+
+    quitCleanupComplete = true;
+    app.exit(0);
+  })();
 
   try {
-    if (canaryMonitor) {
-      canaryMonitor.stop();
-    }
-    await Promise.race([
-      runAppShutdownCleanup(),
-      new Promise((resolve) => setTimeout(resolve, 5000))
-    ]);
-  } catch (err) {
-    logger.error('Session cleanup error:', err);
+    await quitCleanupPromise;
+  } catch (_) {
+    // already logged
   }
-
-  app.exit(0);
 });
 
 // ============================================================================
@@ -394,7 +421,8 @@ function registerComplexHandlers(ctx) {
     sessionManager,
     modelConfigManager,
     compileManager,
-    getGpuInfo: () => gpuInfo
+    getGpuInfo: () => gpuInfo,
+    terminalSessionRegistry
   });
   
   // --------------------------------------------------------------------------
@@ -415,7 +443,8 @@ function registerComplexHandlers(ctx) {
     sessionManager,
     codingTerminalBackend,
     dialog,
-    getMainWindow: () => mainWindow
+    getMainWindow: () => mainWindow,
+    terminalSessionRegistry
   });
   
   console.log('[Main] ✅ Complex handlers registered');

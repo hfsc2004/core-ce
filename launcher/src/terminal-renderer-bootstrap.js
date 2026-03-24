@@ -212,6 +212,7 @@
       if (window.TerminalChatFlow && typeof window.TerminalChatFlow.createChatFlowController === 'function') {
         controllers.chatFlowController = window.TerminalChatFlow.createChatFlowController({
           getUserInput: () => ctx.userInput,
+          getChatDisplay: () => ctx.chatDisplay,
           addInputRecallEntry: ctx.addInputRecallEntry,
           handleCommand: ctx.handleCommand,
           getActiveStream: ctx.getActiveStream,
@@ -247,7 +248,8 @@
           getRlmQuality: ctx.getRlmQuality,
           getRlmBudgets: ctx.getRlmBudgets,
           getRlmIncludeSharedAttachments: ctx.getRlmIncludeSharedAttachments,
-          setThinkingStatusText: ctx.setThinkingStatusText
+          setThinkingStatusText: ctx.setThinkingStatusText,
+          finalizeStreamingMessage: ctx.finalizeStreamingMessage
         });
       } else {
         console.warn('[Terminal] Chatflow controller module not loaded.');

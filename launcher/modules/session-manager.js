@@ -4,7 +4,8 @@
 const createSessionGpuMonitor = require('./session-manager-gpu-monitor');
 const {
   isProcessRunning,
-  killProcess
+  killProcess,
+  killProcessesOnPort
 } = require('./session-manager-process-utils');
 const {
   normalizeServiceType: normalizeServiceTypeValue,
@@ -25,7 +26,8 @@ const attachments = require('./attachments');
 const sessionState = createSessionStateManager({
   processUtils: {
     isProcessRunning,
-    killProcess
+    killProcess,
+    killProcessesOnPort
   },
   sessionUtils: {
     normalizeServiceType: normalizeServiceTypeValue,
