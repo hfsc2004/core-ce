@@ -186,11 +186,28 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       let startResult = null;
       let terminalPort = Number(ollamaPort || 0);
       if (terminalPort <= 0) {
-        startResult = await ensureTerminalOllamaSession();
+        // For dedicated Terminal windows, always create a fresh BMOC terminal session/port
+        // so each window is isolated and can be linked distinctly.
+        startResult = await sessionManager.startOllamaForService('terminal', appDir, getGpuInfo());
         if (!startResult?.success) {
           return { success: false, message: startResult?.message || 'Failed to start BMOC terminal session.' };
         }
         terminalPort = Number(startResult.ollamaPort || startResult.port || 0);
+      } else {
+        // Strict BMOC gate: explicit ports are only allowed if BMOC already owns them.
+        const sessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
+        const matchedSession = Array.isArray(sessions)
+          ? sessions.find((session) => Number(session?.ollamaPort || 0) === terminalPort)
+          : null;
+        if (!matchedSession?.sessionId) {
+          return { success: false, message: `BMOC rejected non-owned terminal port ${terminalPort}.` };
+        }
+        startResult = {
+          success: true,
+          ollamaPort: terminalPort,
+          sessionId: matchedSession.sessionId,
+          reused: true
+        };
       }
       if (!startResult?.sessionId && terminalPort > 0) {
         const sessions = sessionManager.getActiveSessionsForService?.('terminal') || [];

@@ -260,7 +260,7 @@ async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlP
   });
   
   // Build URL with model config parameters
-  let url = `file://${terminalHtmlPath}?model=${encodeURIComponent(modelName)}&port=${port}&gpuType=${gpuInfo.accelerationType}&collection=${encodeURIComponent(collection || '')}`;
+  let url = `file://${terminalHtmlPath}?model=${encodeURIComponent(modelName)}&port=${port}&gpuType=${gpuInfo.accelerationType}&collection=${encodeURIComponent(collection || '')}&windowId=${terminalWindow.id}`;
   
   if (modelConfig) {
     if (modelConfig.systemPrompt) {

@@ -296,7 +296,7 @@ async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlP
   console.log(`[${LOG_PREFIX}] Terminal window ${windowId} -> Ollama port ${ollamaPort}`);
   console.log(`[${LOG_PREFIX}] Active terminal sessions: ${sessionStore.size()}`);
 
-  let url = `file://${terminalHtmlPath}?model=${encodeURIComponent(modelName)}&port=${ollamaPort}&gpuType=${gpuInfo?.accelerationType || 'cpu'}`;
+  let url = `file://${terminalHtmlPath}?model=${encodeURIComponent(modelName)}&port=${ollamaPort}&gpuType=${gpuInfo?.accelerationType || 'cpu'}&windowId=${windowId}`;
 
   if (modelConfig) {
     if (modelConfig.systemPrompt) {

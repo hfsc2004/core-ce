@@ -143,6 +143,33 @@ body {
   appearance: none;
 }
 
+.terminal-link-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.terminal-link-label {
+  color: var(--term-text-secondary);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+#terminal-peer-select {
+  background: var(--term-bg-primary);
+  border: 1px solid var(--term-border);
+  border-radius: 5px;
+  color: var(--term-text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 5px 24px 5px 8px;
+  min-width: 220px;
+  max-width: 340px;
+  appearance: none;
+}
+
 #config-btn,
 #attachments-btn {
   display: inline-flex;
