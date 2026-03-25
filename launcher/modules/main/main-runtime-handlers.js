@@ -268,6 +268,16 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     return participants[(idx + 1) % participants.length];
   }
 
+  function maybeEnableTokenForMultiLlm() {
+    const participants = listTokenParticipants();
+    if (participants.length < 2) return false;
+    if (terminalMeshTokenState.enabled) return false;
+    terminalMeshTokenState.enabled = true;
+    terminalMeshTokenState.holderWindowId = null;
+    normalizeTokenHolder();
+    return true;
+  }
+
   function buildMeshState(selfWindowId) {
     pruneTerminalMeshLinks();
     const selfId = Number(selfWindowId || 0);
@@ -348,6 +358,12 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     }
 
     setBidirectionalLink(selfId, peerId > 0 ? peerId : null);
+    if (terminalMeshTokenState.enabled) {
+      // STP-style re-election whenever topology changes.
+      terminalMeshTokenState.holderWindowId = null;
+      normalizeTokenHolder();
+    }
+    maybeEnableTokenForMultiLlm();
     broadcastMeshState();
     return buildMeshState(selfId);
   });
@@ -359,6 +375,12 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
     }
     const selfId = Number(selfWindow.id);
     setGroupLinks(selfId, Array.isArray(peerWindowIds) ? peerWindowIds : []);
+    if (terminalMeshTokenState.enabled) {
+      // STP-style re-election whenever topology changes.
+      terminalMeshTokenState.holderWindowId = null;
+      normalizeTokenHolder();
+    }
+    maybeEnableTokenForMultiLlm();
     broadcastMeshState();
     return buildMeshState(selfId);
   });
@@ -440,6 +462,8 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
         speakerRole: String(payload?.speakerRole || 'assistant').trim().toLowerCase() || 'assistant',
         senderLabel: String(payload?.senderLabel || '').trim().slice(0, 80),
         modelName: String(payload?.modelName || '').trim() || null,
+        chainId: String(payload?.chainId || '').trim(),
+        hop: Number(payload?.hop || 0) || 0,
         fromWindowId: selfId,
         from: parseTerminalWindowMeta(selfWindow),
         at: new Date().toISOString()
@@ -495,6 +519,8 @@ function registerRuntimeHandlers(ipcMain, deps = {}) {
           speakerRole: String(payload?.speakerRole || 'assistant').trim().toLowerCase() || 'assistant',
           senderLabel: String(payload?.senderLabel || '').trim().slice(0, 80),
           modelName: String(payload?.modelName || '').trim() || null,
+          chainId: String(payload?.chainId || '').trim(),
+          hop: Number(payload?.hop || 0) || 0,
           fromWindowId: selfId,
           from: parseTerminalWindowMeta(selfWindow),
           at: new Date().toISOString()

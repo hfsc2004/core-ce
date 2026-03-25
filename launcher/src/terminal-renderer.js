@@ -94,6 +94,15 @@
   let terminalIdentityLabel = '';
   let tokenModeEnabled = false;
   let tokenHolderWindowId = null;
+  let inboundRelayContext = null;
+  const PAIR_AUTO_HOP_LIMIT = 2;
+  let meshPrewarmInFlight = false;
+  let meshPrewarmKey = '';
+  let meshPrewarmAtMs = 0;
+  let meshTopologyKey = '';
+  const pendingAssistantRelays = [];
+  let pendingAssistantRelayBusy = false;
+  let lastTokenWaitNoticeAt = 0;
   const inboundRelayQueue = [];
   let inboundRelayBusy = false;
   const call = (controller, method, fallback, ...args) => (
@@ -308,10 +317,62 @@
       if (!state?.success) return;
       terminalWindowId = Number(state.selfWindowId || terminalWindowId || 0) || terminalWindowId;
       renderPeerOptions(state);
+      void maybePrewarmMeshSession(state);
     } catch (err) {
       console.warn('[Terminal Mesh] Failed to refresh peers:', err?.message || err);
     } finally {
       meshSyncInProgress = false;
+    }
+  }
+  async function maybePrewarmMeshSession(state = {}) {
+    const currentProvider = String(provider || '').trim().toLowerCase();
+    if (currentProvider !== 'llama.cpp') return;
+    if (!window.electronAPI || typeof window.electronAPI.ensureTerminalLlamaCppSession !== 'function') return;
+    const linkedPeer = Number(state.linkedPeerWindowId || 0);
+    const grouped = Array.isArray(state.groupPeerWindowIds) ? state.groupPeerWindowIds : [];
+    const hasMesh = (linkedPeer > 0) || grouped.length > 0;
+    if (!hasMesh) return;
+    const topologyKey = [String(linkedPeer || ''), grouped.map((v) => Number(v || 0)).sort((a, b) => a - b).join(',')].join('|');
+
+    const modelPath = String(llamaCppModelPath || '').trim();
+    const modelName = String(currentModel || '').trim();
+    if (!modelPath || !modelName) return;
+
+    const key = [
+      modelName,
+      modelPath,
+      String(num_ctx ?? ''),
+      String(num_gpu ?? ''),
+      String(terminalWindowId || '')
+    ].join('|');
+    const now = Date.now();
+    if (meshPrewarmInFlight) return;
+    if (meshTopologyKey === topologyKey && meshPrewarmKey === key && (now - meshPrewarmAtMs) < 60000) return;
+
+    meshPrewarmInFlight = true;
+    meshPrewarmKey = key;
+    meshTopologyKey = topologyKey;
+    try {
+      const result = await window.electronAPI.ensureTerminalLlamaCppSession({
+        modelPath,
+        modelName,
+        contextSize: num_ctx,
+        gpuLayers: num_gpu
+      });
+      meshPrewarmAtMs = Date.now();
+      if (result?.success) {
+        if (result?.reused === false) {
+          const port = Number(result?.port || result?.ollamaPort || 0);
+          if (port > 0) terminalPort = port;
+          addSystemMessage(`Mesh prewarm ready: ${modelName}${port > 0 ? ` on port ${port}` : ''}`);
+        }
+      } else if (result?.message) {
+        addSystemMessage(`Mesh prewarm skipped: ${result.message}`);
+      }
+    } catch (err) {
+      addSystemMessage(`Mesh prewarm failed: ${err?.message || err}`);
+    } finally {
+      meshPrewarmInFlight = false;
     }
   }
   async function handlePeerSelectChange() {
@@ -380,14 +441,21 @@
   function enqueueInboundRelay(payload = {}) {
     const text = String(payload?.text || '').trim();
     if (!text) return;
-    inboundRelayQueue.push({
+    const next = {
       text,
       fromWindowId: Number(payload?.fromWindowId || 0) || null,
       kind: String(payload?.kind || 'pair').trim().toLowerCase() || 'pair',
       speakerRole: String(payload?.speakerRole || 'assistant').trim().toLowerCase() || 'assistant',
       senderLabel: String(payload?.senderLabel || '').trim(),
-      modelName: String(payload?.modelName || '').trim()
-    });
+      modelName: String(payload?.modelName || '').trim(),
+      chainId: String(payload?.chainId || '').trim(),
+      hop: Number(payload?.hop || 0) || 0
+    };
+    inboundRelayQueue.push(next);
+    const speaker = buildIncomingSpeakerDescriptor(next);
+    const preview = text.length > 120 ? `${text.slice(0, 120)}...` : text;
+    const label = next.kind === 'group' ? 'Group relay' : 'Linked relay';
+    addSystemMessage(`${label} received from ${speaker}: ${preview}`);
     void processInboundRelayQueue();
   }
   async function processInboundRelayQueue() {
@@ -396,59 +464,134 @@
     try {
       while (inboundRelayQueue.length > 0) {
         if (inboundRelayHold) return;
-        if (tokenModeEnabled && tokenHolderWindowId && terminalWindowId && Number(tokenHolderWindowId) !== Number(terminalWindowId)) return;
+        if (tokenModeEnabled && tokenHolderWindowId && terminalWindowId && Number(tokenHolderWindowId) !== Number(terminalWindowId)) {
+          const now = Date.now();
+          if ((now - lastTokenWaitNoticeAt) > 2500) {
+            addSystemMessage(`Inbound queued: waiting for token handoff (holder T#${Number(tokenHolderWindowId)}).`);
+            lastTokenWaitNoticeAt = now;
+          }
+          return;
+        }
         if (isWaitingForResponse || activeStream) {
           await new Promise((resolve) => setTimeout(resolve, 350));
           continue;
         }
         const next = inboundRelayQueue.shift();
         if (!next?.text) continue;
+        if (next.kind === 'pair' && Number(next.hop || 0) >= PAIR_AUTO_HOP_LIMIT) {
+          const speaker = buildIncomingSpeakerDescriptor(next);
+          addSystemMessage(`Pair flow-control hold: received hop ${Number(next.hop || 0)} from ${speaker}. Waiting for manual/user turn.`);
+          if (userInput) userInput.value = buildIncomingRelayPrompt(next);
+          continue;
+        }
         const prefix = next.kind === 'group' ? 'Group Terminal' : 'Linked Terminal';
         const speaker = buildIncomingSpeakerDescriptor(next);
         addSystemMessage(`${prefix} ${next.fromWindowId ? `#${next.fromWindowId}` : ''}: incoming message from ${speaker}`);
         if (userInput) userInput.value = buildIncomingRelayPrompt(next);
+        inboundRelayContext = {
+          kind: next.kind,
+          chainId: String(next.chainId || '').trim(),
+          hop: Number(next.hop || 0) || 0
+        };
         suppressUserRelay = true;
         try {
           await sendMessage();
         } finally {
           suppressUserRelay = false;
+          inboundRelayContext = null;
         }
       }
     } finally {
       inboundRelayBusy = false;
     }
   }
-  async function relayToMesh(text, speakerRole = 'assistant') {
+  function queuePendingAssistantRelay(text = '') {
+    const value = String(text || '').trim();
+    if (!value) return;
+    if (pendingAssistantRelays.length >= 8) pendingAssistantRelays.shift();
+    pendingAssistantRelays.push(value);
+  }
+  async function flushPendingAssistantRelays() {
+    if (pendingAssistantRelayBusy) return;
+    if (isWaitingForResponse || activeStream) return;
+    if (!tokenModeEnabled || !terminalWindowId || Number(tokenHolderWindowId || 0) !== Number(terminalWindowId)) return;
+    if (pendingAssistantRelays.length === 0) return;
+    pendingAssistantRelayBusy = true;
+    try {
+      while (pendingAssistantRelays.length > 0) {
+        if (isWaitingForResponse || activeStream) break;
+        if (!tokenModeEnabled || !terminalWindowId || Number(tokenHolderWindowId || 0) !== Number(terminalWindowId)) break;
+        const next = pendingAssistantRelays.shift();
+        if (!next) continue;
+        addSystemMessage('Token acquired: sending queued assistant relay turn.');
+        await relayToMesh(next, 'assistant', { fromPending: true });
+      }
+    } finally {
+      pendingAssistantRelayBusy = false;
+    }
+  }
+  async function relayToMesh(text, speakerRole = 'assistant', options = {}) {
     const payloadText = String(text || '').trim();
     if (!payloadText) return;
     if (!window.electronAPI) return;
+    const inheritedChainId = String(inboundRelayContext?.chainId || '').trim();
+    const inheritedHop = Number(inboundRelayContext?.hop || 0) || 0;
     const sharedPayload = {
       text: payloadText,
       speakerRole: String(speakerRole || 'assistant').trim().toLowerCase() || 'assistant',
       senderLabel: String(terminalIdentityLabel || '').trim(),
       fromWindowId: terminalWindowId || null,
       modelName: currentModel || 'unknown',
-      port: terminalPort || null
+      port: terminalPort || null,
+      chainId: inheritedChainId || `pair-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      hop: inheritedChainId ? (inheritedHop + 1) : 0
     };
     const hasGroup = groupedPeerIds instanceof Set && groupedPeerIds.size > 0;
     const hasPair = Number(linkedPeerId || 0) > 0;
-    try {
+    const isTokenBlocked = (message) => /token is held by terminal/i.test(String(message || ''));
+    const performRelay = async () => {
+      let blockedMessage = '';
       if (hasPair && (!hasGroup || !groupedPeerIds.has(Number(linkedPeerId)))) {
         if (typeof window.electronAPI.terminalLinkRelayMessage === 'function') {
           const result = await window.electronAPI.terminalLinkRelayMessage(sharedPayload);
-          if (result?.success === false && result?.message) {
-            addSystemMessage(`Mesh relay blocked: ${result.message}`);
+          if (result?.success === false) {
+            blockedMessage = String(result?.message || '').trim();
+            if (blockedMessage) addSystemMessage(`Mesh relay blocked: ${blockedMessage}`);
           }
         }
       }
       if (hasGroup && typeof window.electronAPI.terminalLinkRelayGroupMessage === 'function') {
         const result = await window.electronAPI.terminalLinkRelayGroupMessage(sharedPayload);
-        if (result?.success === false && result?.message) {
-          addSystemMessage(`Mesh relay blocked: ${result.message}`);
+        if (result?.success === false) {
+          blockedMessage = String(result?.message || '').trim();
+          if (blockedMessage) addSystemMessage(`Mesh relay blocked: ${blockedMessage}`);
         }
       }
+      return blockedMessage;
+    };
+    try {
+      let blockedMessage = await performRelay();
+      if (blockedMessage && isTokenBlocked(blockedMessage) && String(speakerRole || '').toLowerCase() === 'user') {
+        if (window.electronAPI && typeof window.electronAPI.terminalLinkTokenTakeTurn === 'function') {
+          addSystemMessage('Requesting token for local user turn...');
+          const tokenResult = await window.electronAPI.terminalLinkTokenTakeTurn();
+          if (tokenResult?.success) {
+            blockedMessage = await performRelay();
+            if (blockedMessage && isTokenBlocked(blockedMessage)) {
+              addSystemMessage('Relay still blocked after token request; waiting for next turn.');
+            }
+          }
+        }
+      } else if (blockedMessage && isTokenBlocked(blockedMessage)) {
+        addSystemMessage('Assistant relay is waiting for token handoff.');
+        if (String(speakerRole || '').toLowerCase() === 'assistant' && options?.fromPending !== true) {
+          queuePendingAssistantRelay(payloadText);
+        }
+      }
+      return blockedMessage || '';
     } catch (err) {
       console.warn('[Terminal Mesh] Relay failed:', err?.message || err);
+      return err?.message || 'relay_failed';
     }
   }
   async function relayAssistantToPeer(assistantMessage) {
@@ -490,6 +633,8 @@
           return;
         }
         renderPeerOptions(state);
+        void maybePrewarmMeshSession(state);
+        void flushPendingAssistantRelays();
       });
     }
     if (window.electronAPI && typeof window.electronAPI.onTerminalLinkInbound === 'function') {
