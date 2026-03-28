@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastModified": "2026-03-23T19:28:25.349Z",
+  "lastModified": "2026-03-28T17:43:49.847Z",
   "items": [
     {
       "enabled": true,
@@ -55,7 +55,7 @@
           "wifiStaticCidr": 24,
           "wifiStaticGatewayEnabled": false,
           "wifiStaticGateway": "",
-          "wifiSsid": "No_Access",
+          "wifiSsid": "No_Access_2",
           "wifiPassword": "Paintjet~0987654321~",
           "wifiDriveSpeed": 170,
           "wifiDriveSwapSides": false,
@@ -78,7 +78,21 @@
           "wifiCameraSnapshotPath": "/capture",
           "wifiCameraFlashStatusPath": "/health",
           "wifiCameraFqbn": "esp32:esp32:esp32cam",
-          "wifiCameraBoardProfile": "ai-thinker-esp32cam"
+          "wifiCameraBoardProfile": "ai-thinker-esp32cam",
+          "wifiCameraSsid": "",
+          "wifiCameraPassword": "",
+          "wifiCameraPinProfile": "",
+          "wifiCameraLibraryPath": "",
+          "wifiCameraStaEnabled": false,
+          "wifiCameraUsbCdcOnBoot": true,
+          "wifiCameraEraseBeforeUpload": false,
+          "wifiCameraCaptureRuntimeSerial": true,
+          "wifiCameraRuntimeSerialCaptureMs": 20000,
+          "wifiCameraStaticEnabled": false,
+          "wifiCameraStaticIp": "",
+          "wifiCameraStaticCidr": 24,
+          "wifiCameraStaticGatewayEnabled": false,
+          "wifiCameraStaticGateway": ""
         }
       },
       "id": "gateway-1772317178175-4ne79m9r7",
@@ -87,7 +101,13 @@
     },
     {
       "enabled": true,
+      "mode": "direct",
       "direction": "bidirectional",
+      "fromAgentId": "",
+      "toAgentId": "",
+      "groupId": "",
+      "when": "always",
+      "matchRule": "",
       "flowCondition": "always",
       "retryCount": 0,
       "timeoutMs": 120000,
@@ -98,11 +118,13 @@
     },
     {
       "enabled": true,
+      "provider": "ollama",
       "modelId": "gemma-3-4b-it-mm",
       "modelName": "Gemma 3:4B-IT-MM",
       "systemPrompt": "",
       "routingMode": "dynamic",
       "routingRules": [],
+      "groups": [],
       "rlmAssist": false,
       "rlmAttachmentSessionId": "moe-agent-agent-1772317192895-7hvwsdiob",
       "tools": [],
@@ -130,7 +152,7 @@
         },
         "serial": {
           "enabled": true,
-          "port": "/dev/ttyACM0",
+          "port": "auto",
           "baudRate": 115200
         }
       },
@@ -189,7 +211,7 @@
           "wifiStaticCidr": 24,
           "wifiStaticGatewayEnabled": false,
           "wifiStaticGateway": "",
-          "wifiCameraSsid": "No_Access",
+          "wifiCameraSsid": "No_Access_2",
           "wifiCameraPassword": "Paintjet~0987654321~",
           "wifiCameraStaticEnabled": true,
           "wifiCameraStaticIp": "172.20.0.16",
@@ -197,10 +219,12 @@
           "wifiCameraStaticGatewayEnabled": false,
           "wifiCameraStaticGateway": "",
           "wifiCameraPinProfile": "",
-          "wifiCameraStaEnabled": false,
+          "wifiCameraStaEnabled": true,
           "wifiCameraUsbCdcOnBoot": true,
           "wifiCameraCaptureRuntimeSerial": true,
-          "wifiCameraRuntimeSerialCaptureMs": 30000
+          "wifiCameraRuntimeSerialCaptureMs": 30000,
+          "wifiCameraLibraryPath": "/media/user/Third_4TB/PSF/core-ce/.psf/toolchains/arduino-cli/data/packages/esp32/hardware/esp32/3.3.7/libraries/esp32-camera",
+          "wifiCameraEraseBeforeUpload": false
         },
         "targets": [
           "raspberry-pi-pico",

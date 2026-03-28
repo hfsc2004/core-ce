@@ -58,6 +58,16 @@ function clearTelemetryTimer(state) {
   }
 }
 
+function esp32RenderThrottled(state, minIntervalMs = 900) {
+  const now = Date.now();
+  const last = Number(state?.lastUiRenderAtMs || 0);
+  if (Number.isFinite(last) && (now - last) < minIntervalMs) return;
+  if (state && typeof state === 'object') {
+    state.lastUiRenderAtMs = now;
+  }
+  esp32Render();
+}
+
 function bindDriveReleaseHandlers(gatewayId, state) {
   if (typeof window === 'undefined' || !window.addEventListener) return;
   if (typeof state.driveReleaseHandler === 'function') return;
@@ -143,6 +153,9 @@ function setGatewayEsp32TakeControl(gatewayId, enabled) {
   const state = readScanState(gatewayId);
   const take = enabled === true;
   state.takeControl = take;
+  if (typeof window.updateGatewayIrgEsp32Config === 'function') {
+    window.updateGatewayIrgEsp32Config(gatewayId, 'wifiTakeControl', take);
+  }
 
   if (!take) {
     if (typeof stopGatewayEsp32AiDriveSession === 'function') {
@@ -167,12 +180,12 @@ function setGatewayEsp32TakeControl(gatewayId, enabled) {
       state.telemetryLiveAt = '';
       state.driveError = String(err?.message || err || 'Telemetry poll failed');
     } finally {
-      esp32Render();
+      esp32RenderThrottled(state, 1200);
     }
   };
 
   clearTelemetryTimer(state);
-  state.telemetryTimer = setInterval(poll, 220);
+  state.telemetryTimer = setInterval(poll, 1200);
   poll();
   esp32LogStatus('[ESP32 Drive] Control taken. Live telemetry stream enabled.', 'success');
   esp32Render();
@@ -373,7 +386,7 @@ function startGatewayEsp32Drive(gatewayId, direction) {
       state.driveActive = false;
       esp32LogStatus(`[ESP32 Drive] ${state.driveDirection} failed: ${state.driveError}`, 'error');
     } finally {
-      esp32Render();
+      esp32RenderThrottled(state, 900);
     }
   };
 

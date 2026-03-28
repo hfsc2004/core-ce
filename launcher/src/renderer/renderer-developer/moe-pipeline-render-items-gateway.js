@@ -103,7 +103,7 @@ function renderGatewayDetails(gateway) {
   const esp32DriveLastAt = esp32ScanState.driveLastAt
     ? new Date(esp32ScanState.driveLastAt).toLocaleTimeString()
     : '';
-  const esp32TakeControl = esp32ScanState.takeControl === true;
+  const esp32TakeControl = irgEsp32.wifiTakeControl === true || esp32ScanState.takeControl === true;
   const esp32Telemetry = esp32ScanState.telemetryLive && typeof esp32ScanState.telemetryLive === 'object'
     ? esp32ScanState.telemetryLive
     : null;
@@ -123,8 +123,10 @@ function renderGatewayDetails(gateway) {
   const esp32CameraHealthPath = String(irgEsp32.wifiCameraFlashStatusPath || '/health').trim() || '/health';
   const esp32CameraBoardProfile = String(irgEsp32.wifiCameraBoardProfile || 'ai-thinker-esp32cam').trim().toLowerCase() || 'ai-thinker-esp32cam';
   const esp32CameraFqbn = String(irgEsp32.wifiCameraFqbn || 'esp32:esp32:esp32cam').trim() || 'esp32:esp32:esp32cam';
+  const esp32CameraLibraryPath = String(irgEsp32.wifiCameraLibraryPath || '').trim();
   const esp32CameraStaEnabled = irgEsp32.wifiCameraStaEnabled !== false;
   const esp32CameraUsbCdcOnBoot = irgEsp32.wifiCameraUsbCdcOnBoot !== false;
+  const esp32CameraEraseBeforeUpload = irgEsp32.wifiCameraEraseBeforeUpload === true;
   const esp32CameraCaptureRuntimeSerial = irgEsp32.wifiCameraCaptureRuntimeSerial !== false;
   const esp32CameraRuntimeSerialCaptureMs = Number.isInteger(Number(irgEsp32.wifiCameraRuntimeSerialCaptureMs))
     ? Number(irgEsp32.wifiCameraRuntimeSerialCaptureMs)
@@ -603,9 +605,18 @@ function renderGatewayDetails(gateway) {
                    onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraFqbn', this.value)"
                    placeholder="esp32:esp32:esp32cam"
                    style="min-width:180px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
+            <label style="color:#888; font-size:11px;">esp32-camera Lib</label>
+            <input type="text" value="${escapeBinding(esp32CameraLibraryPath)}"
+                   onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraLibraryPath', this.value)"
+                   placeholder="/path/to/esp32-camera"
+                   style="min-width:260px; padding:4px 8px; background: rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px; color:#fff;">
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
               <input type="checkbox" ${esp32CameraUsbCdcOnBoot ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraUsbCdcOnBoot', this.checked)">
               <span style="color:#ddd; font-size:11px;">USB CDC on Boot</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" ${esp32CameraEraseBeforeUpload ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraEraseBeforeUpload', this.checked)">
+              <span style="color:#ddd; font-size:11px;">Erase flash before upload</span>
             </label>
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
               <input type="checkbox" ${esp32CameraCaptureRuntimeSerial ? 'checked' : ''} onchange="updateGatewayIrgEsp32Config('${gateway.id}', 'wifiCameraCaptureRuntimeSerial', this.checked)">

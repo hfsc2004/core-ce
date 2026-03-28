@@ -130,6 +130,17 @@ window.enhanceMoeSelects = enhanceMoeSelects;
 function renderModelOrdering() {
   const container = document.getElementById('model-ordering-content');
   if (!container) return;
+  const previousWindowScrollY = Number.isFinite(window.scrollY) ? window.scrollY : 0;
+  const previousWindowScrollX = Number.isFinite(window.scrollX) ? window.scrollX : 0;
+  const previousContainerScrollTop = Number.isFinite(container.scrollTop) ? container.scrollTop : 0;
+  const previousContainerScrollLeft = Number.isFinite(container.scrollLeft) ? container.scrollLeft : 0;
+  const previousPipelineList = document.getElementById('moe-pipeline-list');
+  const previousPipelineScrollTop = Number.isFinite(previousPipelineList?.scrollTop)
+    ? previousPipelineList.scrollTop
+    : 0;
+  const previousPipelineScrollLeft = Number.isFinite(previousPipelineList?.scrollLeft)
+    ? previousPipelineList.scrollLeft
+    : 0;
 
   const { scopeMode, selectedModels, editMode } = window.modelOrderingState;
   const theme = getMoeTheme();
@@ -290,6 +301,15 @@ function renderModelOrdering() {
   if (typeof window.enhanceMoeSelects === 'function') {
     try { window.enhanceMoeSelects(container); } catch (_) { /* no-op */ }
   }
+
+  container.scrollTop = previousContainerScrollTop;
+  container.scrollLeft = previousContainerScrollLeft;
+  const nextPipelineList = document.getElementById('moe-pipeline-list');
+  if (nextPipelineList) {
+    nextPipelineList.scrollTop = previousPipelineScrollTop;
+    nextPipelineList.scrollLeft = previousPipelineScrollLeft;
+  }
+  window.scrollTo(previousWindowScrollX, previousWindowScrollY);
 }
 
 window.renderModelOrdering = renderModelOrdering;

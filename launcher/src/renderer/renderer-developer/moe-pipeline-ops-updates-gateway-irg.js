@@ -59,6 +59,7 @@ function ensureGatewayIrg(gateway) {
       wifiDriveMapLeft: 'rev',
       wifiDriveMapRight: 'fwd',
       wifiObstacleFrontThreshold: 1500,
+      wifiTakeControl: false,
       wifiCameraEnabled: false,
       wifiCameraSsid: '',
       wifiCameraPassword: '',
@@ -70,8 +71,10 @@ function ensureGatewayIrg(gateway) {
       wifiCameraFqbn: 'esp32:esp32:esp32cam',
       wifiCameraBoardProfile: 'ai-thinker-esp32cam',
       wifiCameraPinProfile: '',
+      wifiCameraLibraryPath: '',
       wifiCameraStaEnabled: true,
       wifiCameraUsbCdcOnBoot: true,
+      wifiCameraEraseBeforeUpload: false,
       wifiCameraCaptureRuntimeSerial: true,
       wifiCameraRuntimeSerialCaptureMs: 20000,
       wifiCameraStaticEnabled: false,
@@ -105,6 +108,7 @@ function ensureGatewayIrg(gateway) {
     if (typeof gateway.irg.esp32.wifiDriveMapLeft !== 'string') gateway.irg.esp32.wifiDriveMapLeft = 'rev';
     if (typeof gateway.irg.esp32.wifiDriveMapRight !== 'string') gateway.irg.esp32.wifiDriveMapRight = 'fwd';
     if (!Number.isInteger(Number(gateway.irg.esp32.wifiObstacleFrontThreshold))) gateway.irg.esp32.wifiObstacleFrontThreshold = 1500;
+    if (typeof gateway.irg.esp32.wifiTakeControl !== 'boolean') gateway.irg.esp32.wifiTakeControl = false;
     if (typeof gateway.irg.esp32.wifiCameraEnabled !== 'boolean') gateway.irg.esp32.wifiCameraEnabled = false;
     if (typeof gateway.irg.esp32.wifiCameraSsid !== 'string') gateway.irg.esp32.wifiCameraSsid = '';
     if (typeof gateway.irg.esp32.wifiCameraPassword !== 'string') gateway.irg.esp32.wifiCameraPassword = '';
@@ -116,8 +120,10 @@ function ensureGatewayIrg(gateway) {
     if (typeof gateway.irg.esp32.wifiCameraFqbn !== 'string') gateway.irg.esp32.wifiCameraFqbn = 'esp32:esp32:esp32cam';
     if (typeof gateway.irg.esp32.wifiCameraBoardProfile !== 'string') gateway.irg.esp32.wifiCameraBoardProfile = 'ai-thinker-esp32cam';
     if (typeof gateway.irg.esp32.wifiCameraPinProfile !== 'string') gateway.irg.esp32.wifiCameraPinProfile = '';
+    if (typeof gateway.irg.esp32.wifiCameraLibraryPath !== 'string') gateway.irg.esp32.wifiCameraLibraryPath = '';
     if (typeof gateway.irg.esp32.wifiCameraStaEnabled !== 'boolean') gateway.irg.esp32.wifiCameraStaEnabled = true;
     if (typeof gateway.irg.esp32.wifiCameraUsbCdcOnBoot !== 'boolean') gateway.irg.esp32.wifiCameraUsbCdcOnBoot = true;
+    if (typeof gateway.irg.esp32.wifiCameraEraseBeforeUpload !== 'boolean') gateway.irg.esp32.wifiCameraEraseBeforeUpload = false;
     if (typeof gateway.irg.esp32.wifiCameraCaptureRuntimeSerial !== 'boolean') gateway.irg.esp32.wifiCameraCaptureRuntimeSerial = true;
     if (!Number.isInteger(Number(gateway.irg.esp32.wifiCameraRuntimeSerialCaptureMs))) gateway.irg.esp32.wifiCameraRuntimeSerialCaptureMs = 20000;
     if (typeof gateway.irg.esp32.wifiCameraStaticEnabled !== 'boolean') gateway.irg.esp32.wifiCameraStaticEnabled = false;
@@ -323,6 +329,9 @@ function updateGatewayIrgEsp32Config(gatewayId, key, value) {
         : 1500;
       break;
     }
+    case 'wifiTakeControl':
+      gateway.irg.esp32.wifiTakeControl = value === true;
+      break;
     case 'wifiCameraEnabled':
       gateway.irg.esp32.wifiCameraEnabled = value === true;
       break;
@@ -360,11 +369,17 @@ function updateGatewayIrgEsp32Config(gatewayId, key, value) {
     case 'wifiCameraFqbn':
       gateway.irg.esp32.wifiCameraFqbn = String(value || '').trim() || 'esp32:esp32:esp32cam';
       break;
+    case 'wifiCameraLibraryPath':
+      gateway.irg.esp32.wifiCameraLibraryPath = String(value || '').trim();
+      break;
     case 'wifiCameraStaEnabled':
       gateway.irg.esp32.wifiCameraStaEnabled = value === true;
       break;
     case 'wifiCameraUsbCdcOnBoot':
       gateway.irg.esp32.wifiCameraUsbCdcOnBoot = value === true;
+      break;
+    case 'wifiCameraEraseBeforeUpload':
+      gateway.irg.esp32.wifiCameraEraseBeforeUpload = value === true;
       break;
     case 'wifiCameraCaptureRuntimeSerial':
       gateway.irg.esp32.wifiCameraCaptureRuntimeSerial = value === true;
@@ -382,14 +397,10 @@ function updateGatewayIrgEsp32Config(gatewayId, key, value) {
       // Nudge FQBN to the recommended default for the selected profile.
       if (profile === 'elegoo-esp32s3-camera-v1') {
         gateway.irg.esp32.wifiCameraFqbn = 'esp32:esp32:esp32s3';
-        if (!String(gateway.irg.esp32.wifiCameraPinProfile || '').trim()) {
-          gateway.irg.esp32.wifiCameraPinProfile = 's3-samuelw-style';
-        }
+        gateway.irg.esp32.wifiCameraPinProfile = 'elegoo-s3-eye-vendor-a';
       } else if (profile === 'ai-thinker-esp32cam') {
         gateway.irg.esp32.wifiCameraFqbn = 'esp32:esp32:esp32cam';
-        if (!String(gateway.irg.esp32.wifiCameraPinProfile || '').trim()) {
-          gateway.irg.esp32.wifiCameraPinProfile = 'ai-thinker';
-        }
+        gateway.irg.esp32.wifiCameraPinProfile = 'ai-thinker';
       }
       break;
     }

@@ -2,6 +2,10 @@
 
 Session marker: `feat/next-iteration-20260324-1830`
 
+  cd /media/user/Third_4TB/PSF/core-ce && git checkout feat/next-iteration-20260324-1948
+
+codex resume 019cbeaf-746b-7a81-b3df-77e8a0476542
+
 ## What Was Completed
 
 - Added additive Terminal group chat while keeping 1:1 linking intact.

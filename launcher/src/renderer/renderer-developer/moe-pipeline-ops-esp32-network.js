@@ -91,11 +91,9 @@ function cidrToMask(cidrRaw) {
 function getCameraBoardProfileConfig(esp32 = {}) {
   const profile = String(esp32.wifiCameraBoardProfile || '').trim().toLowerCase() || 'ai-thinker-esp32cam';
   if (profile === 'elegoo-esp32s3-camera-v1') {
-    let defaultPinProfileKey = String(esp32.wifiCameraPinProfile || 's3-samuelw-style').trim().toLowerCase();
-    // Migration for older saved configs that defaulted to vendor-a.
-    if (!defaultPinProfileKey || defaultPinProfileKey === 'elegoo-s3-eye-vendor-a') {
-      defaultPinProfileKey = 's3-samuelw-style';
-    }
+    let defaultPinProfileKey = String(esp32.wifiCameraPinProfile || 'elegoo-s3-eye-vendor-a').trim().toLowerCase();
+    if (defaultPinProfileKey === 's3-samuelw-style') defaultPinProfileKey = 'elegoo-s3-eye-vendor-a';
+    if (!defaultPinProfileKey) defaultPinProfileKey = 'elegoo-s3-eye-vendor-a';
     return {
       id: 'elegoo-esp32s3-camera-v1',
       label: 'Elegoo ESP32S3-Camera V1.0',
@@ -157,8 +155,8 @@ function buildEsp32CameraSketch(esp32 = {}) {
   const streamPath = normalizeHttpPath(esp32.wifiCameraStreamPath, '/stream');
   const snapshotPath = normalizeHttpPath(esp32.wifiCameraSnapshotPath, '/capture');
   const healthPath = normalizeHttpPath(esp32.wifiCameraFlashStatusPath, '/health');
-  const staticEnabled = esp32.wifiCameraStaticEnabled === true && !!host;
-  const staticIp = String(esp32.wifiCameraStaticIp || host || '').trim();
+  const staticEnabled = esp32.wifiCameraStaticEnabled === true;
+  const staticIp = String(esp32.wifiCameraStaticIp || '').trim() || host;
   const cidr = Number.isInteger(Number(esp32.wifiCameraStaticCidr)) ? Number(esp32.wifiCameraStaticCidr) : 24;
   const subnetMask = cidrToMask(cidr);
   const gw = esp32.wifiCameraStaticGatewayEnabled === true
@@ -212,6 +210,7 @@ const char* WIFI_SSID = ${JSON.stringify(ssid)};
 const char* WIFI_PASS = ${JSON.stringify(pass)};
 const bool WIFI_STA_ENABLED = ${staEnabled ? 'true' : 'false'};
 const char* CAMERA_BOARD_PROFILE = ${JSON.stringify(board.id)};
+const bool IS_ELEGOO_S3_CAMERA = ${board.id === 'elegoo-esp32s3-camera-v1' ? 'true' : 'false'};
 const uint16_t HTTP_PORT = ${port};
 const bool USE_STATIC_IP = ${staticEnabled ? 'true' : 'false'};
 const char* STATIC_IP = ${JSON.stringify(staticIp)};
@@ -259,11 +258,7 @@ void handleSnapshot() {
     server.send(500, "application/json", "{\\"ok\\":false,\\"error\\":\\"camera_capture_failed\\"}");
     return;
   }
-  server.sendHeader("Content-Type", "image/jpeg");
-  server.sendHeader("Content-Length", String(fb->len));
-  server.send(200);
-  WiFiClient client = server.client();
-  client.write(fb->buf, fb->len);
+  server.send_P(200, "image/jpeg", (const char*)fb->buf, fb->len);
   esp_camera_fb_return(fb);
 }
 
@@ -299,6 +294,15 @@ void handleStream() {
 }
 
 bool initCameraWithPins(const CameraPins& pins) {
+  if (IS_ELEGOO_S3_CAMERA) {
+    // Elegoo note: GPIO46 must be cycled HIGH->LOW before esp_camera_init().
+    pinMode(46, OUTPUT);
+    digitalWrite(46, HIGH);
+    delay(100);
+    digitalWrite(46, LOW);
+    delay(100);
+  }
+
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -319,40 +323,19 @@ bool initCameraWithPins(const CameraPins& pins) {
   config.pin_pwdn = pins.pwdn;
   config.pin_reset = pins.reset;
   config.xclk_freq_hz = 20000000;
-  // Use conservative defaults for first boot stability on ESP32-S3 camera boards.
-  // We can scale this up later after proven stable init + Wi-Fi association.
-  config.frame_size = FRAMESIZE_QVGA;
+  config.frame_size = FRAMESIZE_SVGA;
   config.pixel_format = PIXFORMAT_JPEG;
   config.grab_mode = CAMERA_GRAB_LATEST;
   config.fb_location = CAMERA_FB_IN_PSRAM;
-  config.jpeg_quality = 12;
+  config.jpeg_quality = 10;
   config.fb_count = 2;
 
-  if (config.pixel_format == PIXFORMAT_JPEG) {
-    if (psramFound()) {
-      config.jpeg_quality = 12;
-      config.fb_count = 2;
-      config.grab_mode = CAMERA_GRAB_LATEST;
-    } else {
-      // Mirror vendor fallback when PSRAM is unavailable.
-      config.frame_size = FRAMESIZE_QVGA;
-      config.fb_location = CAMERA_FB_IN_DRAM;
-      config.fb_count = 1;
-    }
-  } else {
-    config.frame_size = FRAMESIZE_240X240;
-    config.fb_count = 1;
+  if (!psramFound()) {
+    lastCameraError = "psram_not_detected";
+    return false;
   }
 
   esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
-    config.frame_size = FRAMESIZE_QQVGA;
-    config.fb_location = CAMERA_FB_IN_DRAM;
-    config.jpeg_quality = 15;
-    config.fb_count = 1;
-    config.grab_mode = CAMERA_GRAB_LATEST;
-    err = esp_camera_init(&config);
-  }
   if (err != ESP_OK) {
     lastCameraError = String("esp_camera_init failed: ") + String((int)err);
     return false;
@@ -363,9 +346,6 @@ bool initCameraWithPins(const CameraPins& pins) {
       s->set_vflip(s, 1);
       s->set_brightness(s, 1);
       s->set_saturation(s, -2);
-    }
-    if (config.pixel_format == PIXFORMAT_JPEG) {
-      s->set_framesize(s, FRAMESIZE_SVGA);
     }
   }
   return true;
@@ -407,21 +387,31 @@ bool connectWifi() {
     return false;
   }
   WiFi.mode(WIFI_STA);
+  WiFi.persistent(false);
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false);
   Serial.println("WiFi: starting STA mode");
   Serial.println(String("WiFi: SSID=") + WIFI_SSID);
+  WiFi.disconnect(false, false);
+  delay(50);
   if (USE_STATIC_IP) {
     IPAddress ip, gw, mask;
     if (ip.fromString(STATIC_IP) && gw.fromString(STATIC_GW) && mask.fromString(STATIC_MASK)) {
       Serial.println(String("WiFi: static config ip=") + STATIC_IP + " gw=" + STATIC_GW + " mask=" + STATIC_MASK);
-      WiFi.config(ip, gw, mask);
+      bool ok = WiFi.config(ip, gw, mask);
+      if (!ok) {
+        Serial.println("WiFi: static config apply failed");
+        wifiStaConnected = false;
+        return false;
+      }
     } else {
-      Serial.println("WiFi: static config parse failed, continuing with DHCP");
+      Serial.println("WiFi: static config parse failed");
+      wifiStaConnected = false;
+      return false;
     }
   } else {
     Serial.println("WiFi: DHCP mode");
   }
-  WiFi.disconnect(true, true);
-  delay(150);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   unsigned long started = millis();
   wifiLastAttemptMs = started;
@@ -472,8 +462,9 @@ void loop() {
       wifiStaConnected = false;
       unsigned long now = millis();
       if (now - wifiLastAttemptMs >= WIFI_RETRY_INTERVAL_MS) {
-        Serial.println("WiFi: disconnected, retrying STA connect...");
-        connectWifi();
+        wifiLastAttemptMs = now;
+        Serial.println("WiFi: disconnected, retrying reconnect...");
+        WiFi.reconnect();
       }
     }
   }
@@ -519,8 +510,10 @@ async function flashGatewayEsp32CameraFirmware(gatewayId) {
   const serialPort = String(gateway?.sources?.serial?.port || '').trim();
   const cameraFqbn = String(esp32.wifiCameraFqbn || 'esp32:esp32:esp32cam').trim() || 'esp32:esp32:esp32cam';
   const cameraBoardProfile = String(esp32.wifiCameraBoardProfile || '').trim().toLowerCase() || 'ai-thinker-esp32cam';
+  const cameraLibraryPath = String(esp32.wifiCameraLibraryPath || '').trim();
   const cameraStaEnabled = esp32.wifiCameraStaEnabled !== false;
   const cameraUsbCdcOnBoot = esp32.wifiCameraUsbCdcOnBoot !== false;
+  const cameraEraseBeforeUpload = esp32.wifiCameraEraseBeforeUpload === true;
   const cameraCaptureRuntimeSerial = esp32.wifiCameraCaptureRuntimeSerial !== false;
   const cameraRuntimeSerialCaptureMs = Number.isInteger(Number(esp32.wifiCameraRuntimeSerialCaptureMs))
     ? Math.max(0, Math.min(120000, Number(esp32.wifiCameraRuntimeSerialCaptureMs)))
@@ -565,8 +558,9 @@ async function flashGatewayEsp32CameraFirmware(gatewayId) {
       params: {
         fqbn: cameraFqbn,
         cameraBoardProfile,
+        cameraLibraryPath,
         strictNoFallback: true,
-        eraseFlashBeforeUpload: true,
+        eraseFlashBeforeUpload: cameraEraseBeforeUpload,
         uploadMode: cameraUploadMode,
         chip: /esp32s3/i.test(cameraFqbn) ? 'esp32s3' : 'esp32',
         wifiStaEnabled: cameraStaEnabled,

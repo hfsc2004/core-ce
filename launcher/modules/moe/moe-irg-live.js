@@ -358,6 +358,72 @@ function normalizeStringList(value) {
     .filter(Boolean);
 }
 
+function resolveEsp32CameraLibraryPaths(contract = {}) {
+  const params = contract?.params || {};
+  const explicit = String(params.cameraLibraryPath || '').trim();
+  const explicitList = normalizeStringList(params.cameraLibraryPaths);
+  const requested = [explicit, ...explicitList]
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+  const existing = [];
+
+  for (const candidate of requested) {
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) existing.push(candidate);
+    } catch {
+      // ignore stat errors
+    }
+  }
+  if (existing.length > 0) {
+    return { paths: existing, missingRequested: false };
+  }
+  if (requested.length > 0) {
+    return { paths: [], missingRequested: true };
+  }
+
+  const projectRoot = path.resolve(__dirname, '..', '..', '..');
+  const defaultCandidates = [
+    path.join(projectRoot, 'robot', 'ESP32-S3-WROOM-1-Camera', 'esp32-camera'),
+    path.join(projectRoot, '.psf', 'toolchains', 'libraries', 'esp32-camera')
+  ];
+  const arduinoCoreRoot = path.join(
+    projectRoot,
+    '.psf',
+    'toolchains',
+    'arduino-cli',
+    'data',
+    'packages',
+    'esp32',
+    'hardware',
+    'esp32'
+  );
+  try {
+    if (fs.existsSync(arduinoCoreRoot) && fs.statSync(arduinoCoreRoot).isDirectory()) {
+      const versionDirs = fs.readdirSync(arduinoCoreRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+        .reverse();
+      for (const version of versionDirs) {
+        defaultCandidates.push(path.join(arduinoCoreRoot, version, 'libraries', 'esp32-camera'));
+      }
+    }
+  } catch {
+    // ignore lookup errors
+  }
+  for (const candidate of defaultCandidates) {
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
+        return { paths: [candidate], missingRequested: false };
+      }
+    } catch {
+      // ignore stat errors
+    }
+  }
+
+  return { paths: [], missingRequested: false };
+}
+
 function resolveEsp32CompileProfiles(contract, fqbn) {
   const params = contract?.params || {};
   const explicitBoardOptions = normalizeStringList(params.compileBoardOptions);
@@ -629,6 +695,11 @@ async function executeLiveEsp32Contract({
   const runtimeSerialCaptureMs = Number.isFinite(Number(contract?.params?.runtimeSerialCaptureMs))
     ? Math.max(0, Math.min(120000, Number(contract.params.runtimeSerialCaptureMs)))
     : 20000;
+  const cameraLibraryResolution = resolveEsp32CameraLibraryPaths(contract);
+  const cameraLibraryPaths = Array.isArray(cameraLibraryResolution?.paths)
+    ? cameraLibraryResolution.paths
+    : [];
+  const missingRequestedCameraLibrary = cameraLibraryResolution?.missingRequested === true;
 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'psf-irg-esp32-'));
   const sketchDir = path.join(tempRoot, sketchName);
@@ -663,8 +734,22 @@ async function executeLiveEsp32Contract({
     let preflightOutGlobal = '';
     let eraseOutGlobal = '';
     const isElegooCamera = isElegooEsp32s3Camera(contract, fqbn);
+    if (isElegooCamera && cameraLibraryPaths.length === 0) {
+      const missingReason = missingRequestedCameraLibrary
+        ? 'Configured esp32-camera library path was not found.'
+        : 'esp32-camera library path was not provided.';
+      return finalizeEsp32Result({
+        success: false,
+        blocked: true,
+        mode: 'live',
+        reason: `${missingReason} Set Camera Sidecar "esp32-camera Lib" to your cloned esp32-camera directory.`,
+        serial: { resolvedPort },
+        metadata: { target: 'esp32', fqbn: effectiveFqbn, cameraBoardProfile: contract?.params?.cameraBoardProfile || '' },
+        output: {}
+      });
+    }
     const shouldPreflight = isElegooCamera;
-    const shouldEraseBeforeCompile = eraseFlashBeforeUpload || isElegooCamera;
+    const shouldEraseBeforeCompile = eraseFlashBeforeUpload;
     if (shouldPreflight) {
       const preflightArgs = ['-k', resolvedPort];
       const preflightCommand = formatCommandForLog('fuser', preflightArgs);
@@ -720,6 +805,11 @@ async function executeLiveEsp32Contract({
         const value = String(prop || '').trim();
         if (!value) continue;
         args.push('--build-property', value);
+      }
+      for (const libPath of cameraLibraryPaths) {
+        const value = String(libPath || '').trim();
+        if (!value) continue;
+        args.push('--libraries', value);
       }
       args.push(sketchDir);
       const commandLine = formatCommandForLog(arduinoCli.bin, args);
@@ -786,7 +876,7 @@ async function executeLiveEsp32Contract({
         mode: 'live',
         reason: `arduino-cli compile failed${compile.error ? `: ${compile.error}` : ` (code ${compile.status})`}`,
         serial: { resolvedPort },
-        metadata: { target: 'esp32', fqbn: effectiveFqbn, sketchFile },
+        metadata: { target: 'esp32', fqbn: effectiveFqbn, sketchFile, cameraLibraries: cameraLibraryPaths },
         output: {
           compile: compileAttemptsOut || compileOut,
           preflight: preflightOutGlobal,
@@ -876,6 +966,7 @@ async function executeLiveEsp32Contract({
           sketchFile,
           mergedBin,
           uploadMode: 'merged-bin',
+          cameraLibraries: cameraLibraryPaths,
           runtimeSerialPort: String(runtimeCapture?.activePort || '').trim() || null,
           runtimeSerialPortsAttempted: Array.isArray(runtimeCapture?.attemptedPorts) ? runtimeCapture.attemptedPorts : [],
           networkOverridesApplied: patchedSketch !== String(sketch || '')
@@ -990,6 +1081,7 @@ async function executeLiveEsp32Contract({
         sketchFile,
         compileProfile: usedCompileProfile || null,
         uploadProfile: usedUploadProfile || null,
+        cameraLibraries: cameraLibraryPaths,
         runtimeSerialPort: String(runtimeCapture?.activePort || '').trim() || null,
         runtimeSerialPortsAttempted: Array.isArray(runtimeCapture?.attemptedPorts) ? runtimeCapture.attemptedPorts : [],
         networkOverridesApplied: patchedSketch !== String(sketch || '')
