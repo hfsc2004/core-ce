@@ -215,6 +215,10 @@ function renderModelOrdering() {
                         style="padding: 7px 12px; min-height: 32px; background: transparent; border: 1px solid #818cf8; border-radius: 5px; color: #c7d2fe; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap;">
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#f0883e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="6.5" cy="6.5" r="2"/><circle cx="6.5" cy="6.5" r="5.5"/><line x1="6.5" y1="1" x2="6.5" y2="4.5"/><line x1="6.5" y1="8.5" x2="6.5" y2="12"/><line x1="1" y1="6.5" x2="4.5" y2="6.5"/><line x1="8.5" y1="6.5" x2="12" y2="6.5"/></svg> + Endpoint Registry
                 </button>
+                <button onclick="addMoeCliAgent()"
+                        style="padding: 7px 12px; min-height: 32px; background: transparent; border: 1px solid #bc8cff; border-radius: 5px; color: #dec8ff; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap;">
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#bc8cff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><rect x="1.2" y="2.2" width="10.6" height="8.6" rx="1.4"></rect><path d="M3.1 5.1l1.7 1.4-1.7 1.4"></path><line x1="6.2" y1="8.1" x2="9.6" y2="8.1"></line></svg> + CLI Agent
+                </button>
                 <span style="border-left: 1px solid #333; height: 24px; margin: 0 2px;"></span>
                 <button id="moe-deploy-btn"
                         style="padding: 7px 12px; min-height: 32px; background: transparent; border: 2px solid ${theme.success}; border-radius: 5px; color: ${theme.success}; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap;">

@@ -67,6 +67,19 @@ function addMoeEndpointRegistry() {
   renderModelOrdering();
 }
 
+function addMoeCliAgent() {
+  const creator = typeof window.createCliAgent === 'function'
+    ? window.createCliAgent
+    : null;
+  if (!creator) return;
+  const cliAgent = creator('CLI Agent');
+  window.modelOrderingState.moeItems.push(cliAgent);
+  ensureExpandedMoeItemsState();
+  ensureMoeItemExpanded(cliAgent.id);
+  console.log('[MoE] Added CLI Agent:', cliAgent.id);
+  renderModelOrdering();
+}
+
 function ensureExpandedMoeItemsState() {
   if (!Array.isArray(window.modelOrderingState.expandedMoeItems)) {
     window.modelOrderingState.expandedMoeItems = [];
@@ -146,12 +159,85 @@ function toggleMoeItemEnabled(itemId, enabled) {
   }
 }
 
+function updateCliAgentConfig(itemId, key, value) {
+  const item = window.modelOrderingState.moeItems.find((i) => {
+    if (i?.id !== itemId) return false;
+    return i.type === 'cli_agent' || i.type === 'deep_agent' || i.type === 'executor';
+  });
+  if (!item) return;
+  if (typeof item.hooks !== 'object' || !item.hooks) {
+    item.hooks = {
+      runCommand: true,
+      writeFile: true,
+      runTests: true,
+      gitDiff: true,
+      flashFirmware: false
+    };
+  }
+
+  switch (key) {
+    case 'ownerAgentId':
+      item.ownerAgentId = String(value || '').trim();
+      break;
+    case 'executionMode': {
+      const normalized = String(value || '').trim().toLowerCase();
+      item.executionMode = ['on-tool', 'on-control', 'auto', 'manual'].includes(normalized)
+        ? normalized
+        : 'on-tool';
+      break;
+    }
+    case 'policyProfile': {
+      const normalized = String(value || '').trim().toLowerCase();
+      item.policyProfile = ['read-only', 'workspace-write', 'privileged-approval'].includes(normalized)
+        ? normalized
+        : 'workspace-write';
+      break;
+    }
+    case 'stepBudget': {
+      const parsed = Number.parseInt(String(value), 10);
+      item.stepBudget = Number.isInteger(parsed) ? Math.max(1, Math.min(500, parsed)) : 50;
+      break;
+    }
+    case 'tokenBudget': {
+      const parsed = Number.parseInt(String(value), 10);
+      item.tokenBudget = Number.isInteger(parsed) ? Math.max(256, Math.min(200000, parsed)) : 8000;
+      break;
+    }
+    case 'timeoutMs': {
+      const parsed = Number.parseInt(String(value), 10);
+      item.timeoutMs = Number.isInteger(parsed) ? Math.max(1000, Math.min(3600000, parsed)) : 300000;
+      break;
+    }
+    case 'hooks.runCommand':
+      item.hooks.runCommand = value === true;
+      break;
+    case 'hooks.writeFile':
+      item.hooks.writeFile = value === true;
+      break;
+    case 'hooks.runTests':
+      item.hooks.runTests = value === true;
+      break;
+    case 'hooks.gitDiff':
+      item.hooks.gitDiff = value === true;
+      break;
+    case 'hooks.flashFirmware':
+      item.hooks.flashFirmware = value === true;
+      break;
+    default:
+      return;
+  }
+
+  renderModelOrdering();
+}
+
 window.addMoeAgent = addMoeAgent;
 window.addMoeChannel = addMoeChannel;
 window.addMoeGateway = addMoeGateway;
 window.addMoeBindings = addMoeBindings;
+window.addMoeCliAgent = addMoeCliAgent;
 window.addMoeEndpointRegistry = addMoeEndpointRegistry;
 window.deleteMoeItem = deleteMoeItem;
 window.toggleMoeExpand = toggleMoeExpand;
 window.handleMoeItemClick = handleMoeItemClick;
 window.toggleMoeItemEnabled = toggleMoeItemEnabled;
+window.updateCliAgentConfig = updateCliAgentConfig;

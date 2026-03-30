@@ -66,6 +66,10 @@
     }
 
     function handleHeaderSettingsClick() {
+      if (quickSettingsUi?.openQuickSettingsModal) {
+        quickSettingsUi.openQuickSettingsModal();
+        return;
+      }
       handleContextRailToggle();
     }
 

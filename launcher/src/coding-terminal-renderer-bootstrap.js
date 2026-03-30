@@ -52,6 +52,9 @@
         modelSelect: document.getElementById('model-select'),
         routerModelSelect: document.getElementById('router-model-select'),
         chatModeSelect: document.getElementById('chat-mode-select'),
+        btnCliAgentInline: document.getElementById('btn-cli-agent-inline'),
+        btnCliPolicyInline: document.getElementById('btn-cli-policy-inline'),
+        btnCliBudgetInline: document.getElementById('btn-cli-budget-inline'),
 
         btnRag: document.getElementById('btn-rag'),
         btnGit: document.getElementById('btn-git'),
@@ -75,6 +78,7 @@
         btnRagBucketNew: document.getElementById('btn-rag-bucket-new'),
         btnRagBucketDelete: document.getElementById('btn-rag-bucket-delete'),
         btnRefreshPlanRun: document.getElementById('btn-refresh-plan-run'),
+        btnRefreshCliLoop: document.getElementById('btn-refresh-cli-loop'),
         btnRefreshTrace: document.getElementById('btn-refresh-trace'),
         btnSettingsRailRag: document.getElementById('btn-settings-rail-rag'),
         btnSettingsRailGit: document.getElementById('btn-settings-rail-git'),
@@ -92,6 +96,7 @@
         routerDebugPanel: document.getElementById('router-debug-panel'),
         routerDebugList: document.getElementById('router-debug-list'),
         planRunContent: document.getElementById('plan-run-content'),
+        cliLoopContent: document.getElementById('cli-loop-content'),
         modelTraceContent: document.getElementById('model-trace-content')
       });
     }
@@ -197,6 +202,9 @@
             handleModelSelection: api.handleModelSelection,
             handleRouterModelSelection: api.handleRouterModelSelection,
             handleChatModeSelection: api.handleChatModeSelection,
+            handleCliAgentToggle: api.handleCliAgentToggle,
+            handleCliAgentPolicyCycle: api.handleCliAgentPolicyCycle,
+            handleCliAgentStepBudgetCycle: api.handleCliAgentStepBudgetCycle,
             loadModelSelector: api.loadModelSelector,
             loadRouterModelSelector: api.loadRouterModelSelector,
             refreshRagSources: api.refreshRagSources,
@@ -207,6 +215,7 @@
             handleSelectRagBucket: api.handleSelectRagBucket,
             refreshGitStatus: api.refreshGitStatus,
             refreshPlanRuns: api.refreshPlanRuns,
+            refreshCliLoop: api.refreshCliLoop,
             refreshModelTrace: api.refreshModelTrace,
             showPromptGuideModal: api.showPromptGuideModal,
             showGitHelpModal: api.showGitHelpModal,
@@ -287,6 +296,9 @@
             handleAutoScrollToggle: api.handleAutoScrollToggle,
             handleRagDebugToggle: api.handleRagDebugToggle,
             handleDeterministicToggle: api.handleDeterministicToggle,
+            handleCliAgentToggle: api.handleCliAgentToggle,
+            handleCliAgentPolicyCycle: api.handleCliAgentPolicyCycle,
+            handleCliAgentStepBudgetCycle: api.handleCliAgentStepBudgetCycle,
             handleTestModeToggle: api.handleTestModeToggle,
             handleRlmToggle: api.handleRlmToggle,
             handleRlmProfileCycle: api.handleRlmProfileCycle,

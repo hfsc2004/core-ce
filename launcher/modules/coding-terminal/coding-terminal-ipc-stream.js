@@ -17,7 +17,8 @@ function createStreamTools(deps = {}) {
     activeStreamRequests,
     OLLAMA_KEEP_ALIVE = '30m',
     formatGroundingProofFooter = null,
-    retryGroundedRewrite = null
+    retryGroundedRewrite = null,
+    postProcessAssistantText = null
   } = deps;
 
   function streamFromBackend({ backend = 'ollama', ...args }) {
@@ -140,6 +141,22 @@ function createStreamTools(deps = {}) {
             dispatch
           });
           if (proof) finalText = `${finalText}\n\n${proof}`;
+        }
+        if (typeof postProcessAssistantText === 'function') {
+          try {
+            const processed = await postProcessAssistantText({
+              text: finalText,
+              streamId,
+              modelName,
+              sender,
+              mode: 'stream'
+            });
+            if (processed && typeof processed.text === 'string') {
+              finalText = processed.text;
+            }
+          } catch (err) {
+            finalText = `${finalText}\n\n[CLI Agent warning]\n${String(err?.message || err)}`;
+          }
         }
         codingTerminalCommon.addMessage('assistant', finalText);
         sender.send('coding-terminal:stream-done', {
@@ -333,6 +350,7 @@ function createStreamTools(deps = {}) {
     validateReplacementEditsInOutput,
     validateNoExtraEditsForReplacements,
     formatGroundingProofFooter,
+    postProcessAssistantText,
     codingTerminalCommon,
     activeStreamRequests
   });

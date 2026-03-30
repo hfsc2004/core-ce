@@ -9,6 +9,11 @@ const deterministicRegistry = require('./coding-terminal-ipc-deterministic-regis
 const routingHelpers = require('./coding-terminal-ipc-chat-prepare-routing');
 
 function createChatPrepareTool(deps = {}) {
+  function isCliToolIntent(message = "") {
+    const text = String(message || "").toLowerCase();
+    return /(cli[_-s]?tool|cli[_-s]?agent|write_file|read_file|run_tests|tool.write_file|tool.read_file|tool.run_tests|tool.verify|verify)/.test(text);
+  }
+
   const {
     getCodingInferenceBackend,
     ensureTerminalLlamaReady,
@@ -96,6 +101,8 @@ function createChatPrepareTool(deps = {}) {
     }
 
     const cfg = codingTerminalCommon.getConfig();
+    const cliIntent = isCliToolIntent(message);
+    const cliAgentEnabled = cfg?.cliAgentEnabled === true || cliIntent;
     const configuredModel = String(cfg?.modelName || '').trim();
     const configuredLlamaModelPath = String(cfg?.llamaCppModelPath || '').trim();
     const sessionPort = backend === 'ollama'
@@ -214,7 +221,7 @@ function createChatPrepareTool(deps = {}) {
     let groundedRewriteMode = false;
     let groundedRewriteFormat = 'unified_diff';
 
-    const requestedMentions = groundingTools.extractFileMentions(message).slice(0, 3);
+    const requestedMentions = cliAgentEnabled ? [] : groundingTools.extractFileMentions(message).slice(0, 3);
     const projectPath = codingTerminalCommon.getProject();
     if (requestedMentions.length > 0) {
       exactFileContext = await groundingTools.tryGetExactFileContext(message, projectPath, { allowBucketFallback: true });
@@ -298,7 +305,7 @@ function createChatPrepareTool(deps = {}) {
       }
     }
 
-    if (dispatch.mode === 'inspect' && isProjectFilenameVerificationRequest(message)) {
+    if (!cliAgentEnabled && dispatch.mode === 'inspect' && isProjectFilenameVerificationRequest(message)) {
       const deterministic = buildDeterministicProjectFilenameVerification({
         projectPath,
         exactFileContext
@@ -324,41 +331,43 @@ function createChatPrepareTool(deps = {}) {
       }
     }
 
-    const deterministicPlannerToolResult = deterministicRegistry.resolveDeterministicPrepare({
-      prepareHelpers,
-      shortHash,
-      turnContext,
-      message,
-      projectPath,
-      dispatch,
-      config: cfg,
-      onMatch: (match) => {
-        pipelineTools.appendPipelineEvent({
-          kind: 'deterministic.registry.match',
-          requestId: turnContext.requestId,
-          traceId: turnContext.traceId,
-          match
-        });
-      },
-      builders: {
-        buildDeterministicPlanCreate,
-        buildDeterministicPlanValidate,
-        buildDeterministicPlanExecuteStep,
-        buildDeterministicPlanVerify,
-        buildDeterministicPlanRunStart,
-        buildDeterministicPlanRunStep,
-        buildDeterministicPlanRunAuto,
-        buildDeterministicPlanRunStatus,
-        buildDeterministicPlanRunVerify,
-        buildDeterministicToolRunTests,
-        buildDeterministicToolReadFile,
-        buildDeterministicToolWriteFile,
-        buildDeterministicToolVerify
-      }
-    });
-    if (deterministicPlannerToolResult) return deterministicPlannerToolResult;
+    if (!cliAgentEnabled) {
+      const deterministicPlannerToolResult = deterministicRegistry.resolveDeterministicPrepare({
+        prepareHelpers,
+        shortHash,
+        turnContext,
+        message,
+        projectPath,
+        dispatch,
+        config: cfg,
+        onMatch: (match) => {
+          pipelineTools.appendPipelineEvent({
+            kind: 'deterministic.registry.match',
+            requestId: turnContext.requestId,
+            traceId: turnContext.traceId,
+            match
+          });
+        },
+        builders: {
+          buildDeterministicPlanCreate,
+          buildDeterministicPlanValidate,
+          buildDeterministicPlanExecuteStep,
+          buildDeterministicPlanVerify,
+          buildDeterministicPlanRunStart,
+          buildDeterministicPlanRunStep,
+          buildDeterministicPlanRunAuto,
+          buildDeterministicPlanRunStatus,
+          buildDeterministicPlanRunVerify,
+          buildDeterministicToolRunTests,
+          buildDeterministicToolReadFile,
+          buildDeterministicToolWriteFile,
+          buildDeterministicToolVerify
+        }
+      });
+      if (deterministicPlannerToolResult) return deterministicPlannerToolResult;
+    }
 
-    if (cfg?.deterministicFileRead === true && dispatch.mode === 'generate' && hasExactFileContext && groundedRewriteMode) {
+    if (!cliAgentEnabled && cfg?.deterministicFileRead === true && dispatch.mode === 'generate' && hasExactFileContext && groundedRewriteMode) {
       const deterministicReplace = buildDeterministicReplacementApply({
         message,
         exactFileContext

@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSF Relay — Pipeline Orchestrator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:        #0e1621;
+    --bg2:       #131e2e;
+    --bg3:       #1a2740;
+    --border:    #1e3050;
+    --steel:     #58a6ff;
+    --green:     #3fb950;
+    --yellow:    #d29922;
+    --orange:    #f0883e;
+    --red:       #f85149;
+    --purple:    #bc8cff;
+    --text:      #c9d1d9;
+    --muted:     #4a5568;
+
+    /* edge colors */
+    --edge-data:    #58a6ff;
+    --edge-control: #f85149;
+    --edge-tool:    #d29922;
+    --edge-event:   #3fb950;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    height: 52px;
+    background: #0a1120;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .wordmark {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1px;
+    margin-right: 6px;
+  }
+  .wordmark span { color: var(--steel); }
+
+  .topbar-sep { color: var(--muted); font-size: 18px; }
+
+  .relay-icon { color: var(--steel); font-size: 16px; }
+
+  .topbar-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: .5px;
+  }
+
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+  .status-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    border: 1px solid var(--green);
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+  }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 5px 13px;
+    border-radius: 4px;
+    border: 1px solid;
+    cursor: pointer;
+    letter-spacing: .4px;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: .8; }
+
+  .btn-back    { background: transparent; border-color: var(--muted); color: var(--text); }
+  .btn-agent   { background: transparent; border-color: var(--steel); color: var(--steel); }
+  .btn-channel { background: transparent; border-color: var(--yellow); color: var(--yellow); }
+  .btn-gateway { background: transparent; border-color: var(--green); color: var(--green); }
+  .btn-bind    { background: transparent; border-color: var(--orange); color: var(--orange); }
+  .btn-ep      { background: transparent; border-color: var(--purple); color: var(--purple); }
+  .btn-deep    { background: transparent; border-color: #bc8cff; color: #bc8cff; }
+  .btn-deploy  { background: var(--green); border-color: var(--green); color: #000; }
+  .btn-stop    { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn-neutral { background: transparent; border-color: var(--border); color: var(--text); }
+
+  .toolbar-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+  /* ── LAYOUT ── */
+  .workspace {
+    display: flex;
+    height: calc(100vh - 52px - 46px);
+  }
+
+  /* ── CANVAS ── */
+  .canvas {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(88,166,255,.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 70%, rgba(188,140,255,.03) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  /* dot grid */
+  .canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, #1e3050 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: .6;
+    pointer-events: none;
+  }
+
+  svg.edges {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* ── NODES ── */
+  .node {
+    position: absolute;
+    width: 220px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    transition: box-shadow .2s;
+    cursor: grab;
+  }
+  .node:hover { box-shadow: 0 4px 32px rgba(88,166,255,.15); }
+  .node.selected { border-color: var(--steel); box-shadow: 0 0 0 2px rgba(88,166,255,.3); }
+
+  .node-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .node-icon { font-size: 14px; flex-shrink: 0; }
+  .node-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .node-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    flex: 1;
+  }
+  .node-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .node-body { padding: 8px 12px 10px; }
+
+  .node-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .node-row span { color: var(--text); }
+
+  .node-model {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--steel);
+    background: rgba(88,166,255,.08);
+    border: 1px solid rgba(88,166,255,.2);
+    border-radius: 3px;
+    padding: 3px 7px;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .owner-bar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    padding: 4px 7px;
+    background: rgba(88,166,255,.06);
+    border: 1px solid rgba(88,166,255,.12);
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .owner-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .owner-name { color: var(--text); font-weight: 500; }
+  .owner-mode {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--green);
+  }
+
+  /* ── PORTS ── */
+  .ports {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  .port {
+    position: absolute;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: var(--bg2);
+    cursor: crosshair;
+    pointer-events: all;
+    transition: transform .15s;
+    z-index: 10;
+  }
+  .port:hover { transform: scale(1.4); }
+
+  .port-left  { left: -6px; }
+  .port-right { right: -6px; }
+
+  .port.data    { border-color: var(--edge-data);    }
+  .port.control { border-color: var(--edge-control); }
+  .port.tool    { border-color: var(--edge-tool);    }
+  .port.event   { border-color: var(--edge-event);   }
+
+  /* port filled = connected */
+  .port.connected { background: currentColor; }
+  .port.data.connected    { background: var(--edge-data); }
+  .port.control.connected { background: var(--edge-control); }
+  .port.tool.connected    { background: var(--edge-tool); }
+  .port.event.connected   { background: var(--edge-event); }
+
+  /* port labels */
+  .port-label {
+    position: absolute;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* ── DEEP AGENT BADGE on node ── */
+  .da-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 3px 7px;
+    background: rgba(188,140,255,.08);
+    border: 1px solid rgba(188,140,255,.25);
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--purple);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: rgba(10,17,32,.85);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    backdrop-filter: blur(6px);
+  }
+  .legend-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+  .legend-line {
+    width: 28px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  /* ── MINIMAP ── */
+  .minimap {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 140px;
+    height: 90px;
+    background: rgba(10,17,32,.85);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    backdrop-filter: blur(6px);
+  }
+  .minimap-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    position: absolute;
+    top: 4px; left: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* ── SIDE PANEL ── */
+  .side-panel {
+    width: 240px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-section {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 14px;
+  }
+
+  .panel-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .agent-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .agent-card:hover { border-color: var(--steel); }
+
+  .agent-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .agent-info { flex: 1; min-width: 0; }
+  .agent-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .agent-model {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .agent-cards-owned {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .timeline-entry {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 7px;
+    font-size: 11px;
+  }
+  .tl-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .tl-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+  .tl-text { color: var(--text); line-height: 1.4; }
+  .tl-node {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--steel);
+  }
+
+  /* node type colors for headers */
+  .nh-gateway { background: rgba(63,185,80,.08); border-bottom-color: rgba(63,185,80,.2); }
+  .nh-agent   { background: rgba(88,166,255,.08); border-bottom-color: rgba(88,166,255,.2); }
+  .nh-channel { background: rgba(210,153,34,.08); border-bottom-color: rgba(210,153,34,.2); }
+  .nh-bind    { background: rgba(240,136,62,.08); border-bottom-color: rgba(240,136,62,.2); }
+  .nh-deep    { background: rgba(188,140,255,.08); border-bottom-color: rgba(188,140,255,.2); }
+
+  /* tooltip hint */
+  .canvas-hint {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    pointer-events: none;
+    letter-spacing: .5px;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="wordmark">[<span>CORE</span>]</div>
+  <div class="topbar-sep">⟩</div>
+  <span class="relay-icon">⇄</span>
+  <div class="topbar-title">PSF Relay</div>
+  <div class="topbar-right">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--muted);">Pipeline Orchestrator</div>
+    <div class="status-badge">[IDLE]</div>
+    <div style="font-size:18px;color:var(--muted);cursor:pointer;">⋯</div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="btn btn-back">← Back</button>
+  <div class="toolbar-sep"></div>
+  <button class="btn btn-agent">👤 + Agent</button>
+  <button class="btn btn-channel">→ + Channel</button>
+  <button class="btn btn-gateway">⊞ + Gateway</button>
+  <button class="btn btn-bind">⟵ + Bindings</button>
+  <button class="btn btn-ep">⊛ + Endpoint Registry</button>
+  <button class="btn btn-deep">⚡ + Deep Agent</button>
+  <div class="toolbar-sep"></div>
+  <button class="btn btn-stop">■ Stop</button>
+  <button class="btn btn-neutral">Load Profile</button>
+  <button class="btn btn-neutral">Save Profile</button>
+  <button class="btn btn-neutral">Open Chat</button>
+  <button class="btn btn-neutral" style="color:var(--red);border-color:var(--red);">Delete Profile</button>
+  <button class="btn btn-neutral" style="color:var(--yellow);border-color:var(--yellow);">Reorder</button>
+  <div style="margin-left:auto;">
+    <button class="btn btn-deploy">▶ Deploy</button>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- CANVAS -->
+  <div class="canvas" id="canvas">
+    <div class="canvas-hint">VISUAL PIPELINE — drag nodes · click ports to wire · scroll to zoom</div>
+
+    <!-- SVG EDGES -->
+    <svg class="edges" id="edges">
+      <defs>
+        <marker id="arr-data"    markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--edge-data)" opacity=".8"/>
+        </marker>
+        <marker id="arr-control" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--edge-control)" opacity=".8"/>
+        </marker>
+        <marker id="arr-tool"    markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--edge-tool)" opacity=".8"/>
+        </marker>
+        <marker id="arr-event"   markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--edge-event)" opacity=".8"/>
+        </marker>
+        <filter id="glow-blue">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-yellow">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Gate → Agent (data) -->
+      <path id="e1" stroke="var(--edge-data)" stroke-width="2" fill="none"
+            stroke-dasharray="0" opacity=".85"
+            marker-end="url(#arr-data)" filter="url(#glow-blue)"/>
+
+      <!-- Agent → DeepAgent (tool) -->
+      <path id="e2" stroke="var(--edge-tool)" stroke-width="2" fill="none"
+            stroke-dasharray="5 3" opacity=".85"
+            marker-end="url(#arr-tool)" filter="url(#glow-yellow)"/>
+
+      <!-- DeepAgent → IRG (control) -->
+      <path id="e3" stroke="var(--edge-control)" stroke-width="2" fill="none"
+            stroke-dasharray="0" opacity=".85"
+            marker-end="url(#arr-control)"/>
+
+      <!-- Agent → Bindings (data) -->
+      <path id="e4" stroke="var(--edge-data)" stroke-width="1.5" fill="none"
+            stroke-dasharray="0" opacity=".5"
+            marker-end="url(#arr-data)"/>
+
+      <!-- IRG → Agent (event feedback) -->
+      <path id="e5" stroke="var(--edge-event)" stroke-width="1.5" fill="none"
+            stroke-dasharray="3 4" opacity=".7"
+            marker-end="url(#arr-event)"/>
+    </svg>
+
+    <!-- NODE 1: User Gateway -->
+    <div class="node" id="n-gateway" style="left:44px;top:80px;">
+      <div class="node-header nh-gateway">
+        <span class="node-icon">⊞</span>
+        <span class="node-num">#1</span>
+        <span class="node-title">User Gateway</span>
+        <span class="node-badge" style="background:rgba(63,185,80,.15);color:var(--green);">INPUT</span>
+      </div>
+      <div class="node-body">
+        <div class="node-row">Type: <span>Terminal</span></div>
+        <div class="node-row">Dir: <span>Bi-directional</span></div>
+      </div>
+      <!-- ports -->
+      <div class="ports">
+        <div class="port data connected port-right" style="top:38px;" title="data out"></div>
+        <span class="port-label" style="right:14px;top:34px;">data</span>
+      </div>
+    </div>
+
+    <!-- NODE 2: Navigator Agent -->
+    <div class="node selected" id="n-agent" style="left:310px;top:60px;">
+      <div class="node-header nh-agent">
+        <span class="node-icon">👤</span>
+        <span class="node-num">#2</span>
+        <span class="node-title">Navigator</span>
+        <span class="node-badge" style="background:rgba(88,166,255,.15);color:var(--steel);">AGENT</span>
+      </div>
+      <div class="node-body">
+        <div class="node-model">Qwen2.5-Coder-7B-Instruct Q5_K_M</div>
+        <div class="owner-bar">
+          <div class="owner-dot" style="background:#58a6ff;"></div>
+          <span class="owner-name">Self-owned</span>
+          <span class="owner-mode">AUTO</span>
+        </div>
+      </div>
+      <div class="ports">
+        <div class="port data connected port-left"  style="top:36px;" title="data in"></div>
+        <div class="port data connected port-right" style="top:36px;" title="data out"></div>
+        <div class="port tool connected port-right" style="top:60px;" title="tool grant out"></div>
+        <span class="port-label" style="right:14px;top:56px;">tool</span>
+      </div>
+    </div>
+
+    <!-- NODE 3: Deep Agent -->
+    <div class="node" id="n-deep" style="left:578px;top:40px;">
+      <div class="node-header nh-deep">
+        <span class="node-icon">⚡</span>
+        <span class="node-num">#3</span>
+        <span class="node-title">Deep Agent</span>
+        <span class="node-badge" style="background:rgba(188,140,255,.15);color:var(--purple);">EXEC</span>
+      </div>
+      <div class="node-body">
+        <div class="node-row">Policy: <span>Workspace-Write</span></div>
+        <div class="node-row">Budget: <span>50 steps / 8k tok</span></div>
+        <div class="da-chip">⚡ CLI · write_file · run_tests · flash</div>
+        <div class="owner-bar">
+          <div class="owner-dot" style="background:#58a6ff;"></div>
+          <span class="owner-name">Navigator</span>
+          <span class="owner-mode">ON-TOOL</span>
+        </div>
+      </div>
+      <div class="ports">
+        <div class="port tool connected port-left"    style="top:36px;" title="tool in"></div>
+        <div class="port control connected port-right" style="top:36px;" title="control out"></div>
+        <div class="port event connected port-left"   style="top:60px;" title="event feedback in"></div>
+        <span class="port-label" style="left:14px;top:56px;">feedback</span>
+        <span class="port-label" style="right:14px;top:32px;">ctrl</span>
+      </div>
+    </div>
+
+    <!-- NODE 4: IRG Hardware Gateway -->
+    <div class="node" id="n-irg" style="left:578px;top:240px;">
+      <div class="node-header nh-gateway">
+        <span class="node-icon">⊞</span>
+        <span class="node-num">#4</span>
+        <span class="node-title">IRG Hardware</span>
+        <span class="node-badge" style="background:rgba(240,136,62,.15);color:var(--orange);">IRG</span>
+      </div>
+      <div class="node-body">
+        <div class="node-row">Target: <span>ESP32-S3 / Pico 2</span></div>
+        <div class="node-row">Proto: <span>Serial · CAN · GPIO</span></div>
+        <div class="node-row">e-stop: <span style="color:var(--green);">ARMED</span></div>
+      </div>
+      <div class="ports">
+        <div class="port control connected port-left"  style="top:36px;" title="control in"></div>
+        <div class="port event connected port-right"   style="top:36px;" title="telemetry out"></div>
+        <span class="port-label" style="right:14px;top:32px;">telem</span>
+      </div>
+    </div>
+
+    <!-- NODE 5: Runtime Bindings -->
+    <div class="node" id="n-bind" style="left:310px;top:270px;">
+      <div class="node-header nh-bind">
+        <span class="node-icon">⟵</span>
+        <span class="node-num">#5</span>
+        <span class="node-title">Runtime Bindings</span>
+        <span class="node-badge" style="background:rgba(240,136,62,.15);color:var(--orange);">BIND</span>
+      </div>
+      <div class="node-body">
+        <div class="node-row">Entries: <span>5 bindings</span></div>
+        <div class="node-row">Scope: <span>pipeline-global</span></div>
+      </div>
+      <div class="ports">
+        <div class="port data connected port-left"  style="top:36px;" title="data in"></div>
+        <div class="port data connected port-right" style="top:36px;" title="data out"></div>
+      </div>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="legend">
+      <div class="legend-title">EDGE TYPES</div>
+      <div class="legend-row">
+        <div class="legend-line" style="background:var(--edge-data);"></div>
+        <span>Data flow</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-line" style="background:var(--edge-control);"></div>
+        <span>Control signal</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-line" style="background:var(--edge-tool);height:2px;background:repeating-linear-gradient(90deg,var(--edge-tool) 0,var(--edge-tool) 5px,transparent 5px,transparent 8px);"></div>
+        <span>Tool grant</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-line" style="background:repeating-linear-gradient(90deg,var(--edge-event) 0,var(--edge-event) 3px,transparent 3px,transparent 7px);"></div>
+        <span>Event / feedback</span>
+      </div>
+    </div>
+
+    <!-- MINIMAP -->
+    <div class="minimap">
+      <div class="minimap-label">MINIMAP</div>
+      <svg width="140" height="90" style="position:absolute;top:0;left:0;">
+        <rect x="8"  y="22" width="22" height="14" rx="2" fill="rgba(63,185,80,.3)"  stroke="var(--green)"   stroke-width=".5"/>
+        <rect x="38" y="16" width="22" height="14" rx="2" fill="rgba(88,166,255,.3)" stroke="var(--steel)"   stroke-width=".5"/>
+        <rect x="72" y="10" width="22" height="14" rx="2" fill="rgba(188,140,255,.3)"stroke="var(--purple)"  stroke-width=".5"/>
+        <rect x="72" y="50" width="22" height="14" rx="2" fill="rgba(63,185,80,.3)"  stroke="var(--orange)"  stroke-width=".5"/>
+        <rect x="38" y="58" width="22" height="14" rx="2" fill="rgba(240,136,62,.3)" stroke="var(--orange)"  stroke-width=".5"/>
+        <line x1="30" y1="29" x2="38" y2="23" stroke="var(--edge-data)"    stroke-width=".8"/>
+        <line x1="60" y1="23" x2="72" y2="17" stroke="var(--edge-tool)"    stroke-width=".8" stroke-dasharray="2 2"/>
+        <line x1="83" y1="24" x2="83" y2="50" stroke="var(--edge-control)" stroke-width=".8"/>
+        <line x1="49" y1="30" x2="49" y2="58" stroke="var(--edge-data)"    stroke-width=".6" opacity=".5"/>
+        <line x1="94" y1="57" x2="83" y2="24" stroke="var(--edge-event)"   stroke-width=".6" stroke-dasharray="1 3"/>
+        <rect x="4" y="8" width="60" height="52" rx="2" fill="none" stroke="rgba(88,166,255,.3)" stroke-width=".5"/>
+      </svg>
+    </div>
+
+  </div><!-- /canvas -->
+
+  <!-- SIDE PANEL -->
+  <div class="side-panel">
+
+    <div class="panel-section">
+      <div class="panel-title">AGENTS IN PIPELINE</div>
+      <div class="agent-card">
+        <div class="agent-dot" style="background:#58a6ff;"></div>
+        <div class="agent-info">
+          <div class="agent-name">Navigator</div>
+          <div class="agent-model">Qwen2.5-Coder-7B Q5_K_M</div>
+        </div>
+        <div class="agent-cards-owned">2 cards</div>
+      </div>
+      <div class="agent-card" style="border-color:rgba(188,140,255,.3);">
+        <div class="agent-dot" style="background:#bc8cff;"></div>
+        <div class="agent-info">
+          <div class="agent-name">Deep Agent</div>
+          <div class="agent-model">stateless executor</div>
+        </div>
+        <div class="agent-cards-owned">1 card</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">SELECTED NODE — Navigator #2</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Execution Mode</div>
+      <div style="display:flex;gap:5px;margin-bottom:10px;">
+        <div style="padding:3px 8px;border-radius:3px;border:1px solid var(--green);color:var(--green);font-size:10px;font-family:'JetBrains Mono',monospace;">AUTO</div>
+        <div style="padding:3px 8px;border-radius:3px;border:1px solid var(--border);color:var(--muted);font-size:10px;font-family:'JetBrains Mono',monospace;">MANUAL</div>
+        <div style="padding:3px 8px;border-radius:3px;border:1px solid var(--border);color:var(--muted);font-size:10px;font-family:'JetBrains Mono',monospace;">EVENT</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Connected Ports</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.8;color:var(--text);">
+        IN  ← <span style="color:var(--edge-data);">data</span> · Gateway #1<br>
+        OUT → <span style="color:var(--edge-data);">data</span> · Bindings #5<br>
+        OUT → <span style="color:var(--edge-tool);">tool</span> · DeepAgent #3
+      </div>
+    </div>
+
+    <div class="panel-section" style="flex:1;overflow-y:auto;">
+      <div class="panel-title">PIPELINE TIMELINE</div>
+      <div class="timeline-entry">
+        <div class="tl-time">00:00</div>
+        <div class="tl-dot" style="background:var(--green);"></div>
+        <div>
+          <div class="tl-text">Pipeline loaded</div>
+          <div class="tl-node">5 nodes · 5 edges</div>
+        </div>
+      </div>
+      <div class="timeline-entry">
+        <div class="tl-time">00:01</div>
+        <div class="tl-dot" style="background:var(--steel);"></div>
+        <div>
+          <div class="tl-text">Navigator assigned to #2, #3</div>
+          <div class="tl-node">ownerAgentId set</div>
+        </div>
+      </div>
+      <div class="timeline-entry">
+        <div class="tl-time">—</div>
+        <div class="tl-dot" style="background:var(--muted);"></div>
+        <div>
+          <div class="tl-text" style="color:var(--muted);">Awaiting Deploy…</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:10px 14px;border-top:1px solid var(--border);">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.5px;">
+        v1.1.2 · Core [Community Edition]<br>
+        GPU Inference · 32 models ready
+      </div>
+    </div>
+
+  </div><!-- /side-panel -->
+
+</div><!-- /workspace -->
+
+<script>
+// Draw bezier edges between nodes
+function getCenter(el, side) {
+  const canvas = document.getElementById('canvas');
+  const cr = canvas.getBoundingClientRect();
+  const r  = el.getBoundingClientRect();
+  const x  = side === 'left' ? r.left - cr.left : r.right - cr.left;
+  const y  = r.top - cr.top + r.height / 2;
+  return { x, y };
+}
+
+function cubicBez(x1, y1, x2, y2) {
+  const dx = Math.abs(x2 - x1) * 0.55;
+  return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+}
+
+function drawEdges() {
+  const ng  = document.getElementById('n-gateway');
+  const na  = document.getElementById('n-agent');
+  const nd  = document.getElementById('n-deep');
+  const ni  = document.getElementById('n-irg');
+  const nb  = document.getElementById('n-bind');
+
+  // port vertical offsets (approximate center of port)
+  function portPos(node, side, offsetY) {
+    const canvas = document.getElementById('canvas');
+    const cr = canvas.getBoundingClientRect();
+    const r  = node.getBoundingClientRect();
+    const x  = side === 'right' ? r.right - cr.left : r.left - cr.left;
+    const y  = r.top  - cr.top  + offsetY;
+    return { x, y };
+  }
+
+  const edges = [
+    // e1: gateway right(38) → agent left(36)
+    { id:'e1', p1: portPos(ng,'right',38+10), p2: portPos(na,'left',36+10) },
+    // e2: agent right(60) → deep left(36)
+    { id:'e2', p1: portPos(na,'right',60+10), p2: portPos(nd,'left',36+10) },
+    // e3: deep right(36) → irg left(36)
+    { id:'e3', p1: portPos(nd,'right',36+10), p2: portPos(ni,'left',36+10) },
+    // e4: agent right(36) → bind left(36)
+    { id:'e4', p1: portPos(na,'right',36+10), p2: portPos(nb,'left',36+10) },
+    // e5: irg right(36) → deep left(60) feedback loop
+    { id:'e5', p1: portPos(ni,'right',36+10), p2: portPos(nd,'left',60+10) },
+  ];
+
+  edges.forEach(e => {
+    const el = document.getElementById(e.id);
+    if (el) el.setAttribute('d', cubicBez(e.p1.x, e.p1.y, e.p2.x, e.p2.y));
+  });
+}
+
+window.addEventListener('load', drawEdges);
+window.addEventListener('resize', drawEdges);
+
+// Simple node drag
+let dragging = null, ox = 0, oy = 0;
+document.querySelectorAll('.node').forEach(node => {
+  node.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('port')) return;
+    dragging = node;
+    const r = node.getBoundingClientRect();
+    ox = e.clientX - r.left;
+    oy = e.clientY - r.top;
+    node.style.zIndex = 100;
+    e.preventDefault();
+  });
+});
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const canvas = document.getElementById('canvas');
+  const cr = canvas.getBoundingClientRect();
+  dragging.style.left = (e.clientX - cr.left - ox) + 'px';
+  dragging.style.top  = (e.clientY - cr.top  - oy) + 'px';
+  drawEdges();
+});
+document.addEventListener('mouseup', () => {
+  if (dragging) { dragging.style.zIndex = ''; dragging = null; }
+});
+</script>
+</body>
+</html>

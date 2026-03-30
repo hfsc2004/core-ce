@@ -41,6 +41,9 @@
             <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-autoscroll"></button><span class="ct-settings-item">Auto-scroll</span><span class="ct-settings-desc">Keeps chat pinned to newest output while streaming. (Recommended Off)</span></div>
             <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-rag-debug"></button><span class="ct-settings-item">RAG Debug</span><span class="ct-settings-desc">Logs retrieval internals for troubleshooting. (Recommended Off)</span></div>
             <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-deterministic"></button><span class="ct-settings-item">Deterministic</span><span class="ct-settings-desc">Enables deterministic inspect shortcuts and exact replacement-apply for explicit replace prompts. (Recommended Off)</span></div>
+            <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-cli-agent"></button><span class="ct-settings-item">CLI Agent</span><span class="ct-settings-desc">Allow model turns to emit CLI_TOOL_JSON actions that run deterministic tools. (Recommended Off)</span></div>
+            <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-cli-policy"></button><span class="ct-settings-item">CLI Policy</span><span class="ct-settings-desc">Execution policy for CLI Agent actions. (workspace-write or read-only)</span></div>
+            <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-cli-budget"></button><span class="ct-settings-item">CLI Step Budget</span><span class="ct-settings-desc">Max CLI tool actions per turn before cut-off. (1-8)</span></div>
             <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-test-mode"></button><span class="ct-settings-item">Test Mode</span><span class="ct-settings-desc">Disables routing shortcuts to isolate pipeline behavior. (Recommended Off)</span></div>
             <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-rlm"></button><span class="ct-settings-item">RLM Assisted</span><span class="ct-settings-desc">Use shared deterministic planner/tools for attachment/document intents. (Recommended On)</span></div>
             <div class="ct-settings-row"><button class="ct-btn ct-btn-small ct-settings-state-btn" id="ct-settings-rlm-profile"></button><span class="ct-settings-item">RLM Profile</span><span class="ct-settings-desc">Preset behavior for speed/coverage/safety. (Fast, Balanced, Deep, Industrial Safe)</span></div>
@@ -78,6 +81,9 @@
         setBtn('ct-settings-autoscroll', state.autoScroll ? 'On' : 'Off');
         setBtn('ct-settings-rag-debug', state.ragDebug ? 'On' : 'Off');
         setBtn('ct-settings-deterministic', state.deterministicFileRead ? 'On' : 'Off');
+        setBtn('ct-settings-cli-agent', state.cliAgentEnabled ? 'On' : 'Off');
+        setBtn('ct-settings-cli-policy', String(state.cliAgentPolicy || 'workspace-write'));
+        setBtn('ct-settings-cli-budget', String(Number(state.cliAgentStepBudget || 2)));
         setBtn('ct-settings-test-mode', state.testMode ? 'On' : 'Off');
         setBtn('ct-settings-rlm', state.rlmAssisted ? 'On' : 'Off');
         setBtn('ct-settings-rlm-profile', String(state.rlmProfile || 'balanced'));
@@ -106,6 +112,9 @@
       bind('ct-settings-autoscroll', () => { api.handleAutoScrollToggle(); refreshStates(); });
       bind('ct-settings-rag-debug', async () => { await api.handleRagDebugToggle(); refreshStates(); });
       bind('ct-settings-deterministic', async () => { await api.handleDeterministicToggle(); refreshStates(); });
+      bind('ct-settings-cli-agent', async () => { await api.handleCliAgentToggle(); refreshStates(); });
+      bind('ct-settings-cli-policy', async () => { await api.handleCliAgentPolicyCycle(); refreshStates(); });
+      bind('ct-settings-cli-budget', async () => { await api.handleCliAgentStepBudgetCycle(); refreshStates(); });
       bind('ct-settings-test-mode', async () => { await api.handleTestModeToggle(); refreshStates(); });
       bind('ct-settings-rlm', () => { api.handleRlmToggle(); refreshStates(); });
       bind('ct-settings-rlm-profile', () => { api.handleRlmProfileCycle(); refreshStates(); });

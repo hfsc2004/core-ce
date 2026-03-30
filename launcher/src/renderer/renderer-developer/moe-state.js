@@ -230,6 +230,34 @@ function createBindings(name = 'Runtime Bindings') {
 }
 
 /**
+ * Create a CLI Agent node.
+ * This node is stateless execution capability; ownerAgentId selects which agent can invoke it.
+ * @param {string} name - Node display name
+ * @returns {Object} CLI Agent configuration object
+ */
+function createCliAgent(name = 'CLI Agent') {
+  return {
+    id: `cli-agent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type: 'cli_agent',
+    name,
+    ownerAgentId: '',
+    executionMode: 'on-tool', // on-tool | auto | manual | on-control
+    policyProfile: 'workspace-write', // read-only | workspace-write | privileged-approval
+    stepBudget: 50,
+    tokenBudget: 8000,
+    timeoutMs: 300000,
+    hooks: {
+      runCommand: true,
+      writeFile: true,
+      runTests: true,
+      gitDiff: true,
+      flashFirmware: false
+    },
+    enabled: true
+  };
+}
+
+/**
  * Create the Distributed Endpoint Registry pipeline item (singleton).
  * Registry data lives in modelOrderingState.endpointRegistry.
  * @returns {Object} Endpoint Registry item
@@ -251,4 +279,5 @@ window.createAgent = createAgent;
 window.createChannel = createChannel;
 window.createGateway = createGateway;
 window.createBindings = createBindings;
+window.createCliAgent = createCliAgent;
 window.createEndpointRegistryItem = createEndpointRegistryItem;

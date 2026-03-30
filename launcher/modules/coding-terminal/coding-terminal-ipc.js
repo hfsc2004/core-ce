@@ -26,6 +26,7 @@ const createChatPrepareTool = require('./coding-terminal-ipc-chat-prepare');
 const createGroundingProofTools = require('./coding-terminal-ipc-grounding-proof');
 const createIpcRuntimeHandlers = require('./coding-terminal-ipc-runtime');
 const createReadinessTools = require('./coding-terminal-ipc-readiness');
+const createCliAgentTools = require('./coding-terminal-ipc-cli-agent');
 const deterministicRegistry = require('./coding-terminal-ipc-deterministic-registry');
 const { withTimeout, getMergedFilename } = require('./coding-terminal-ipc-utils');
 const pipelineTools = require('./coding-terminal-pipeline');
@@ -165,6 +166,7 @@ const groundingProofTools = createGroundingProofTools({
   rewriteRetryPrompt: GROUNDED_FILE_REWRITE_RETRY_PROMPT
 });
 const { formatGroundingProofFooter, retryGroundedRewrite } = groundingProofTools;
+let cliAgentPostProcessHook = async ({ text }) => ({ text: String(text || ''), executed: 0 });
 const streamTools = createStreamTools({
   http,
   codingTerminalCommon,
@@ -172,7 +174,8 @@ const streamTools = createStreamTools({
   activeStreamRequests,
   OLLAMA_KEEP_ALIVE,
   formatGroundingProofFooter,
-  retryGroundedRewrite
+  retryGroundedRewrite,
+  postProcessAssistantText: async (payload = {}) => cliAgentPostProcessHook(payload)
 });
 const modelTools = createModelTools({
   codingTerminalCommon,
@@ -269,6 +272,16 @@ const {
   applyRouterRewriteToHistory,
   getEffectiveUserMessage
 } = deterministicHelpers;
+const cliAgentTools = createCliAgentTools({
+  getConfig: () => (codingTerminalCommon.getConfig ? codingTerminalCommon.getConfig() : {}),
+  getProjectPath: () => (codingTerminalCommon.getProject ? codingTerminalCommon.getProject() : ''),
+  appendPipelineEvent: (event) => pipelineTools.appendPipelineEvent(event),
+  buildDeterministicToolRunTests,
+  buildDeterministicToolReadFile,
+  buildDeterministicToolWriteFile,
+  buildDeterministicToolVerify
+});
+cliAgentPostProcessHook = cliAgentTools.postProcessAssistantText;
 const { buildGitArgs, runGitCli } = gitCliTools;
 const routerTools = createRouterTools({
   streamTools,
@@ -399,6 +412,9 @@ function registerHandlers() {
       validateGroundedAnalysis: groundingTools.validateGroundedAnalysis,
       buildGroundingFailureMessage: groundingTools.buildGroundingFailureMessage,
       retryGroundedRewrite,
+      applyCliAgentContext: (prepared) => cliAgentTools.applyCliAgentContext(prepared),
+      postProcessAssistantText: async (payload = {}) => cliAgentTools.postProcessAssistantText(payload),
+      runCliAgentAutonomousTurn: async (payload = {}) => cliAgentTools.runAutonomousTurn(payload),
       prepareChatRequest,
       streamFromBackend: streamTools.streamFromBackend,
       getActiveStreamRequests: () => activeStreamRequests

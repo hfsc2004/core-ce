@@ -14,6 +14,7 @@ function createLlamaStreamTools(deps = {}) {
     validateReplacementEditsInOutput,
     validateNoExtraEditsForReplacements,
     formatGroundingProofFooter,
+    postProcessAssistantText,
     codingTerminalCommon,
     activeStreamRequests
   } = deps;
@@ -190,6 +191,22 @@ function createLlamaStreamTools(deps = {}) {
             dispatch
           });
           if (proof) finalText = `${finalText}\n\n${proof}`;
+        }
+        if (typeof postProcessAssistantText === 'function') {
+          try {
+            const processed = await postProcessAssistantText({
+              text: finalText,
+              streamId,
+              modelName,
+              sender,
+              mode: 'stream'
+            });
+            if (processed && typeof processed.text === 'string') {
+              finalText = processed.text;
+            }
+          } catch (err) {
+            finalText = `${finalText}\n\n[CLI Agent warning]\n${String(err?.message || err)}`;
+          }
         }
         codingTerminalCommon.addMessage('assistant', finalText);
         sender.send('coding-terminal:stream-done', {

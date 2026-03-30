@@ -14,7 +14,7 @@ const LEGACY_PROFILES_DIRNAME = 'moe-pipelines';
 const DEFAULT_PROFILE_NAME = 'default';
 const CURRENT_SCHEMA_VERSION = '1.0';
 
-const VALID_ITEM_TYPES = ['agent', 'channel', 'gateway', 'bindings', 'endpoint_registry'];
+const VALID_ITEM_TYPES = ['agent', 'channel', 'gateway', 'bindings', 'endpoint_registry', 'cli_agent'];
 const VALID_ROUTING_MODES = ['dynamic', 'static'];
 const VALID_CHANNEL_DIRECTIONS = ['bidirectional', 'unidirectional'];
 const VALID_CHANNEL_FLOW_CONDITIONS = ['always', 'on_success', 'on_failure', 'on_match'];

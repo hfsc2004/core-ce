@@ -22,12 +22,19 @@ function registerChatHandlers({
   constants,
   deps
 }) {
+  function isCliToolIntent(message = "") {
+    const text = String(message || "").toLowerCase();
+    return /(cli[_-s]?tool|cli[_-s]?agent|write_file|read_file|run_tests|tool.write_file|tool.read_file|tool.run_tests|tool.verify|verify)/.test(text);
+  }
+
   register('coding-terminal:send-message', async (event, message) => {
     try {
       codingTerminalCommon.addMessage('user', message);
       const dispatchMode = deps.getChatDispatchMode ? deps.getChatDispatchMode(message) : { mode: 'auto' };
       const runtimeCfg = codingTerminalCommon.getConfig ? codingTerminalCommon.getConfig() : {};
-      const deterministicEnabled = runtimeCfg?.deterministicFileRead === true;
+      const cliIntent = isCliToolIntent(message);
+      const cliAgentEnabled = runtimeCfg?.cliAgentEnabled === true;
+      const deterministicEnabled = runtimeCfg?.deterministicFileRead === true && !cliAgentEnabled && !cliIntent;
       const deterministic = (deterministicEnabled && dispatchMode.mode !== 'generate')
         ? await deps.tryHandleDeterministicFileRequest(message)
         : null;
@@ -40,7 +47,17 @@ function registerChatHandlers({
               dispatch: { mode: 'inspect', used: false }
             })
           : '';
-        const content = proof ? `${deterministic.content}\n\n${proof}` : deterministic.content;
+        let content = proof ? `${deterministic.content}\n\n${proof}` : deterministic.content;
+        if (typeof deps.postProcessAssistantText === 'function') {
+          const processed = await deps.postProcessAssistantText({
+            text: content,
+            streamId,
+            modelName: 'deterministic-file-read',
+            sender: event.sender,
+            mode: 'stream'
+          });
+          if (processed && typeof processed.text === 'string') content = processed.text;
+        }
         codingTerminalCommon.addMessage('assistant', content);
         return {
           id: codingTerminalCommon.generateId(),
@@ -57,22 +74,34 @@ function registerChatHandlers({
           sources: []
         };
       }
-      if (prepared?.deterministicResult) {
-        const deterministicContent = String(prepared.deterministicResult.content || '');
-        const deterministicSources = Array.isArray(prepared.deterministicResult.sources)
-          ? prepared.deterministicResult.sources
+      const preparedForRun = (typeof deps.applyCliAgentContext === 'function')
+        ? (deps.applyCliAgentContext(prepared) || prepared)
+        : prepared;
+      if (preparedForRun?.deterministicResult) {
+        const deterministicContent = String(preparedForRun.deterministicResult.content || '');
+        const deterministicSources = Array.isArray(preparedForRun.deterministicResult.sources)
+          ? preparedForRun.deterministicResult.sources
           : [];
-        const deterministicModelName = String(prepared?.modelName || 'deterministic-file-read');
-        const deterministicDispatch = prepared.dispatch || { mode: 'inspect', used: false };
+        const deterministicModelName = String(preparedForRun?.modelName || 'deterministic-file-read');
+        const deterministicDispatch = preparedForRun.dispatch || { mode: 'inspect', used: false };
         const proof = deps.formatGroundingProofFooter
           ? deps.formatGroundingProofFooter({
               modelName: deterministicModelName,
               sources: deterministicSources,
-              grounding: prepared.grounding || { enabled: true },
+              grounding: preparedForRun.grounding || { enabled: true },
               dispatch: deterministicDispatch
             })
           : '';
-        const content = proof ? `${deterministicContent}\n\n${proof}` : deterministicContent;
+        let content = proof ? `${deterministicContent}\n\n${proof}` : deterministicContent;
+        if (typeof deps.postProcessAssistantText === 'function') {
+          const processed = await deps.postProcessAssistantText({
+            text: content,
+            modelName: deterministicModelName,
+            sender: event.sender,
+            mode: 'non-stream'
+          });
+          if (processed && typeof processed.text === 'string') content = processed.text;
+        }
         codingTerminalCommon.addMessage('assistant', content);
         return {
           id: codingTerminalCommon.generateId(),
@@ -86,12 +115,12 @@ function registerChatHandlers({
       const activePort = backend === 'llama-cpp'
         ? (deps.getTerminalLlamaPort ? deps.getTerminalLlamaPort() : null)
         : port;
-      const selectedModel = prepared.modelName;
-      const history = prepared.messages || [];
-      const sources = Array.isArray(prepared.sources) ? prepared.sources : [];
-      const exactFileContext = prepared?.grounding?.exactFileContext || null;
-      const groundedAnalysisMode = !!prepared?.grounding?.enabled;
-      const generationOptions = prepared?.generationOptions || {};
+      const selectedModel = preparedForRun.modelName;
+      const history = preparedForRun.messages || [];
+      const sources = Array.isArray(preparedForRun.sources) ? preparedForRun.sources : [];
+      const exactFileContext = preparedForRun?.grounding?.exactFileContext || null;
+      const groundedAnalysisMode = !!preparedForRun?.grounding?.enabled;
+      const generationOptions = preparedForRun?.generationOptions || {};
 
       const cfg = codingTerminalCommon.getConfig();
       const isFirstResponse = history.length <= 1;
@@ -134,22 +163,22 @@ function registerChatHandlers({
         };
       }
       if (groundedAnalysisMode && exactFileContext) {
-        const verdict = deps.validateGroundedAnalysis(content, exactFileContext, prepared.grounding || null);
+        const verdict = deps.validateGroundedAnalysis(content, exactFileContext, preparedForRun.grounding || null);
         if (!verdict.ok) {
-          if (prepared?.grounding?.rewriteMode) {
+          if (preparedForRun?.grounding?.rewriteMode) {
             const warning = deps.buildGroundingFailureMessage
               ? deps.buildGroundingFailureMessage(verdict, exactFileContext)
               : `Grounded rewrite warning: ${verdict.reason || 'rewrite-validation-failed'}`;
             content = `${content}\n\n[Validation warning]\n${warning}`;
           }
-        } else if (prepared?.grounding?.rewriteMode && verdict?.applied?.content) {
+        } else if (preparedForRun?.grounding?.rewriteMode && verdict?.applied?.content) {
           const lang = verdict?.applied?.language ? String(verdict.applied.language) : '';
           content = `~~~${lang}\n${verdict.applied.content}\n~~~`;
         }
       }
-      const strictVerdict = enforceStrictOutputContract(content, prepared.dispatch || dispatchMode);
+      const strictVerdict = enforceStrictOutputContract(content, preparedForRun.dispatch || dispatchMode);
       if (!strictVerdict.ok) {
-        const strictOutput = String((prepared.dispatch || dispatchMode)?.strictOutput || '').trim().toLowerCase();
+        const strictOutput = String((preparedForRun.dispatch || dispatchMode)?.strictOutput || '').trim().toLowerCase();
         if (strictOutput === 'unified_diff') {
           const synthesized = trySynthesizeUnifiedDiffFromModelOutput({
             outputText: content,
@@ -172,7 +201,7 @@ function registerChatHandlers({
       const replacementVerdict = validateReplacementEditsInOutput({
         userMessage: message,
         outputText: content,
-        dispatch: prepared.dispatch || dispatchMode
+        dispatch: preparedForRun.dispatch || dispatchMode
       });
       if (!replacementVerdict.ok) {
         content = `${content}\n\n[Validation warning]\n${replacementVerdict.error}`;
@@ -180,21 +209,47 @@ function registerChatHandlers({
       const noExtraEditsVerdict = validateNoExtraEditsForReplacements({
         userMessage: message,
         outputText: content,
-        dispatch: prepared.dispatch || dispatchMode,
+        dispatch: preparedForRun.dispatch || dispatchMode,
         exactFileContext
       });
       if (!noExtraEditsVerdict.ok) {
         content = `${content}\n\n[Validation warning]\n${noExtraEditsVerdict.error}`;
       }
       const proof = deps.formatGroundingProofFooter
-        ? deps.formatGroundingProofFooter({
+          ? deps.formatGroundingProofFooter({
             modelName: selectedModel,
             sources,
-            grounding: prepared.grounding || null,
-            dispatch: prepared.dispatch || dispatchMode
+            grounding: preparedForRun.grounding || null,
+            dispatch: preparedForRun.dispatch || dispatchMode
           })
         : '';
       if (proof) content = `${content}\n\n${proof}`;
+      const cliAgentEnabledForTurn = runtimeCfg?.cliAgentEnabled === true;
+      if (!cliAgentEnabledForTurn && typeof deps.postProcessAssistantText === 'function') {
+        const processed = await deps.postProcessAssistantText({
+          text: content,
+          modelName: selectedModel,
+          sender: event.sender,
+          mode: 'non-stream'
+        });
+        if (processed && typeof processed.text === 'string') content = processed.text;
+      }
+      if (cliAgentEnabledForTurn && typeof deps.runCliAgentAutonomousTurn === 'function') {
+        const looped = await deps.runCliAgentAutonomousTurn({
+          text: content,
+          userPrompt: message,
+          modelName: selectedModel,
+          history,
+          sendModelMessage: (model, messages, options = {}) => deps.ollamaManager.sendMessage(model, messages, options),
+          sendOptions: {
+            port: activePort,
+            keep_alive: constants.OLLAMA_KEEP_ALIVE,
+            ...generationOptions
+          },
+          sender: event.sender
+        });
+        if (looped && typeof looped.text === 'string') content = looped.text;
+      }
       codingTerminalCommon.addMessage('assistant', content);
       return {
         id: codingTerminalCommon.generateId(),
@@ -218,7 +273,9 @@ function registerChatHandlers({
 
       const dispatchMode = deps.getChatDispatchMode ? deps.getChatDispatchMode(message) : { mode: 'auto' };
       const cfg = codingTerminalCommon.getConfig ? codingTerminalCommon.getConfig() : {};
-      const deterministicEnabled = cfg?.deterministicFileRead === true;
+      const cliIntent = isCliToolIntent(message);
+      const cliAgentEnabled = cfg?.cliAgentEnabled === true;
+      const deterministicEnabled = cfg?.deterministicFileRead === true && !cliAgentEnabled && !cliIntent;
       const deterministic = (deterministicEnabled && dispatchMode.mode !== 'generate')
         ? await deps.tryHandleDeterministicFileRequest(message)
         : null;
@@ -231,7 +288,16 @@ function registerChatHandlers({
               dispatch: { mode: 'inspect', used: false }
             })
           : '';
-        const content = proof ? `${deterministic.content}\n\n${proof}` : deterministic.content;
+        let content = proof ? `${deterministic.content}\n\n${proof}` : deterministic.content;
+        if (typeof deps.postProcessAssistantText === 'function') {
+          const processed = await deps.postProcessAssistantText({
+            text: content,
+            modelName: 'deterministic-file-read',
+            sender: event.sender,
+            mode: 'non-stream'
+          });
+          if (processed && typeof processed.text === 'string') content = processed.text;
+        }
         codingTerminalCommon.addMessage('assistant', content);
         setTimeout(() => {
           event.sender.send('coding-terminal:stream-data', {
@@ -259,22 +325,35 @@ function registerChatHandlers({
         });
         return { success: false, streamId, error: prepared.error };
       }
-      if (prepared?.deterministicResult) {
-        const deterministicContent = String(prepared.deterministicResult.content || '');
-        const deterministicSources = Array.isArray(prepared.deterministicResult.sources)
-          ? prepared.deterministicResult.sources
+      const preparedForRun = (typeof deps.applyCliAgentContext === 'function')
+        ? (deps.applyCliAgentContext(prepared) || prepared)
+        : prepared;
+      if (preparedForRun?.deterministicResult) {
+        const deterministicContent = String(preparedForRun.deterministicResult.content || '');
+        const deterministicSources = Array.isArray(preparedForRun.deterministicResult.sources)
+          ? preparedForRun.deterministicResult.sources
           : [];
-        const deterministicModelName = String(prepared?.modelName || 'deterministic-file-read');
-        const deterministicDispatch = prepared.dispatch || { mode: 'inspect', used: false };
+        const deterministicModelName = String(preparedForRun?.modelName || 'deterministic-file-read');
+        const deterministicDispatch = preparedForRun.dispatch || { mode: 'inspect', used: false };
         const proof = deps.formatGroundingProofFooter
           ? deps.formatGroundingProofFooter({
               modelName: deterministicModelName,
               sources: deterministicSources,
-              grounding: prepared.grounding || { enabled: true },
+              grounding: preparedForRun.grounding || { enabled: true },
               dispatch: deterministicDispatch
             })
           : '';
-        const content = proof ? `${deterministicContent}\n\n${proof}` : deterministicContent;
+        let content = proof ? `${deterministicContent}\n\n${proof}` : deterministicContent;
+        if (typeof deps.postProcessAssistantText === 'function') {
+          const processed = await deps.postProcessAssistantText({
+            text: content,
+            streamId,
+            modelName: deterministicModelName,
+            sender: event.sender,
+            mode: 'stream'
+          });
+          if (processed && typeof processed.text === 'string') content = processed.text;
+        }
         codingTerminalCommon.addMessage('assistant', content);
         setTimeout(() => {
           event.sender.send('coding-terminal:stream-data', {
@@ -299,12 +378,12 @@ function registerChatHandlers({
       const llamaPort = deps.getTerminalLlamaPort ? deps.getTerminalLlamaPort() : null;
       deps.streamFromBackend({
         streamId,
-        modelName: prepared.modelName,
-        messages: prepared.messages,
-        sources: prepared.sources || [],
-        grounding: prepared.grounding || null,
-        dispatch: prepared.dispatch || dispatchMode,
-        generationOptions: prepared.generationOptions || {},
+        modelName: preparedForRun.modelName,
+        messages: preparedForRun.messages,
+        sources: preparedForRun.sources || [],
+        grounding: preparedForRun.grounding || null,
+        dispatch: preparedForRun.dispatch || dispatchMode,
+        generationOptions: preparedForRun.generationOptions || {},
         originalUserMessage: message,
         port: backend === 'llama-cpp' ? llamaPort : ollamaPort,
         backend,
@@ -314,11 +393,11 @@ function registerChatHandlers({
       return {
         success: true,
         streamId,
-        modelName: prepared.modelName,
-        sources: prepared.sources || [],
-        grounding: prepared.grounding || null,
-        dispatch: prepared.dispatch || null,
-        routingDebug: prepared.routingDebug || null
+        modelName: preparedForRun.modelName,
+        sources: preparedForRun.sources || [],
+        grounding: preparedForRun.grounding || null,
+        dispatch: preparedForRun.dispatch || null,
+        routingDebug: preparedForRun.routingDebug || null
       };
     } catch (err) {
       console.error('[CodingTerminal:IPC:Chat] Stream start error:', err);

@@ -140,6 +140,9 @@
           <option value="inspect">Mode: Inspect</option>
           <option value="generate">Mode: Generate</option>
         </select>
+        <button class="ct-btn ct-btn-small" id="btn-cli-agent-inline" title="Toggle CLI Agent">CLI: Off</button>
+        <button class="ct-btn ct-btn-small" id="btn-cli-policy-inline" title="Cycle CLI Policy">Policy: workspace-write</button>
+        <button class="ct-btn ct-btn-small" id="btn-cli-budget-inline" title="Cycle CLI Step Budget">Budget: 2</button>
         <button class="ct-btn ct-btn-small" id="btn-model-refresh" title="Refresh model/router list">↻</button>
       </div>
 
@@ -211,6 +214,19 @@
         </div>
         <div class="ct-section-content ct-trace-content" id="plan-run-content">
           <p class="ct-placeholder">No plan run yet.</p>
+        </div>
+      </div>
+
+      <!-- CLI Loop Trace -->
+      <div class="ct-context-section" id="section-cli-loop-trace">
+        <div class="ct-section-header">
+          <span>⚙ CLI Loop Trace</span>
+          <div class="ct-rag-actions">
+            <button class="ct-btn ct-btn-tiny" id="btn-refresh-cli-loop" title="Refresh CLI loop trace">↻</button>
+          </div>
+        </div>
+        <div class="ct-section-content ct-trace-content" id="cli-loop-content">
+          <p class="ct-placeholder">CLI loop idle.</p>
         </div>
       </div>
 

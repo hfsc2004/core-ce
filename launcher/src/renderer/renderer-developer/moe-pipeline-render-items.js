@@ -22,6 +22,10 @@ function renderMoeItem(item, index, modelsForDropdown) {
       return renderGatewayRow(item, index);
     case 'bindings':
       return renderBindingsRow(item, index);
+    case 'cli_agent':
+    case 'deep_agent':
+    case 'executor':
+      return renderCliAgentRow(item, index);
     case 'endpoint_registry':
       return renderEndpointRegistryRow(item, index);
     default:

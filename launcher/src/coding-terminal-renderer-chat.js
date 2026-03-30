@@ -317,7 +317,8 @@
           if (rlm?.handled) return;
         }
 
-        if (window.electronAPI?.sendCodingMessageStream) {
+        const forceNonStreamCliAgent = state.cliAgentEnabled === true;
+        if (!forceNonStreamCliAgent && window.electronAPI?.sendCodingMessageStream) {
           const start = await window.electronAPI.sendCodingMessageStream(message);
           if (!start?.success) {
             finalizeMessage(shellId, `Error: ${start?.error || 'Failed to start stream'}`);
@@ -344,6 +345,9 @@
           }
           return;
         } else if (window.electronAPI?.sendCodingMessage) {
+          if (forceNonStreamCliAgent) {
+            addSystemMessage('CLI Agent mode active: running autonomous tool loop for this turn.');
+          }
           const response = await window.electronAPI.sendCodingMessage(message);
           finalizeMessage(shellId, response.content);
           if (response.sources) {

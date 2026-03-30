@@ -206,6 +206,47 @@ function validateItem(item, index) {
         errors.push(`${prefix}: endpoint registry missing name`);
       }
       break;
+    case 'cli_agent':
+      if (!item.name) {
+        errors.push(`${prefix}: cli_agent missing name`);
+      }
+      if (item.ownerAgentId != null && typeof item.ownerAgentId !== 'string') {
+        errors.push(`${prefix}: ownerAgentId must be string`);
+      }
+      if (item.executionMode != null) {
+        const mode = String(item.executionMode).trim().toLowerCase();
+        if (!['on-tool', 'on-control', 'auto', 'manual'].includes(mode)) {
+          errors.push(`${prefix}: invalid executionMode '${item.executionMode}'`);
+        }
+      }
+      if (item.policyProfile != null) {
+        const profile = String(item.policyProfile).trim().toLowerCase();
+        if (!['read-only', 'workspace-write', 'privileged-approval'].includes(profile)) {
+          errors.push(`${prefix}: invalid policyProfile '${item.policyProfile}'`);
+        }
+      }
+      if (item.stepBudget != null) {
+        const stepBudget = Number(item.stepBudget);
+        if (!Number.isInteger(stepBudget) || stepBudget < 1 || stepBudget > 500) {
+          errors.push(`${prefix}: stepBudget must be integer 1-500`);
+        }
+      }
+      if (item.tokenBudget != null) {
+        const tokenBudget = Number(item.tokenBudget);
+        if (!Number.isInteger(tokenBudget) || tokenBudget < 256 || tokenBudget > 200000) {
+          errors.push(`${prefix}: tokenBudget must be integer 256-200000`);
+        }
+      }
+      if (item.timeoutMs != null) {
+        const timeout = Number(item.timeoutMs);
+        if (!Number.isFinite(timeout) || timeout < 1000 || timeout > 3600000) {
+          errors.push(`${prefix}: timeoutMs must be between 1000 and 3600000`);
+        }
+      }
+      if (item.hooks != null && typeof item.hooks !== 'object') {
+        errors.push(`${prefix}: hooks must be object`);
+      }
+      break;
   }
 
   return errors;

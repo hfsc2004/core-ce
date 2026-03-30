@@ -93,6 +93,23 @@ function ensureItemDefaults(item) {
     endpoint_registry: {
       enabled: true,
       name: 'Distributed Endpoint Registry'
+    },
+    cli_agent: {
+      enabled: true,
+      name: 'CLI Agent',
+      ownerAgentId: '',
+      executionMode: 'on-tool',
+      policyProfile: 'workspace-write',
+      stepBudget: 50,
+      tokenBudget: 8000,
+      timeoutMs: 300000,
+      hooks: {
+        runCommand: true,
+        writeFile: true,
+        runTests: true,
+        gitDiff: true,
+        flashFirmware: false
+      }
     }
   };
 

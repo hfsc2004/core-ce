@@ -37,6 +37,9 @@
         state.ragEnabled = cfg?.ragEnabled !== false;
         state.ragDebug = !!cfg?.ragDebug;
         state.deterministicFileRead = !!cfg?.deterministicFileRead;
+        state.cliAgentEnabled = !!cfg?.cliAgentEnabled;
+        state.cliAgentPolicy = normalizeCliAgentPolicy(cfg?.cliAgentPolicy);
+        state.cliAgentStepBudget = normalizeCliAgentStepBudget(cfg?.cliAgentStepBudget);
         state.testMode = !!cfg?.testMode;
         state.diffLegendEnabled = !!cfg?.diffLegendEnabled;
         state.diffDisplayMode = normalizeDiffDisplayMode(cfg?.diffDisplayMode);
@@ -45,6 +48,7 @@
         applyRouterToggleUi();
         applyRagToggleUi();
         applyChatModeUi();
+        applyCliInlineUi();
         api.updateStatus('rag', state.ragEnabled ? 'Idle' : 'Off');
         await loadSessionMemoryRecallState();
       } catch (err) {
@@ -196,6 +200,16 @@
       return 'auto';
     }
 
+    function normalizeCliAgentPolicy(value) {
+      return String(value || '').trim().toLowerCase() === 'read-only' ? 'read-only' : 'workspace-write';
+    }
+
+    function normalizeCliAgentStepBudget(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return 2;
+      return Math.max(1, Math.min(Math.trunc(num), 8));
+    }
+
     function normalizeRouterMode(mode, enabled = false) {
       const value = String(mode || '').trim().toLowerCase();
       if (value === 'on' || value === 'off') return value;
@@ -205,6 +219,18 @@
     function applyChatModeUi() {
       if (!elements.chatModeSelect) return;
       elements.chatModeSelect.value = normalizeChatMode(state.chatMode);
+    }
+
+    function applyCliInlineUi() {
+      if (elements.btnCliAgentInline) {
+        elements.btnCliAgentInline.textContent = `CLI: ${state.cliAgentEnabled ? 'On' : 'Off'}`;
+      }
+      if (elements.btnCliPolicyInline) {
+        elements.btnCliPolicyInline.textContent = `Policy: ${String(state.cliAgentPolicy || 'workspace-write')}`;
+      }
+      if (elements.btnCliBudgetInline) {
+        elements.btnCliBudgetInline.textContent = `Budget: ${Number(state.cliAgentStepBudget || 2)}`;
+      }
     }
 
     async function handleChatModeSelection() {
@@ -290,6 +316,56 @@
       api.addSystemMessage(`Deterministic mode ${state.deterministicFileRead ? 'enabled' : 'disabled'}.`);
     }
 
+    async function handleCliAgentToggle() {
+      state.cliAgentEnabled = !state.cliAgentEnabled;
+      applyCliInlineUi();
+      if (window.electronAPI?.updateCodingConfig) {
+        try {
+          await window.electronAPI.updateCodingConfig({
+            cliAgentEnabled: state.cliAgentEnabled
+          });
+        } catch (err) {
+          console.warn('[CodingTerminal] CLI Agent config save error:', err.message);
+        }
+      }
+      api.addSystemMessage(`CLI Agent ${state.cliAgentEnabled ? 'enabled' : 'disabled'}.`);
+    }
+
+    async function handleCliAgentPolicyCycle() {
+      const next = normalizeCliAgentPolicy(state.cliAgentPolicy) === 'workspace-write'
+        ? 'read-only'
+        : 'workspace-write';
+      state.cliAgentPolicy = next;
+      applyCliInlineUi();
+      if (window.electronAPI?.updateCodingConfig) {
+        try {
+          await window.electronAPI.updateCodingConfig({
+            cliAgentPolicy: state.cliAgentPolicy
+          });
+        } catch (err) {
+          console.warn('[CodingTerminal] CLI Agent policy save error:', err.message);
+        }
+      }
+      api.addSystemMessage(`CLI Agent policy: ${state.cliAgentPolicy}.`);
+    }
+
+    async function handleCliAgentStepBudgetCycle() {
+      const current = normalizeCliAgentStepBudget(state.cliAgentStepBudget);
+      const next = current >= 8 ? 1 : (current + 1);
+      state.cliAgentStepBudget = next;
+      applyCliInlineUi();
+      if (window.electronAPI?.updateCodingConfig) {
+        try {
+          await window.electronAPI.updateCodingConfig({
+            cliAgentStepBudget: state.cliAgentStepBudget
+          });
+        } catch (err) {
+          console.warn('[CodingTerminal] CLI Agent step budget save error:', err.message);
+        }
+      }
+      api.addSystemMessage(`CLI Agent step budget: ${state.cliAgentStepBudget}.`);
+    }
+
     async function handleTestModeToggle() {
       state.testMode = !state.testMode;
       if (window.electronAPI?.updateCodingConfig) {
@@ -366,6 +442,9 @@
       handleRouterGpuToggle,
       handleRagDebugToggle,
       handleDeterministicToggle,
+      handleCliAgentToggle,
+      handleCliAgentPolicyCycle,
+      handleCliAgentStepBudgetCycle,
       handleTestModeToggle,
       handleDiffLegendToggle,
       normalizeDiffDisplayMode,

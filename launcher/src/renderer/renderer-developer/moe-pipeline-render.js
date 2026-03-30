@@ -257,6 +257,11 @@ function renderMoePipeline() {
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#f0883e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="2"/><circle cx="6.5" cy="6.5" r="5.5"/><line x1="6.5" y1="1" x2="6.5" y2="4.5"/><line x1="6.5" y1="8.5" x2="6.5" y2="12"/><line x1="1" y1="6.5" x2="4.5" y2="6.5"/><line x1="8.5" y1="6.5" x2="12" y2="6.5"/></svg>
               Add Endpoint Registry
             </button>
+            <button onclick="addMoeCliAgent()"
+                    style="display:flex; align-items:center; gap:7px; padding:9px 18px; border:1px solid rgba(188,140,255,0.45); border-radius:6px; background:transparent; color:#dec8ff; cursor:pointer; font-size:12px; font-weight:500;">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#bc8cff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="1.2" y="2.2" width="10.6" height="8.6" rx="1.4"></rect><path d="M3.1 5.1l1.7 1.4-1.7 1.4"></path><line x1="6.2" y1="8.1" x2="9.6" y2="8.1"></line></svg>
+              Add CLI Agent
+            </button>
           </div>
         </div>
       </div>
@@ -295,6 +300,10 @@ function renderMoePipeline() {
         <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
           <div style="width:10px; height:10px; border-radius:2px; background:rgba(240,136,62,0.25); border:1px solid #f0883e;"></div>
           Endpoint Registry - Distributed Worker Routing
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
+          <div style="width:10px; height:10px; border-radius:2px; background:rgba(188,140,255,0.25); border:1px solid #bc8cff;"></div>
+          CLI Agent - Stateless Tool Execution
         </div>
       </div>
       </div>

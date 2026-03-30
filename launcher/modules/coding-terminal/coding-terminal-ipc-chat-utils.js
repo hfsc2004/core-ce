@@ -28,6 +28,11 @@ function extractAssistantResponseText(reply) {
     reply?.response?.message?.reasoning ||
     reply?.response?.message?.reasoning_content ||
     reply?.response?.message?.thinking ||
+    reply?.response?.choices?.[0]?.message?.content ||
+    reply?.response?.choices?.[0]?.message?.reasoning ||
+    reply?.response?.choices?.[0]?.message?.reasoning_content ||
+    reply?.response?.choices?.[0]?.message?.thinking ||
+    reply?.response?.choices?.[0]?.delta?.content ||
     reply?.response?.content ||
     ''
   );

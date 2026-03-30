@@ -10,6 +10,39 @@ function updateAgentSystemPrompt(agentId, prompt) {
   }
 }
 
+function buildCliAgentPromptPresetBlock() {
+  return [
+    'CLI Agent tool policy:',
+    '- Emit CLI tool requests only when needed.',
+    '- Output tool calls on separate lines using exact format:',
+    '  CLI_TOOL_JSON: {"tool":"run_command|write_file|run_tests|git_diff","args":{...}}',
+    '- Allowed args:',
+    '  run_command: {"cmd":"<shell command>","cwd":"<relative optional>"}',
+    '  run_tests: {"cmd":"<test command>","cwd":"<relative optional>"}',
+    '  write_file: {"path":"<relative file path>","content":"<full file content>"}',
+    '  git_diff: {"cwd":"<relative optional>"}',
+    '- Never wrap CLI_TOOL_JSON in markdown code fences.',
+    '- Continue normal response text after tool lines when helpful.'
+  ].join('\n');
+}
+
+function applyCliAgentPromptPreset(agentId) {
+  const agent = window.modelOrderingState.moeItems.find(i => i.id === agentId && i.type === 'agent');
+  if (!agent) return;
+  const preset = buildCliAgentPromptPresetBlock();
+  const current = String(agent.systemPrompt || '');
+  if (/CLI_TOOL_JSON\s*:/i.test(current)) {
+    return;
+  }
+  agent.systemPrompt = current.trim()
+    ? `${current.trim()}\n\n${preset}`
+    : preset;
+  if (typeof markMoePipelineConfigChanged === 'function') {
+    markMoePipelineConfigChanged('Agent system prompt');
+  }
+  renderModelOrdering();
+}
+
 function updateAgentRoutingRules(agentId, rawRules) {
   const agent = window.modelOrderingState.moeItems.find(i => i.id === agentId && i.type === 'agent');
   if (!agent) return;
@@ -186,6 +219,7 @@ function updateGatewaySourceConfig(gatewayId, sourceType, key, value) {
 
 
 window.updateAgentSystemPrompt = updateAgentSystemPrompt;
+window.applyCliAgentPromptPreset = applyCliAgentPromptPreset;
 window.updateAgentRoutingRules = updateAgentRoutingRules;
 window.updateChannelDirection = updateChannelDirection;
 window.updateChannelMode = updateChannelMode;

@@ -32,7 +32,7 @@
 
       elements.btnRag?.addEventListener('click', api.handleHeaderRagClick);
       elements.btnGit?.addEventListener('click', api.handleHeaderGitClick);
-      elements.btnSettingsDrawerHandle?.addEventListener('click', api.handleContextRailToggle);
+      elements.btnSettingsDrawerHandle?.addEventListener('click', api.handleHeaderSettingsClick);
       elements.btnSettingsRailRag?.addEventListener('click', () => api.handleContextRailSelect('rag'));
       elements.btnSettingsRailGit?.addEventListener('click', () => api.handleContextRailSelect('git'));
       elements.btnSettingsRailPlan?.addEventListener('click', () => api.handleContextRailSelect('plan'));
@@ -47,6 +47,9 @@
       elements.modelSelect?.addEventListener('change', api.handleModelSelection);
       elements.routerModelSelect?.addEventListener('change', api.handleRouterModelSelection);
       elements.chatModeSelect?.addEventListener('change', api.handleChatModeSelection);
+      elements.btnCliAgentInline?.addEventListener('click', api.handleCliAgentToggle);
+      elements.btnCliPolicyInline?.addEventListener('click', api.handleCliAgentPolicyCycle);
+      elements.btnCliBudgetInline?.addEventListener('click', api.handleCliAgentStepBudgetCycle);
       elements.btnModelRefresh?.addEventListener('click', async () => {
         await api.loadModelSelector();
         await api.loadRouterModelSelector();
@@ -59,6 +62,7 @@
       elements.ragBucketSelect?.addEventListener('change', api.handleSelectRagBucket);
       elements.btnRefreshGit?.addEventListener('click', api.refreshGitStatus);
       elements.btnRefreshPlanRun?.addEventListener('click', api.refreshPlanRuns);
+      elements.btnRefreshCliLoop?.addEventListener('click', api.refreshCliLoop);
       elements.btnRefreshTrace?.addEventListener('click', api.refreshModelTrace);
       elements.btnPromptGuide?.addEventListener('click', api.showPromptGuideModal);
       elements.btnGitHelp?.addEventListener('click', api.showGitHelpModal);

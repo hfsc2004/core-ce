@@ -230,6 +230,7 @@ async function deployPipeline(pipelineConfig, appPath, gpuInfo) {
     gateways: {},
     channels: [],
     bindings: [],
+    cliAgents: [],
     ingress: null,
     config: pipelineConfig
   };
@@ -257,6 +258,11 @@ async function deployPipeline(pipelineConfig, appPath, gpuInfo) {
         case 'bindings':
           deployBindings(item);
           break;
+        case 'cli_agent':
+        case 'deep_agent':
+        case 'executor':
+          deployCliAgent(item);
+          break;
       }
     }
     
@@ -275,6 +281,7 @@ async function deployPipeline(pipelineConfig, appPath, gpuInfo) {
       gateways: activeDeployment.gateways,
     channels: activeDeployment.channels,
     bindings: activeDeployment.bindings,
+    cliAgents: activeDeployment.cliAgents,
     ingress: ingressTools.sanitizeIngress(activeDeployment.ingress),
     message: `Deployed ${agentCount} agents (${(totalTime/1000).toFixed(1)}s)`
   };
@@ -514,6 +521,30 @@ function deployBindings(bindings) {
   console.log(`[MoE Deployment] 🧩 Bindings: ${bindings.name || bindings.id} (${entries.length} entries)`);
 }
 
+function deployCliAgent(node) {
+  const hooks = node?.hooks && typeof node.hooks === 'object' ? node.hooks : {};
+  const deployed = {
+    id: node.id,
+    name: node.name || 'CLI Agent',
+    enabled: node.enabled !== false,
+    ownerAgentId: String(node.ownerAgentId || '').trim(),
+    executionMode: String(node.executionMode || 'on-tool').trim().toLowerCase(),
+    policyProfile: String(node.policyProfile || 'workspace-write').trim().toLowerCase(),
+    stepBudget: Number.isInteger(Number(node.stepBudget)) ? Number(node.stepBudget) : 50,
+    tokenBudget: Number.isInteger(Number(node.tokenBudget)) ? Number(node.tokenBudget) : 8000,
+    timeoutMs: Number.isInteger(Number(node.timeoutMs)) ? Number(node.timeoutMs) : 300000,
+    hooks: {
+      runCommand: hooks.runCommand === true,
+      writeFile: hooks.writeFile === true,
+      runTests: hooks.runTests === true,
+      gitDiff: hooks.gitDiff === true,
+      flashFirmware: hooks.flashFirmware === true
+    }
+  };
+  activeDeployment.cliAgents.push(deployed);
+  console.log(`[MoE Deployment] ⚡ CLI Agent: ${deployed.name} (owner=${deployed.ownerAgentId || 'unassigned'})`);
+}
+
 // ============================================================================
 // TEARDOWN
 // ============================================================================
@@ -575,10 +606,12 @@ function getStatus() {
     gatewayCount: Object.keys(activeDeployment.gateways).length,
     channelCount: activeDeployment.channels.length,
     bindingsCount: activeDeployment.bindings.length,
+    cliAgentsCount: Array.isArray(activeDeployment.cliAgents) ? activeDeployment.cliAgents.length : 0,
     agents: { ...activeDeployment.agents },
     gateways: { ...activeDeployment.gateways },
     channels: [...activeDeployment.channels ],
     bindings: [...activeDeployment.bindings],
+    cliAgents: [...(activeDeployment.cliAgents || [])],
     ingress: ingressTools.sanitizeIngress(activeDeployment.ingress),
     config: activeDeployment.config
   };

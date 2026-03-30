@@ -393,6 +393,7 @@ body.ct-settings-drawer-open .ct-settings-rail-toggle svg {
 .ct-context-tools {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--ct-border);
@@ -400,11 +401,27 @@ body.ct-settings-drawer-open .ct-settings-rail-toggle svg {
 }
 
 .ct-context-mode-select {
-  flex: 1;
+  flex: 1 1 100%;
   min-width: 0;
   height: 28px;
   padding: 0 8px;
   font-size: 12px;
+}
+
+#btn-cli-agent-inline,
+#btn-cli-policy-inline,
+#btn-cli-budget-inline {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#btn-model-refresh {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
 }
 
 /* =============================================================================

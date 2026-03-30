@@ -232,6 +232,13 @@ function createAgentTransport({ requestTimeout }) {
       });
     }
 
+    if (options?.cliToolContext) {
+      messages.push({
+        role: 'system',
+        content: String(options.cliToolContext)
+      });
+    }
+
     messages.push({ role: 'user', content: currentInput });
     return messages;
   }

@@ -119,7 +119,13 @@ function renderAgentDetails(agent, counts = {}) {
   return `
     <div onclick="event.stopPropagation()" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid ${theme.accent}33;">
       <div style="margin-bottom: 15px;">
-        <label style="color: #888; font-size: 12px; display: block; margin-bottom: 5px;">System Prompt (Role Instructions)</label>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:5px;">
+          <label style="color: #888; font-size: 12px; display: block;">System Prompt (Role Instructions)</label>
+          <button onclick="event.stopPropagation(); applyCliAgentPromptPreset('${agent.id}')"
+                  style="padding:5px 9px; background:rgba(188,140,255,0.16); border:1px solid #bc8cff; border-radius:6px; color:#dec8ff; cursor:pointer; font-size:11px;">
+            + CLI Tool Prompt
+          </button>
+        </div>
         <textarea onchange="updateAgentSystemPrompt('${agent.id}', this.value)" placeholder="Define this agent's role, personality, and instructions..."
                   style="width: 100%; height: 80px; background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 6px; color: #fff; padding: 10px; resize: vertical;">${agent.systemPrompt || ''}</textarea>
       </div>

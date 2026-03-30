@@ -223,6 +223,33 @@ if (!window.createBindings) {
   };
 }
 
+if (!window.createCliAgent) {
+  /**
+   * Create a CLI Agent node (fallback)
+   */
+  window.createCliAgent = function(name = 'CLI Agent') {
+    return {
+      id: `cli-agent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'cli_agent',
+      name,
+      ownerAgentId: '',
+      executionMode: 'on-tool',
+      policyProfile: 'workspace-write',
+      stepBudget: 50,
+      tokenBudget: 8000,
+      timeoutMs: 300000,
+      hooks: {
+        runCommand: true,
+        writeFile: true,
+        runTests: true,
+        gitDiff: true,
+        flashFirmware: false
+      },
+      enabled: true
+    };
+  };
+}
+
 if (!window.createEndpointRegistryItem) {
   /**
    * Create Endpoint Registry item (singleton in pipeline list)

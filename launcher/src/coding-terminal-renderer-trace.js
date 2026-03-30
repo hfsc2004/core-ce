@@ -17,6 +17,7 @@
     let lastPipelineEventAt = 0;
 
     state.modelTraceRows = Array.isArray(state.modelTraceRows) ? state.modelTraceRows : [];
+    state.cliLoopRows = Array.isArray(state.cliLoopRows) ? state.cliLoopRows : [];
     state.activeModelTrace = state.activeModelTrace || null;
     state.deterministicRegistrySnapshot = state.deterministicRegistrySnapshot || null;
 
@@ -71,6 +72,19 @@
         state.modelTraceRows.splice(0, state.modelTraceRows.length - MAX_LOCAL_TRACE_ROWS);
       }
       renderModelTrace();
+    }
+
+    function pushCliLoopTrace(summary, details = '', at = Date.now()) {
+      if (!summary) return;
+      state.cliLoopRows.push({
+        at,
+        summary: String(summary || ''),
+        details: String(details || '')
+      });
+      if (state.cliLoopRows.length > MAX_LOCAL_TRACE_ROWS) {
+        state.cliLoopRows.splice(0, state.cliLoopRows.length - MAX_LOCAL_TRACE_ROWS);
+      }
+      renderCliLoopTrace();
     }
 
     function setActiveModelTrace(patch = {}) {
@@ -191,6 +205,63 @@
       el.innerHTML = lines.join('');
     }
 
+    function renderCliLoopTrace() {
+      const el = elements.cliLoopContent;
+      if (!el) return;
+      const rows = Array.isArray(state.cliLoopRows)
+        ? state.cliLoopRows.slice(-30).reverse()
+        : [];
+      if (!rows.length) {
+        el.innerHTML = '<p class="ct-placeholder">CLI loop idle.</p>';
+        return;
+      }
+      const lines = [];
+      for (const row of rows) {
+        lines.push('<div class="ct-trace-row">');
+        lines.push(`<div class="ct-trace-meta">${formatTime(row.at)}</div>`);
+        lines.push(`<div>${escapeHtml(row.summary || '')}</div>`);
+        if (row.details) {
+          lines.push(`<div class="ct-trace-muted">${escapeHtml(clampText(row.details, 360))}</div>`);
+        }
+        lines.push('</div>');
+      }
+      el.innerHTML = lines.join('');
+    }
+
+    function summarizeCliEvent(evt) {
+      const kind = String(evt?.kind || '');
+      const action = String(evt?.action || '').trim();
+      const round = Number(evt?.round || 0);
+      if (kind === 'cli.agent.loop.start') {
+        return `loop start (budget=${Number(evt?.budget || 0)})`;
+      }
+      if (kind === 'cli.agent.loop.budget') {
+        return `budget reached (${Number(evt?.executed || 0)}/${Number(evt?.budget || 0)})`;
+      }
+      if (kind === 'cli.agent.loop.done') {
+        return `loop done (rounds=${Number(evt?.rounds || 0)}, tools=${Number(evt?.executed || 0)})`;
+      }
+      if (kind === 'cli.agent.tool.start') {
+        return `tool start: ${action || 'unknown'}${round > 0 ? ` (round ${round})` : ''}`;
+      }
+      if (kind === 'cli.agent.tool.done') {
+        return `tool done: ${action || 'unknown'}${round > 0 ? ` (round ${round})` : ''}`;
+      }
+      if (kind === 'cli.agent.followup.start') {
+        return `follow-up start${round > 0 ? ` (round ${round})` : ''}`;
+      }
+      if (kind === 'cli.agent.followup.done') {
+        return `follow-up done${round > 0 ? ` (round ${round})` : ''}`;
+      }
+      if (kind === 'cli.agent.followup.error') {
+        return `follow-up error${round > 0 ? ` (round ${round})` : ''}`;
+      }
+      if (kind === 'cli.agent.followup.empty') {
+        return `follow-up empty${round > 0 ? ` (round ${round})` : ''}`;
+      }
+      return kind;
+    }
+
     function renderPlanRuns(payload = {}) {
       const el = elements.planRunContent;
       if (!el) return;
@@ -251,6 +322,12 @@
           const at = Number(evt?.at) || 0;
           if (at <= lastPipelineEventAt) continue;
           lastPipelineEventAt = Math.max(lastPipelineEventAt, at);
+          if (String(evt?.kind || '').startsWith('cli.agent.')) {
+            const summary = summarizeCliEvent(evt);
+            const details = evt?.error ? `error=${String(evt.error)}` : '';
+            pushCliLoopTrace(summary, details, at || Date.now());
+            continue;
+          }
           const summary = toEventSummary(evt);
           const details = evt?.requestId ? `request=${evt.requestId}` : '';
           pushModelTrace(summary, details, at || Date.now());
@@ -283,7 +360,12 @@
       await refreshPipelineTrace();
       await refreshPlanRuns();
       await refreshDeterministicRegistry();
+      renderCliLoopTrace();
       renderModelTrace();
+    }
+
+    function refreshCliLoop() {
+      renderCliLoopTrace();
     }
 
     function startPolling() {
@@ -305,6 +387,7 @@
       stopPolling,
       refreshNow,
       refreshPlanRuns,
+      refreshCliLoop,
       refreshPipelineTrace,
       pushModelTrace,
       setActiveModelTrace,

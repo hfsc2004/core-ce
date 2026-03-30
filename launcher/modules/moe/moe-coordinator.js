@@ -10,6 +10,10 @@
  */
 
 const moeIrg = require('./moe-irg');
+const fs = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
+const { promisify } = require('util');
 const createAgentTransport = require('./moe-coordinator-agents');
 const {
   DEFAULT_CHANNEL_POLICY,
@@ -47,6 +51,8 @@ let deterministicToolsRuntime = null;
 let attachmentStore = null;
 const gatewayRuntime = new Map();
 let lastIrgReplay = null;
+const execAsync = promisify(exec);
+const CLI_AGENT_WORKSPACE_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 const REQUEST_TIMEOUT = 120000;
 
@@ -63,6 +69,248 @@ function initialize(deployment, options = {}) {
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeCliToolName(value) {
+  return String(value || '').trim().toLowerCase().replace(/[.\s-]+/g, '_');
+}
+
+function normalizeCliAgentNode(item = {}) {
+  const hooks = item?.hooks && typeof item.hooks === 'object' ? item.hooks : {};
+  return {
+    id: String(item.id || '').trim() || `cli-agent-${Date.now()}`,
+    type: String(item.type || 'cli_agent').trim(),
+    name: String(item.name || 'CLI Agent').trim() || 'CLI Agent',
+    ownerAgentId: String(item.ownerAgentId || '').trim(),
+    executionMode: String(item.executionMode || 'on-tool').trim().toLowerCase(),
+    policyProfile: String(item.policyProfile || 'workspace-write').trim().toLowerCase(),
+    stepBudget: Number.isInteger(Number(item.stepBudget)) ? Math.max(1, Math.min(500, Number(item.stepBudget))) : 50,
+    tokenBudget: Number.isInteger(Number(item.tokenBudget)) ? Math.max(256, Math.min(200000, Number(item.tokenBudget))) : 8000,
+    timeoutMs: Number.isInteger(Number(item.timeoutMs)) ? Math.max(1000, Math.min(3600000, Number(item.timeoutMs))) : 300000,
+    hooks: {
+      runCommand: hooks.runCommand === true,
+      writeFile: hooks.writeFile === true,
+      runTests: hooks.runTests === true,
+      gitDiff: hooks.gitDiff === true,
+      flashFirmware: hooks.flashFirmware === true
+    },
+    enabled: item.enabled !== false
+  };
+}
+
+function collectCliAgentNodes(configItems = []) {
+  return (Array.isArray(configItems) ? configItems : [])
+    .filter((item) => item && (item.type === 'cli_agent' || item.type === 'deep_agent' || item.type === 'executor'))
+    .map(normalizeCliAgentNode)
+    .filter((item) => item.enabled !== false);
+}
+
+function buildCliToolContextForOwner(ownerAgentId, cliAgents = []) {
+  const owned = cliAgents.filter((node) => node.ownerAgentId && node.ownerAgentId === ownerAgentId);
+  const active = owned.filter((node) => node.executionMode === 'on-tool' || node.executionMode === 'auto');
+  if (!active.length) return '';
+  const lines = [
+    'CLI Agent capability is available on this hop via owner assignment.',
+    'When a deterministic tool action is needed, emit one or more lines in this exact format:',
+    'CLI_TOOL_JSON: {"tool":"run_command|write_file|run_tests|git_diff","args":{...}}',
+    'Allowed args:',
+    '- run_command: {"cmd":"<shell command>","cwd":"<relative optional>"}',
+    '- run_tests: {"cmd":"<test command>","cwd":"<relative optional>"}',
+    '- write_file: {"path":"<relative file path>","content":"<full file content>"}',
+    '- git_diff: {"cwd":"<relative optional>"}',
+    'Do not emit CLI_TOOL_JSON unless action is explicitly needed for the user task.'
+  ];
+  return lines.join('\n');
+}
+
+function extractCliToolRequests(text) {
+  const raw = String(text || '');
+  if (!raw) return [];
+  const requests = [];
+  const regex = /^CLI_TOOL_JSON\s*:\s*(\{.+\})\s*$/gim;
+  let match = regex.exec(raw);
+  while (match) {
+    const blob = String(match[1] || '').trim();
+    if (!blob) {
+      match = regex.exec(raw);
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(blob);
+      const tool = normalizeCliToolName(parsed?.tool || parsed?.name || '');
+      if (!tool) {
+        match = regex.exec(raw);
+        continue;
+      }
+      const args = parsed?.args && typeof parsed.args === 'object' ? parsed.args : {};
+      requests.push({ tool, args });
+    } catch (_) {
+      // ignore malformed request lines
+    }
+    match = regex.exec(raw);
+  }
+  return requests;
+}
+
+function isCommandPotentiallyDestructive(cmd) {
+  const value = String(cmd || '').toLowerCase();
+  if (!value) return true;
+  const blockedPatterns = [
+    /(^|\s)rm\s+-rf(\s|$)/,
+    /(^|\s)mkfs(\s|$)/,
+    /(^|\s)dd\s+if=/,
+    /(^|\s)shutdown(\s|$)/,
+    /(^|\s)reboot(\s|$)/,
+    /(^|\s)poweroff(\s|$)/,
+    /(^|\s)halt(\s|$)/,
+    /(^|\s)init\s+0(\s|$)/,
+    /:\(\)\s*\{/,
+    /(^|\s)userdel(\s|$)/,
+    /(^|\s)passwd(\s|$)/
+  ];
+  return blockedPatterns.some((pattern) => pattern.test(value));
+}
+
+function resolveWithinWorkspace(inputPath, { allowDirectory = true } = {}) {
+  const candidate = String(inputPath || '').trim();
+  if (!candidate) return CLI_AGENT_WORKSPACE_ROOT;
+  const absolute = path.isAbsolute(candidate)
+    ? path.resolve(candidate)
+    : path.resolve(CLI_AGENT_WORKSPACE_ROOT, candidate);
+  const rootWithSep = `${CLI_AGENT_WORKSPACE_ROOT}${path.sep}`;
+  const isRoot = absolute === CLI_AGENT_WORKSPACE_ROOT;
+  const isInside = absolute.startsWith(rootWithSep);
+  if (!isRoot && !isInside) {
+    throw new Error(`Path escapes workspace: ${candidate}`);
+  }
+  if (!allowDirectory) {
+    const parent = path.dirname(absolute);
+    const parentWithSep = `${CLI_AGENT_WORKSPACE_ROOT}${path.sep}`;
+    const parentInside = parent === CLI_AGENT_WORKSPACE_ROOT || parent.startsWith(parentWithSep);
+    if (!parentInside) {
+      throw new Error(`File path escapes workspace: ${candidate}`);
+    }
+  }
+  return absolute;
+}
+
+function isCliToolAllowedByPolicy(node, toolName) {
+  const tool = normalizeCliToolName(toolName);
+  if (String(node?.policyProfile || '').toLowerCase() === 'privileged-approval') {
+    return { allowed: false, reason: 'policy profile requires privileged approval' };
+  }
+  if (String(node?.policyProfile || '').toLowerCase() === 'read-only') {
+    if (tool !== 'git_diff' && tool !== 'run_tests') {
+      return { allowed: false, reason: 'read-only policy blocks mutating tools' };
+    }
+  }
+  const hooks = node?.hooks || {};
+  const hookMap = {
+    run_command: hooks.runCommand === true,
+    write_file: hooks.writeFile === true,
+    run_tests: hooks.runTests === true,
+    git_diff: hooks.gitDiff === true,
+    flash_firmware: hooks.flashFirmware === true
+  };
+  if (hookMap[tool] !== true) {
+    return { allowed: false, reason: `hook disabled for ${tool}` };
+  }
+  return { allowed: true, reason: 'ok' };
+}
+
+async function executeCliToolRequest(node, request) {
+  const tool = normalizeCliToolName(request?.tool);
+  const args = request?.args && typeof request.args === 'object' ? request.args : {};
+  const gate = isCliToolAllowedByPolicy(node, tool);
+  if (!gate.allowed) {
+    return { success: false, tool, error: gate.reason };
+  }
+
+  if (tool === 'write_file') {
+    const relPath = String(args.path || '').trim();
+    if (!relPath) return { success: false, tool, error: 'write_file requires args.path' };
+    const nextContent = String(args.content ?? '');
+    const fullPath = resolveWithinWorkspace(relPath, { allowDirectory: false });
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, nextContent, 'utf8');
+    return {
+      success: true,
+      tool,
+      output: `Wrote ${Buffer.byteLength(nextContent, 'utf8')} bytes to ${path.relative(CLI_AGENT_WORKSPACE_ROOT, fullPath)}`
+    };
+  }
+
+  if (tool === 'git_diff') {
+    const cwd = resolveWithinWorkspace(String(args.cwd || ''), { allowDirectory: true });
+    const cmd = `git -C ${JSON.stringify(cwd)} diff -- .`;
+    const { stdout, stderr } = await execAsync(cmd, {
+      timeout: Math.min(120000, Number(node?.timeoutMs || 120000)),
+      maxBuffer: 1024 * 1024
+    });
+    return {
+      success: true,
+      tool,
+      output: String(stdout || stderr || '(no diff)').slice(0, 4000)
+    };
+  }
+
+  if (tool === 'run_command' || tool === 'run_tests') {
+    const cmd = String(args.cmd || '').trim();
+    if (!cmd) return { success: false, tool, error: `${tool} requires args.cmd` };
+    if (isCommandPotentiallyDestructive(cmd)) {
+      return { success: false, tool, error: `blocked potentially destructive command: ${cmd}` };
+    }
+    const cwd = resolveWithinWorkspace(String(args.cwd || ''), { allowDirectory: true });
+    const { stdout, stderr } = await execAsync(cmd, {
+      cwd,
+      timeout: Math.min(240000, Number(node?.timeoutMs || 240000)),
+      maxBuffer: 1024 * 1024
+    });
+    const combined = [String(stdout || ''), String(stderr || '')].filter(Boolean).join('\n').trim();
+    return {
+      success: true,
+      tool,
+      output: combined ? combined.slice(0, 6000) : '(ok)'
+    };
+  }
+
+  if (tool === 'flash_firmware') {
+    return { success: false, tool, error: 'flash_firmware runtime hook not implemented yet' };
+  }
+
+  return { success: false, tool, error: `unknown tool: ${tool}` };
+}
+
+async function executeCliAgentNode(node, ownerOutput) {
+  const requests = extractCliToolRequests(ownerOutput);
+  if (!requests.length) {
+    return { handled: false, summary: '', requests: [] };
+  }
+  const maxOps = Math.max(1, Math.min(Number(node?.stepBudget || 1), requests.length));
+  const limited = requests.slice(0, maxOps);
+  const results = [];
+  for (const req of limited) {
+    try {
+      const res = await executeCliToolRequest(node, req);
+      results.push(res);
+    } catch (err) {
+      results.push({
+        success: false,
+        tool: normalizeCliToolName(req?.tool),
+        error: String(err?.message || err || 'tool execution failed')
+      });
+    }
+  }
+  const summaryLines = results.map((row, idx) => {
+    if (row.success) return `${idx + 1}. ${row.tool}: PASS\n${String(row.output || '').trim()}`;
+    return `${idx + 1}. ${row.tool}: FAIL\n${String(row.error || 'unknown error').trim()}`;
+  });
+  return {
+    handled: true,
+    requests: limited,
+    results,
+    summary: `CLI Agent ${node.name} execution results:\n${summaryLines.join('\n\n')}`
+  };
 }
 
 function sanitizeAgentOutputForHandoff(value) {
@@ -332,6 +580,7 @@ async function routeMessage(userMessage, options = {}) {
   }
 
   const deploymentStatus = deploymentManager?.getStatus?.() || null;
+  const cliAgentNodes = collectCliAgentNodes(deploymentStatus?.config?.items || []);
   const orderedAgentIds = agents.map((agent) => agent.id);
   const channelPolicyContext = getChannelPoliciesForAgentEdges(
     agents.length,
@@ -420,6 +669,7 @@ async function routeMessage(userMessage, options = {}) {
         deterministicToolsRuntime,
         attachmentStore
       });
+      const cliToolContext = buildCliToolContextForOwner(agent.id, cliAgentNodes);
 
       const messages = transport.buildAgentMessages(
         agent,
@@ -438,6 +688,7 @@ async function routeMessage(userMessage, options = {}) {
             parsePipelineStateGetKeys(`${agent?.systemPrompt || ''}\n${currentContext || ''}`),
             pipelineState
           ),
+          cliToolContext,
           structuredRecordContext:
             String(agent?.name || '').trim().toLowerCase() === 'clerk'
               ? buildStructuredContextText(structuredRecord)
@@ -517,6 +768,36 @@ async function routeMessage(userMessage, options = {}) {
       previousResponses.push({ agent: agent.name, response: normalizedOutput || response.content });
       Object.assign(structuredRecord, buildStructuredUpdateFromStep(normalizedOutput || response.content));
       currentContext = normalizedOutput || response.content;
+
+      const ownedCliAgents = cliAgentNodes.filter((node) => node.ownerAgentId === agent.id);
+      for (const cliNode of ownedCliAgents) {
+        const mode = String(cliNode.executionMode || 'on-tool').toLowerCase();
+        if (mode !== 'on-tool' && mode !== 'auto') continue;
+        const execStart = Date.now();
+        const cliExec = await executeCliAgentNode(cliNode, currentContext);
+        if (!cliExec.handled) continue;
+        const success = cliExec.results.every((row) => row.success === true);
+        const output = String(cliExec.summary || '').trim();
+        const cliStep = {
+          agentId: cliNode.id,
+          agentName: cliNode.name,
+          modelName: 'cli-agent-runtime',
+          input: String(currentContext || '').slice(0, 200),
+          output,
+          durationMs: Date.now() - execStart,
+          success,
+          route: {
+            mode: 'cli-agent',
+            reason: `owner=${agent.name}`
+          }
+        };
+        trace.steps.push(cliStep);
+        if (options.onAgentResponse) {
+          options.onAgentResponse(cliStep, currentAgentIndex, agents.length);
+        }
+        previousResponses.push({ agent: cliNode.name, response: output });
+        currentContext = `${currentContext}\n\n${output}`.trim();
+      }
       previousStepSuccess = true;
 
       const routeDecision = resolveNextAgentIndex({
@@ -692,6 +973,9 @@ async function runIrgContract(contractInput, options = {}) {
 async function sendToAgent(agentId, message, options = {}) {
   const agent = deploymentManager?.getAgent(agentId);
   if (!agent) return { success: false, error: `Agent not found: ${agentId}` };
+  const deploymentStatus = deploymentManager?.getStatus?.() || null;
+  const cliAgentNodes = collectCliAgentNodes(deploymentStatus?.config?.items || []);
+  const cliToolContext = buildCliToolContextForOwner(agent.id, cliAgentNodes);
 
   const rlmAssistContext = await buildAgentRlmAssistContext({
     agent,
@@ -711,9 +995,27 @@ async function sendToAgent(agentId, message, options = {}) {
         `Use it as grounding context. If it conflicts with explicit user intent, follow user intent.`
     });
   }
+  if (cliToolContext) {
+    messages.push({
+      role: 'system',
+      content: cliToolContext
+    });
+  }
   messages.push({ role: 'user', content: message });
+  const response = await transport.callAgent(agent, messages);
+  if (!response?.success) return response;
 
-  return transport.callAgent(agent, messages);
+  let finalContent = String(response.content || '');
+  const ownedCliAgents = cliAgentNodes.filter((node) => node.ownerAgentId === agent.id);
+  for (const cliNode of ownedCliAgents) {
+    const mode = String(cliNode.executionMode || 'on-tool').toLowerCase();
+    if (mode !== 'on-tool' && mode !== 'auto') continue;
+    const cliExec = await executeCliAgentNode(cliNode, finalContent);
+    if (!cliExec.handled) continue;
+    finalContent = `${finalContent}\n\n${cliExec.summary}`.trim();
+  }
+
+  return { ...response, content: finalContent };
 }
 
 async function pingAgent(agentId) {
