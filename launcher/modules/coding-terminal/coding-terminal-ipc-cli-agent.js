@@ -17,6 +17,18 @@ function createCliAgentTools(deps = {}) {
   const buildDeterministicToolWriteFile = typeof deps.buildDeterministicToolWriteFile === 'function'
     ? deps.buildDeterministicToolWriteFile
     : (() => null);
+  const buildDeterministicToolListFiles = typeof deps.buildDeterministicToolListFiles === 'function'
+    ? deps.buildDeterministicToolListFiles
+    : (() => null);
+  const buildDeterministicToolSearchCode = typeof deps.buildDeterministicToolSearchCode === 'function'
+    ? deps.buildDeterministicToolSearchCode
+    : (() => null);
+  const buildDeterministicToolReadFileChunk = typeof deps.buildDeterministicToolReadFileChunk === 'function'
+    ? deps.buildDeterministicToolReadFileChunk
+    : (() => null);
+  const buildDeterministicToolApplyPatch = typeof deps.buildDeterministicToolApplyPatch === 'function'
+    ? deps.buildDeterministicToolApplyPatch
+    : (() => null);
   const buildDeterministicToolVerify = typeof deps.buildDeterministicToolVerify === 'function'
     ? deps.buildDeterministicToolVerify
     : (() => null);
@@ -53,6 +65,10 @@ function createCliAgentTools(deps = {}) {
       'If you need CLI/file actions, emit one line per action exactly:',
       'CLI_TOOL_JSON: {"action":"read_file","path":"relative/path.ext"}',
       'CLI_TOOL_JSON: {"action":"write_file","path":"relative/path.ext","content":"full file content"}',
+      'CLI_TOOL_JSON: {"action":"list_files","path":".","max_depth":2,"limit":200}',
+      'CLI_TOOL_JSON: {"action":"search_code","query":"needle","path":".","limit":100,"regex":false}',
+      'CLI_TOOL_JSON: {"action":"read_file_chunk","path":"relative/path.ext","start":1,"count":200}',
+      'CLI_TOOL_JSON: {"action":"apply_patch","path":"relative/path.ext","old_text":"before","new_text":"after"}',
       'CLI_TOOL_JSON: {"action":"run_tests"}',
       'CLI_TOOL_JSON: {"action":"verify"}',
       'Do not invent tool results. Wait for returned tool output.'
@@ -146,6 +162,26 @@ function createCliAgentTools(deps = {}) {
         continue;
       }
 
+      const listMatch = step.match(/list_files(?:\s+path=([^\s]+))?/i);
+      if (listMatch) {
+        planned.push({
+          action: 'list_files',
+          path: String(listMatch[1] || '.').trim() || '.'
+        });
+        continue;
+      }
+
+      const chunkMatch = step.match(/read_file_chunk\s+path=([^\s]+)(?:\s+start=(\d+))?(?:\s+count=(\d+))?/i);
+      if (chunkMatch) {
+        planned.push({
+          action: 'read_file_chunk',
+          path: String(chunkMatch[1] || '').trim(),
+          start: Number.parseInt(chunkMatch[2] || '1', 10),
+          count: Number.parseInt(chunkMatch[3] || '200', 10)
+        });
+        continue;
+      }
+
       if (/\brun_tests\b/i.test(step)) {
         planned.push({ action: 'run_tests' });
         continue;
@@ -166,6 +202,42 @@ function createCliAgentTools(deps = {}) {
     if (action === 'write_file') {
       const nextContent = String(call?.content || '').replace(/\r\n/g, '\n');
       return `tool.write_file path=${pathArg}\n\`\`\`\n${nextContent}\n\`\`\``;
+    }
+    if (action === 'list_files') {
+      const payload = {
+        path: pathArg || '.',
+        max_depth: Number(call?.max_depth ?? call?.maxDepth ?? 2),
+        limit: Number(call?.limit ?? 200),
+        glob: String(call?.glob || '').trim()
+      };
+      return `tool.list_files ${JSON.stringify(payload)}`;
+    }
+    if (action === 'search_code') {
+      const payload = {
+        query: String(call?.query || ''),
+        path: pathArg || '.',
+        glob: String(call?.glob || '').trim(),
+        limit: Number(call?.limit ?? 100),
+        max_depth: Number(call?.max_depth ?? call?.maxDepth ?? 5),
+        regex: Boolean(call?.regex)
+      };
+      return `tool.search_code ${JSON.stringify(payload)}`;
+    }
+    if (action === 'read_file_chunk') {
+      const payload = {
+        path: pathArg,
+        start: Number(call?.start ?? 1),
+        count: Number(call?.count ?? 200)
+      };
+      return `tool.read_file_chunk ${JSON.stringify(payload)}`;
+    }
+    if (action === 'apply_patch') {
+      const payload = {
+        path: pathArg,
+        old_text: String(call?.old_text || call?.oldText || ''),
+        new_text: String(call?.new_text || call?.newText || '')
+      };
+      return `tool.apply_patch ${JSON.stringify(payload)}`;
     }
     return '';
   }
@@ -192,8 +264,8 @@ function createCliAgentTools(deps = {}) {
       return 'CLI tool: FAIL\nReason: project root is not set.';
     }
 
-    if (policy === 'read-only' && action === 'write_file') {
-      return 'CLI tool: BLOCKED\nReason: policy read-only does not allow write_file.';
+    if (policy === 'read-only' && (action === 'write_file' || action === 'apply_patch')) {
+      return `CLI tool: BLOCKED\nReason: policy read-only does not allow ${action}.`;
     }
 
     const message = makeToolMessage(call);
@@ -210,6 +282,14 @@ function createCliAgentTools(deps = {}) {
       result = buildDeterministicToolReadFile({ message, projectPath });
     } else if (action === 'write_file') {
       result = buildDeterministicToolWriteFile({ message, projectPath });
+    } else if (action === 'list_files') {
+      result = buildDeterministicToolListFiles({ message, projectPath });
+    } else if (action === 'search_code') {
+      result = buildDeterministicToolSearchCode({ message, projectPath });
+    } else if (action === 'read_file_chunk') {
+      result = buildDeterministicToolReadFileChunk({ message, projectPath });
+    } else if (action === 'apply_patch') {
+      result = buildDeterministicToolApplyPatch({ message, projectPath });
     }
 
     if (!result || typeof result !== 'object') {
@@ -234,6 +314,17 @@ function createCliAgentTools(deps = {}) {
       if (text) return text;
     }
     return '';
+  }
+
+  function sanitizeAssistantDisplayText(text = '') {
+    const raw = String(text || '');
+    if (!raw) return '';
+    // Ignore model-fabricated CLI tool result sections; real tool results are appended deterministically.
+    const atTop = raw.startsWith('[CLI Agent ');
+    if (atTop) return '';
+    const idx = raw.indexOf('\n[CLI Agent ');
+    const trimmed = idx >= 0 ? raw.slice(0, idx) : raw;
+    return trimmed.trim();
   }
 
   async function postProcessAssistantText(payload = {}) {
@@ -316,7 +407,7 @@ function createCliAgentTools(deps = {}) {
     let executed = 0;
     let rounds = 0;
     let currentText = initialText;
-    let finalText = initialText;
+    let finalText = sanitizeAssistantDisplayText(initialText);
     const history = seedHistory.concat([{ role: 'assistant', content: initialText }]);
     appendPipelineEvent({
       kind: 'cli.agent.loop.start',
@@ -458,7 +549,10 @@ function createCliAgentTools(deps = {}) {
 
       currentText = nextText;
       history.push({ role: 'assistant', content: nextText });
-      finalText = `${finalText}\n\n[Assistant Follow-up ${round}]\n${nextText}`.trim();
+      const displayFollowup = sanitizeAssistantDisplayText(nextText);
+      if (displayFollowup) {
+        finalText = `${finalText}\n\n[Assistant Follow-up ${round}]\n${displayFollowup}`.trim();
+      }
       appendPipelineEvent({
         kind: 'cli.agent.followup.done',
         modelName,

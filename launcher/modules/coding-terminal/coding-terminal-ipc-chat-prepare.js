@@ -11,7 +11,30 @@ const routingHelpers = require('./coding-terminal-ipc-chat-prepare-routing');
 function createChatPrepareTool(deps = {}) {
   function isCliToolIntent(message = "") {
     const text = String(message || "").toLowerCase();
-    return /(cli[_-s]?tool|cli[_-s]?agent|write_file|read_file|run_tests|tool.write_file|tool.read_file|tool.run_tests|tool.verify|verify)/.test(text);
+    return [
+      'cli tool',
+      'cli-tool',
+      'cli_tool',
+      'cli agent',
+      'cli-agent',
+      'cli_agent',
+      'write_file',
+      'read_file',
+      'run_tests',
+      'list_files',
+      'search_code',
+      'read_file_chunk',
+      'apply_patch',
+      'tool.write_file',
+      'tool.read_file',
+      'tool.run_tests',
+      'tool.list_files',
+      'tool.search_code',
+      'tool.read_file_chunk',
+      'tool.apply_patch',
+      'tool.verify',
+      'verify'
+    ].some((token) => text.includes(token));
   }
 
   const {
@@ -56,6 +79,10 @@ function createChatPrepareTool(deps = {}) {
     buildDeterministicToolRunTests,
     buildDeterministicToolReadFile,
     buildDeterministicToolWriteFile,
+    buildDeterministicToolListFiles,
+    buildDeterministicToolSearchCode,
+    buildDeterministicToolReadFileChunk,
+    buildDeterministicToolApplyPatch,
     buildDeterministicToolVerify,
     tryGetRagContext,
     runRouterDirectTurn,
@@ -361,6 +388,10 @@ function createChatPrepareTool(deps = {}) {
           buildDeterministicToolRunTests,
           buildDeterministicToolReadFile,
           buildDeterministicToolWriteFile,
+          buildDeterministicToolListFiles,
+          buildDeterministicToolSearchCode,
+          buildDeterministicToolReadFileChunk,
+          buildDeterministicToolApplyPatch,
           buildDeterministicToolVerify
         }
       });

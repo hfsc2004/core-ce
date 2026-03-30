@@ -268,6 +268,10 @@ const {
   buildDeterministicToolRunTests,
   buildDeterministicToolReadFile,
   buildDeterministicToolWriteFile,
+  buildDeterministicToolListFiles,
+  buildDeterministicToolSearchCode,
+  buildDeterministicToolReadFileChunk,
+  buildDeterministicToolApplyPatch,
   buildDeterministicToolVerify,
   applyRouterRewriteToHistory,
   getEffectiveUserMessage
@@ -279,6 +283,10 @@ const cliAgentTools = createCliAgentTools({
   buildDeterministicToolRunTests,
   buildDeterministicToolReadFile,
   buildDeterministicToolWriteFile,
+  buildDeterministicToolListFiles,
+  buildDeterministicToolSearchCode,
+  buildDeterministicToolReadFileChunk,
+  buildDeterministicToolApplyPatch,
   buildDeterministicToolVerify
 });
 cliAgentPostProcessHook = cliAgentTools.postProcessAssistantText;
@@ -362,6 +370,10 @@ const chatPrepareTool = createChatPrepareTool({
   buildDeterministicToolRunTests,
   buildDeterministicToolReadFile,
   buildDeterministicToolWriteFile,
+  buildDeterministicToolListFiles,
+  buildDeterministicToolSearchCode,
+  buildDeterministicToolReadFileChunk,
+  buildDeterministicToolApplyPatch,
   buildDeterministicToolVerify,
   tryGetRagContext,
   runRouterDirectTurn,

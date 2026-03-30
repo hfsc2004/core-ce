@@ -222,6 +222,42 @@ function buildDeterministicEntries({ message, projectPath, builders = {} } = {})
       build: () => builders.buildDeterministicToolWriteFile?.({ message, projectPath })
     },
     {
+      key: 'tool.list_files',
+      category: 'tool',
+      priority: 325,
+      reason: 'deterministic-tool-list-files',
+      modelName: 'deterministic-tool-list-files',
+      mode: 'inspect',
+      build: () => builders.buildDeterministicToolListFiles?.({ message, projectPath })
+    },
+    {
+      key: 'tool.search_code',
+      category: 'tool',
+      priority: 326,
+      reason: 'deterministic-tool-search-code',
+      modelName: 'deterministic-tool-search-code',
+      mode: 'inspect',
+      build: () => builders.buildDeterministicToolSearchCode?.({ message, projectPath })
+    },
+    {
+      key: 'tool.read_file_chunk',
+      category: 'tool',
+      priority: 327,
+      reason: 'deterministic-tool-read-file-chunk',
+      modelName: 'deterministic-tool-read-file-chunk',
+      mode: 'inspect',
+      build: () => builders.buildDeterministicToolReadFileChunk?.({ message, projectPath })
+    },
+    {
+      key: 'tool.apply_patch',
+      category: 'tool',
+      priority: 328,
+      reason: 'deterministic-tool-apply-patch',
+      modelName: 'deterministic-tool-apply-patch',
+      mode: 'generate',
+      build: () => builders.buildDeterministicToolApplyPatch?.({ message, projectPath })
+    },
+    {
       key: 'tool.verify',
       category: 'tool',
       priority: 330,

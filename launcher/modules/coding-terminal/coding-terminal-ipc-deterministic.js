@@ -128,6 +128,10 @@ function createDeterministicHelpers(deps = {}) {
     buildDeterministicToolRunTests: toolHelpers.buildDeterministicToolRunTests,
     buildDeterministicToolReadFile: toolHelpers.buildDeterministicToolReadFile,
     buildDeterministicToolWriteFile: toolHelpers.buildDeterministicToolWriteFile,
+    buildDeterministicToolListFiles: toolHelpers.buildDeterministicToolListFiles,
+    buildDeterministicToolSearchCode: toolHelpers.buildDeterministicToolSearchCode,
+    buildDeterministicToolReadFileChunk: toolHelpers.buildDeterministicToolReadFileChunk,
+    buildDeterministicToolApplyPatch: toolHelpers.buildDeterministicToolApplyPatch,
     buildDeterministicToolVerify: toolHelpers.buildDeterministicToolVerify,
     applyRouterRewriteToHistory,
     getEffectiveUserMessage
