@@ -1,7 +1,7 @@
 /**
  * ollama-manager-macos-intel.js
  * macOS Intel Platform-Specific Implementation
- * Version: 1.1.2 - January 13, 2026
+ * Version: 1.1.3 - January 13, 2026
  * 
  * SESSION-MANAGER INTEGRATION:
  * - session-manager.js is the BMOC (sole authority) for all sessions

@@ -1,5 +1,5 @@
 #!/bin/bash
-# @version 1.1.2 - March 5, 2026
+# @version 1.1.3 - March 5, 2026
 # @copyright 2026 Pseudo SF
 # Pseudo Science Fiction Core Collection - Python WebUI Builder (macOS)
 # This script creates a portable Python venv with Open WebUI pre-installed

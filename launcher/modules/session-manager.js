@@ -1,5 +1,5 @@
 // session-manager.js
-// Version: 1.1.2
+// Version: 1.1.3
 
 const createSessionGpuMonitor = require('./session-manager-gpu-monitor');
 const {

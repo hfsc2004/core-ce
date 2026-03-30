@@ -2,7 +2,7 @@
  * Settings Modal - modal lifecycle/core behavior
  * Extracted from settings-modal.js to reduce monolith size.
  *
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 async function showSettingsModal(initialTab = 'huggingface') {

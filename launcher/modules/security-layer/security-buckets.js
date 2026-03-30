@@ -8,7 +8,7 @@
  * PSF_BUCKET_SECURITY_ENFORCE=true.
  *
  * @module security-buckets
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * ============================================================================
  */
 

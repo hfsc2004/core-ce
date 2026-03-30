@@ -17,7 +17,7 @@
  *   - gguf tools binary is stored in<projectRoot>/binaries/gguf-tools/<platformTag>/llama-gguf-split[.exe]
  *
  * @module gguf-tools-builder
- * @version 1.1.2 - March 5, 2026-gguf-pathfix
+ * @version 1.1.3 - March 5, 2026-gguf-pathfix
  */
 
 const fs = require('fs');

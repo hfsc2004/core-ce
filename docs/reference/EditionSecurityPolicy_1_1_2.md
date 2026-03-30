@@ -1,4 +1,4 @@
-# Edition Security Policy (1.1.2)
+# Edition Security Policy (1.1.3)
 
 ## Purpose
 Prevent architecture drift and zombie code by documenting the authoritative edition/security behavior for current and future builds.

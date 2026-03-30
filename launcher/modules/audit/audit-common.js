@@ -2,7 +2,7 @@
  * PSF Audit - Dispatcher
  *
  * @module audit-common
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 let backend = null;

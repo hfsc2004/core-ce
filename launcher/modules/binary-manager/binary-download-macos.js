@@ -5,7 +5,7 @@
  * Downloads from ollama.com and extracts the binary
  * 
  * @module binary-download-macos
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * @changes FIXED: Properly extracts binary from Ollama-darwin.zip
  * @license SEE LICENSE.txt
  */

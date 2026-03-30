@@ -9,7 +9,7 @@
  * THEME INTEGRATION: Uses global CSS theme variables for colors
  * 
  * @module moe-pipeline-render
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * ============================================================================
  */
 

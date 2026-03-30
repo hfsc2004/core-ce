@@ -15,7 +15,7 @@
  * - May support universal binaries (fallback to 'macos' folder)
  * 
  * @module path-manager-macos-intel
- * @version 1.1.2 - March 5, 2026 (Platform Isolation Refactor)
+ * @version 1.1.3 - March 5, 2026 (Platform Isolation Refactor)
  * @license SEE LICENSE.txt
  */
 

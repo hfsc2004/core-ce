@@ -21,7 +21,7 @@
  *   5. Bundle everything into final product
  * 
  * @module compile-product-binaries
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const path = require('path');

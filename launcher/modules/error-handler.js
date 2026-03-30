@@ -16,7 +16,7 @@
  * - Inconsistent {success, message} formats
  * 
  * Author: Pseudo Science Fiction
- * Version: 1.1.2
+ * Version: 1.1.3
  * Created: December 21, 2025
  * 
  * USAGE EXAMPLES:

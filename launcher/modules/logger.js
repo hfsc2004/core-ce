@@ -15,7 +15,7 @@
  * USE THIS IN EVERY MODULE.
  * 
  * Author: Pseudo Science Fiction
- * Version: 1.1.2
+ * Version: 1.1.3
  * Created: December 21, 2025
  * Updated: December 30, 2025 - Added 100KB log file cap with auto-truncation
  * 

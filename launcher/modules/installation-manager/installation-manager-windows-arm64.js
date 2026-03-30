@@ -1,6 +1,6 @@
 /**
  * Installation Manager Windows ARM64 - Platform-specific implementation
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 const fs = require('fs');
 const path = require('path');

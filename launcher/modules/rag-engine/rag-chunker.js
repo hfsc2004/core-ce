@@ -3,7 +3,7 @@
  * Intelligent text splitting that respects code structure
  * 
  * @module rag-chunker
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const ragConfig = require('./rag-config');

@@ -2,7 +2,7 @@
  * PSF Inference Adapters - Common interface and registry (stub)
  *
  * @module adapter-common
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const adapters = {

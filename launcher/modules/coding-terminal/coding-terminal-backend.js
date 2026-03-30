@@ -3,7 +3,7 @@
  * Routes requests to appropriate handlers based on operation type
  * 
  * @module coding-terminal-backend
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const { ipcMain } = require('electron');

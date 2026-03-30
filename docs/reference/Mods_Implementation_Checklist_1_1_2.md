@@ -1,4 +1,4 @@
-# Mods Implementation Checklist (1.1.2, v1)
+# Mods Implementation Checklist (1.1.3, v1)
 
 ## Goal
 Implement a secure mod platform with edition-aware policy enforcement, then ship `voice-pack` as the first production mod.

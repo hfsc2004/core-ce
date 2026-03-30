@@ -1,4 +1,4 @@
-# Coding Terminal Cluster Pipeline Stubs (1.1.2)
+# Coding Terminal Cluster Pipeline Stubs (1.1.3)
 
 ## Purpose
 This document defines the cluster-ready stubs added to Coding Terminal so the current local implementation does not become dead-end code.

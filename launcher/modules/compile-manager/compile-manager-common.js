@@ -6,7 +6,7 @@
  * reducing monolithic file size.
  *
  * @module compile-manager-common
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 'use strict';

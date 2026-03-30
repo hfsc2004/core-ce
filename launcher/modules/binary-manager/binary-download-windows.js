@@ -5,7 +5,7 @@
  * Uses GitHub releases ZIP files for portable binaries (Cody's method)
  * 
  * @module binary-download-windows
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * @changes Uses GitHub ZIP extraction (Cody's method)
  *          Reads version from binary-versions.json
  * @license SEE LICENSE.txt

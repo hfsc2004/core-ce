@@ -7,7 +7,7 @@
  * - detectNVIDIA_Common() - nvidia-smi parsing (works on Windows + Linux)
  * 
  * @module gpu-detector-common
- * @version 1.1.2 - March 5, 2026 (Platform Isolation Refactor)
+ * @version 1.1.3 - March 5, 2026 (Platform Isolation Refactor)
  * @license SEE LICENSE.txt
  */
 

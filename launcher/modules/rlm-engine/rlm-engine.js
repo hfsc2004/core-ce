@@ -7,7 +7,7 @@
  * Uses deterministic tools + attachment store + model transport through deps.
  *
  * @module rlm-engine
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * ============================================================================
  */
 const {

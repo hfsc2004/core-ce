@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# @version 1.1.2 - March 5, 2026
+# @version 1.1.3 - March 5, 2026
 # @copyright 2026 Pseudo SF
 """
 MOJIBAKE FIXER - Python version

@@ -1,4 +1,4 @@
-# Deterministic Tooling Layer (v1.1.2)
+# Deterministic Tooling Layer (v1.1.3)
 
 ## Purpose
 

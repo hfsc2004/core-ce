@@ -18,7 +18,7 @@
  *   - ASAR encryption: Encrypt the entire app.asar archive
  * 
  * @module compile-obfuscator
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const { execSync } = require('child_process');

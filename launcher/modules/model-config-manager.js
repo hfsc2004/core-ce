@@ -2,7 +2,7 @@
  * MODEL CONFIG MANAGER
  * Backend module for Modelfile storage and Ollama registry integration
  * @module model-config-manager
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * @copyright 2026 Pseudo SF
  */
 

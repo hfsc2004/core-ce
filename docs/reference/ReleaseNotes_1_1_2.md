@@ -1,4 +1,4 @@
-# Release Notes - 1.1.2
+# Release Notes - 1.1.3
 
 ## Update Log - March 5, 2026
 

@@ -4,7 +4,7 @@
  * Exposes only the essential APIs needed for compiled Standard Edition products.
  * This is a subset of the full Core-CE preload.js.
  * 
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const { contextBridge, ipcRenderer } = require('electron');

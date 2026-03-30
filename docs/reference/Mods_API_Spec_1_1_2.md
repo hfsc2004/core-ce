@@ -1,6 +1,6 @@
-*Version: 1.1.2*
+*Version: 1.1.3*
 *Copyright © 2026 Pseudo SF*
-# Mods API Spec (1.1.2, v1)
+# Mods API Spec (1.1.3, v1)
 
 ## Purpose
 Define a pullable, removable mod system that supports:

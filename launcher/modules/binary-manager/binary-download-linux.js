@@ -4,7 +4,7 @@
  * Facade module that composes Linux download handlers.
  *
  * @module binary-download-linux
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const { downloadOllama, extractOllamaTarball } = require('./binary-download-linux-ollama');

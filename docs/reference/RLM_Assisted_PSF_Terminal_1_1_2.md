@@ -1,4 +1,4 @@
-# RLM Assisted Mode - PSF Terminal (v1.1.2)
+# RLM Assisted Mode - PSF Terminal (v1.1.3)
 
 ## Purpose
 

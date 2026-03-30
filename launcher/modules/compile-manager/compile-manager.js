@@ -5,7 +5,7 @@
  * Replaces index.js with explicit naming for better maintainability
  * 
  * @module compile-manager
- * @version 1.1.2 - March 5, 2026 (Explicit Naming Refactor)
+ * @version 1.1.3 - March 5, 2026 (Explicit Naming Refactor)
  * @license SEE LICENSE.txt
  */
 

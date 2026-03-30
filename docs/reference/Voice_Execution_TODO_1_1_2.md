@@ -1,4 +1,4 @@
-# Voice Execution TODO (1.1.2)
+# Voice Execution TODO (1.1.3)
 
 ## Goal
 Stabilize voice behavior across all chat surfaces, with focus on hot-mic prevention and consistent UX.

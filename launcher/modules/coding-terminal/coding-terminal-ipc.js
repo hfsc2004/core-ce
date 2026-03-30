@@ -1,7 +1,7 @@
 /**
  * PSF Coding Terminal IPC handler registration.
  * @module coding-terminal-ipc
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 const { ipcMain } = require('electron');
 const codingTerminalCommon = require('./coding-terminal-common');

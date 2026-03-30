@@ -2,7 +2,7 @@
  * MODEL CONFIGURATION (MODELFILE EDITION)
  * Per-model configuration using Ollama's native Modelfile format.
  * @module model-config
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const DEFAULT_PARAMS = {

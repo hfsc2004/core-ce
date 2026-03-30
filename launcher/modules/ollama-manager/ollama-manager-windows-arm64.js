@@ -1,7 +1,7 @@
 /**
  * ollama-manager-windows-arm64.js
  * Windows ARM64 Platform-Specific Implementation
- * Version: 1.1.2 - January 13, 2026
+ * Version: 1.1.3 - January 13, 2026
  * 
  * SESSION-MANAGER INTEGRATION:
  * - session-manager.js is the BMOC (sole authority) for all sessions

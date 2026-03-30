@@ -4,7 +4,7 @@
  * STUB - Full implementation for DC bare metal deployment
  * 
  * @module cluster-coordinator
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const protocol = require('./cluster-protocol');

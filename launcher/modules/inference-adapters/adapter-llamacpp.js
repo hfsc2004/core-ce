@@ -2,7 +2,7 @@
  * PSF Inference Adapter - llama.cpp (stub wrapper)
  *
  * @module adapter-llamacpp
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const llamaCppManager = require('../llama-cpp-manager');

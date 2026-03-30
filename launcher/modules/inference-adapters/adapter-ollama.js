@@ -2,7 +2,7 @@
  * PSF Inference Adapter - Ollama (stub wrapper)
  *
  * @module adapter-ollama
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const ollamaManager = require('../ollama-manager/ollama-manager');

@@ -1,7 +1,7 @@
 /**
  * Pseudo Science Fiction Core Collection - WebUI Manager Windows x64
  * Platform-specific implementation for Windows x64 systems
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const { BrowserWindow } = require('electron');

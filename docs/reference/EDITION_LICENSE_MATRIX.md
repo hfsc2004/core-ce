@@ -8,19 +8,19 @@ Use these labels consistently in UI, packaging, docs, and telemetry.
 
 1. Core-CE (free/open)
 - Display: `Core v<version> CORE-CE`
-- Example: `Core v1.1.2 CORE-CE`
+- Example: `Core v1.1.3 CORE-CE`
 - License: Apache-2.0
 - Purpose: open enterprise baseline, community use, self-hosted operation.
 
 2. Community Subscription (commercial)
 - Display: `Core v<version> COMMUNITY SUBSCRIPTION`
-- Example: `Core v1.1.2 COMMUNITY SUBSCRIPTION`
+- Example: `Core v1.1.3 COMMUNITY SUBSCRIPTION`
 - License: Commercial EULA
 - Purpose: supported enterprise distribution, SLA/support channels, commercial features.
 
 3. Secure Enterprise Profile (hardened/compliance)
 - Display: `Core v<version> CORE-CE`
-- Example: `Core v1.1.2 CORE-CE`
+- Example: `Core v1.1.3 CORE-CE`
 - License: Commercial EULA + policy/compliance controls
 - Purpose: hardened profile for compliance-oriented deployments.
 

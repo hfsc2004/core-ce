@@ -1,7 +1,7 @@
 /**
  * Model ordering actions (save/launch/download/delete/verify).
  * @module model-ordering-actions
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 function moEscapeHtml(value) {

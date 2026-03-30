@@ -7,7 +7,7 @@
  * Provides role-to-endpoint mapping, health-aware selection, and failover.
  *
  * @module moe-endpoint-registry
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * @license SEE LICENSE.txt
  * ============================================================================
  */

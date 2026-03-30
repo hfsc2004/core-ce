@@ -2,7 +2,7 @@
  * Settings Modal - Namespace API surface
  * Keeps inline handlers and external callers on a single object.
  *
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const __modsNoopAsync = async () => {};

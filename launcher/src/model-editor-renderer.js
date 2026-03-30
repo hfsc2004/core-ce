@@ -4,7 +4,7 @@
  * Handles form population, validation, API fetches, and submission.
  * 
  * @module model-editor-renderer
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * @changes Merged model mappings from ollama-name-helper.js (now deprecated)
  * @license SEE LICENSE.txt
  */

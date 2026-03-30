@@ -1,7 +1,7 @@
 /**
  * PSF Offline Archive Collection - File Structure
  * Companion file: ProjectFiles_1_1_2.md for detailed descriptions
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 /{project root}
@@ -3248,4 +3248,4 @@
   - webui-debug.log
   - WorkspaceGitControls.md
 
-*Version: 1.1.2*
+*Version: 1.1.3*

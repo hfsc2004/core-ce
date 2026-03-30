@@ -1,4 +1,4 @@
-# MoE/IRG Gateway USB + Serial Flow (v1.1.2)
+# MoE/IRG Gateway USB + Serial Flow (v1.1.3)
 
 ## What Was Added
 

@@ -1,7 +1,7 @@
 /**
  * ollama-manager-linux-x64.js
  * Linux x64 Platform-Specific Implementation
- * Version: 1.1.2 - January 13, 2026
+ * Version: 1.1.3 - January 13, 2026
  *
  * MULTI-INSTANCE ARCHITECTURE:
  * Each terminal window gets its own Ollama server on its own port.

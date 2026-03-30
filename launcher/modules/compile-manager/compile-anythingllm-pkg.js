@@ -15,7 +15,7 @@
  * Paired with portable Node.js binary for zero-dependency execution.
  * 
  * @module compile-anythingllm-pkg
- * @version 1.1.2 - March 5, 2026 - Portable Node.js + archive approach (replaces ncc → pkg)
+ * @version 1.1.3 - March 5, 2026 - Portable Node.js + archive approach (replaces ncc → pkg)
  */
 
 const { execSync } = require('child_process');

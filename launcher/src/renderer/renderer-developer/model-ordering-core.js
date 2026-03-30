@@ -8,7 +8,7 @@
  * navigation, and style helpers are in model-ordering-core-helpers.js.
  *
  * @module model-ordering-core
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * ============================================================================
  */
 

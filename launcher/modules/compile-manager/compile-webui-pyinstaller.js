@@ -16,7 +16,7 @@
  *   dist/open_webui_launcher.dist/open-webui
  * 
  * @module compile-webui-pyinstaller
- * @version 1.1.2 - March 5, 2026 - February 2026
+ * @version 1.1.3 - March 5, 2026 - February 2026
  */
 
 const { spawn, execSync } = require('child_process');

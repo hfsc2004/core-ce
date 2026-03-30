@@ -1,4 +1,4 @@
-# Security And Cluster Stub Roadmap (1.1.2)
+# Security And Cluster Stub Roadmap (1.1.3)
 
 See also: EditionSecurityPolicy_1_1_2.md (authoritative edition/security matrix).
 

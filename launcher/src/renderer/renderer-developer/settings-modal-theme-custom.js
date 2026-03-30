@@ -2,7 +2,7 @@
  * Settings Modal - Theme custom profile persistence/actions
  * Split from settings-modal-theme.js to keep modules focused.
  *
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 function getThemeStorageSM() {

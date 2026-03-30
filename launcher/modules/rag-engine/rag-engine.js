@@ -3,7 +3,7 @@
  * Vector-based code context retrieval for AI-assisted coding
  * 
  * @module rag-engine
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const ragConfig = require('./rag-config');

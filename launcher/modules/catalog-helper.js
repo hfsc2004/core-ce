@@ -7,7 +7,7 @@
  * All functions kept under 50 lines for maintainability.
  * 
  * Author: Pseudo Science Fiction
- * Version: 1.1.2 (Refactored)
+ * Version: 1.1.3 (Refactored)
  * ============================================================================
  */
 

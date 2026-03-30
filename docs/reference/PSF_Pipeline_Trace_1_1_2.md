@@ -1,5 +1,5 @@
 # PSF Offline Archive Collection - Complete Pipeline Trace
-## Version 1.1.2 | March 5, 2026
+## Version 1.1.3 | March 5, 2026
 
 ---
 
@@ -593,7 +593,7 @@ gguf-tools-builder.js          7.5K   llama-gguf-split builder
 
 ## Port Management System
 
-### Port Ranges (v1.1.2)
+### Port Ranges (v1.1.3)
 
 ```
 STANDARD POOLS:
@@ -1122,5 +1122,5 @@ PSF.png                       8.5K
 ---
 
 *Document generated: January 27, 2026*
-*Version: 1.1.2*
+*Version: 1.1.3*
 *PSF Offline Archive Collection*

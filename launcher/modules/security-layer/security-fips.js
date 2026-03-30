@@ -5,7 +5,7 @@
  * It exists to establish interface contracts for future certified builds.
  *
  * @module security-fips
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const crypto = require('crypto');

@@ -10,7 +10,7 @@
  * - No chmod operations (Windows doesn't use Unix permissions)
  * 
  * @module compile-manager-windows-x64
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * @date December 22, 2025
  */
 

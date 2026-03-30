@@ -7,7 +7,7 @@
  * These are designed for small models to call reliably.
  *
  * @module deterministic-tools-pack-common
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * ============================================================================
  */
 

@@ -17,7 +17,7 @@
  * - Safe for multiple concurrent services
  * 
  * @module port-pool
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * @license SEE LICENSE.txt
  * ============================================================================
  */

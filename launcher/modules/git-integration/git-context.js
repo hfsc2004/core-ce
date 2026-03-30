@@ -3,7 +3,7 @@
  * Extract git context for RAG augmentation
  * 
  * @module git-context
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const gitOperations = require('./git-operations');

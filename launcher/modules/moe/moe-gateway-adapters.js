@@ -7,7 +7,7 @@
  * Current implementation focuses on USB/serial discovery and source resolution.
  *
  * @module moe-gateway-adapters
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * ============================================================================
  */
 

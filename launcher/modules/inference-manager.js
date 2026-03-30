@@ -6,7 +6,7 @@
  * to switch to llama.cpp backend.
  *
  * @module inference-manager
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  */
 
 const settingsManager = require('./settings-manager');

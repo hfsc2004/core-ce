@@ -1,6 +1,6 @@
-*Version: 1.1.2*
+*Version: 1.1.3*
 *Copyright © 2026 Pseudo SF*
-# Mods Security Profiles Matrix (1.1.2, v1)
+# Mods Security Profiles Matrix (1.1.3, v1)
 
 ## Purpose
 Define mod security posture by edition/profile, with clear enforcement for enterprise and maximum-security government/DoD environments.

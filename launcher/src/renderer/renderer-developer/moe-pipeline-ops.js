@@ -10,7 +10,7 @@
  * This module stores collectionKey/filename so deployment can find local GGUFs.
  * 
  * @module moe-pipeline-ops
- * @version 1.1.2 - March 5, 2026
+ * @version 1.1.3 - March 5, 2026
  * ============================================================================
  */
 
