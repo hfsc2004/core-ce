@@ -63,7 +63,28 @@ function buildSerialPortOptions(serialPorts, selectedPort) {
   return options.join('');
 }
 
+function getMoeItemCanvasStyle(item, index) {
+  const graphMode = window.modelOrderingState?.moeGraphMode === true;
+  if (!graphMode) return '';
+  if (!item || typeof item !== 'object') return '';
+  const existing = item.canvasPos && typeof item.canvasPos === 'object' ? item.canvasPos : null;
+  let x = Number(existing?.x);
+  let y = Number(existing?.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    const col = Number(index) % 3;
+    const row = Math.floor(Number(index) / 3);
+    x = 24 + (col * 280);
+    y = 18 + (row * 150);
+    item.canvasPos = { x, y };
+  }
+  x = Math.max(8, Math.round(x));
+  y = Math.max(8, Math.round(y));
+  item.canvasPos = { x, y };
+  return `position:absolute; left:${x}px; top:${y}px; width:260px; max-width:260px;`;
+}
+
 window.notifyMoeComingSoon = notifyMoeComingSoon;
 window.escapeBinding = escapeBinding;
 window.serializeRoutingRules = serializeRoutingRules;
 window.buildSerialPortOptions = buildSerialPortOptions;
+window.getMoeItemCanvasStyle = getMoeItemCanvasStyle;

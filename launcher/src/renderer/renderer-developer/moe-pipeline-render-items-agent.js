@@ -11,6 +11,9 @@ function renderAgentRow(agent, index, modelsForDropdown) {
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
   const provider = String(agent.provider || '').trim().toLowerCase() === 'llama.cpp' ? 'llama.cpp' : 'ollama';
+  const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
+    ? window.getMoeItemCanvasStyle(agent, index)
+    : '';
   const filteredModels = (Array.isArray(modelsForDropdown) ? modelsForDropdown : []).filter((m) => {
     const runtimes = Array.isArray(m?.runtimes) ? m.runtimes.map((value) => String(value || '').trim().toLowerCase()) : [];
     const hasOllamaRuntime = runtimes.includes('ollama') || String(m?.ollamaModel || '').trim().length > 0;
@@ -26,9 +29,10 @@ function renderAgentRow(agent, index, modelsForDropdown) {
     <div class="moe-item moe-agent ${isExpanded ? 'expanded' : ''}"
          data-moe-id="${agent.id}" data-moe-type="agent" data-index="${index}"
          ${editMode ? `draggable="true" ondragstart="handleMoeDragStart(event, '${agent.id}')" ondragend="handleMoeDragEnd(event)"` : ''}
+         onmousedown="beginMoeCanvasDrag(event, '${agent.id}')"
          onclick="handleMoeItemClick(event, '${agent.id}')"
          style="background: ${theme.accentLight}; border: 2px solid ${theme.accent}; border-radius: 8px; padding: 12px 15px;
-                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!agent.enabled ? 'opacity: 0.5;' : ''}">
+                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!agent.enabled ? 'opacity: 0.5;' : ''} ${canvasStyle}">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span onclick="event.stopPropagation(); toggleMoeExpand('${agent.id}')"
               style="color: ${theme.accent}; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>

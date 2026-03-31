@@ -140,6 +140,10 @@ function toggleMoeExpand(itemId) {
 }
 
 function handleMoeItemClick(event, itemId) {
+  if (window.__moeCanvasDidDrag === true) {
+    window.__moeCanvasDidDrag = false;
+    return;
+  }
   const target = event?.target;
   if (target?.closest?.('.drag-handle')) {
     return;
@@ -148,6 +152,74 @@ function handleMoeItemClick(event, itemId) {
     return;
   }
   toggleMoeExpand(itemId);
+}
+
+function isMoeGraphModeEnabled() {
+  return window.modelOrderingState?.moeGraphMode === true;
+}
+
+function toggleMoeGraphMode() {
+  if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return;
+  window.modelOrderingState.moeGraphMode = !isMoeGraphModeEnabled();
+  renderModelOrdering();
+}
+
+function beginMoeCanvasDrag(event, itemId) {
+  if (!isMoeGraphModeEnabled()) return;
+  if (!event || event.button !== 0) return;
+  const target = event.target;
+  if (target?.closest?.('input, textarea, select, button, label, [contenteditable]:not([contenteditable="false"])')) return;
+
+  const cardEl = event.currentTarget;
+  if (!(cardEl instanceof HTMLElement)) return;
+  const item = (window.modelOrderingState?.moeItems || []).find((entry) => entry?.id === itemId);
+  if (!item) return;
+
+  const root = cardEl.closest('.psf-relay-synth-root');
+  const scale = (() => {
+    if (!(root instanceof HTMLElement)) return 1;
+    const rect = root.getBoundingClientRect();
+    const width = Number(root.offsetWidth || 0);
+    if (!width || !rect.width) return 1;
+    const s = rect.width / width;
+    return Number.isFinite(s) && s > 0 ? s : 1;
+  })();
+
+  const pos = item.canvasPos && typeof item.canvasPos === 'object'
+    ? item.canvasPos
+    : { x: Number(cardEl.style.left?.replace('px', '')) || 8, y: Number(cardEl.style.top?.replace('px', '')) || 8 };
+  item.canvasPos = { x: Number(pos.x) || 8, y: Number(pos.y) || 8 };
+
+  const startX = Number(event.clientX || 0);
+  const startY = Number(event.clientY || 0);
+  const originX = item.canvasPos.x;
+  const originY = item.canvasPos.y;
+  window.__moeCanvasDidDrag = false;
+
+  const move = (moveEvent) => {
+    const dx = (Number(moveEvent.clientX || 0) - startX) / scale;
+    const dy = (Number(moveEvent.clientY || 0) - startY) / scale;
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      window.__moeCanvasDidDrag = true;
+    }
+    const nextX = Math.max(8, Math.round(originX + dx));
+    const nextY = Math.max(8, Math.round(originY + dy));
+    item.canvasPos = { x: nextX, y: nextY };
+    cardEl.style.left = `${nextX}px`;
+    cardEl.style.top = `${nextY}px`;
+  };
+
+  const up = () => {
+    window.removeEventListener('mousemove', move, true);
+    window.removeEventListener('mouseup', up, true);
+    if (window.__moeCanvasDidDrag) {
+      renderModelOrdering();
+      setTimeout(() => { window.__moeCanvasDidDrag = false; }, 0);
+    }
+  };
+
+  window.addEventListener('mousemove', move, true);
+  window.addEventListener('mouseup', up, true);
 }
 
 function toggleMoeItemEnabled(itemId, enabled) {
@@ -259,3 +331,5 @@ window.handleMoeItemClick = handleMoeItemClick;
 window.toggleMoeItemEnabled = toggleMoeItemEnabled;
 window.updateCliAgentConfig = updateCliAgentConfig;
 window.pickCliAgentProjectPath = pickCliAgentProjectPath;
+window.toggleMoeGraphMode = toggleMoeGraphMode;
+window.beginMoeCanvasDrag = beginMoeCanvasDrag;

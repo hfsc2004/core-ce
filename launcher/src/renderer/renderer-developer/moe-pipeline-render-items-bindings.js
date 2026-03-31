@@ -11,14 +11,18 @@ function renderBindingsRow(bindings, index) {
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
   const entries = Array.isArray(bindings.entries) ? bindings.entries : [];
+  const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
+    ? window.getMoeItemCanvasStyle(bindings, index)
+    : '';
 
   return `
     <div class="moe-item moe-bindings ${isExpanded ? 'expanded' : ''}"
          data-moe-id="${bindings.id}" data-moe-type="bindings" data-index="${index}"
          ${editMode && !isExpanded ? `draggable="true" ondragstart="handleMoeDragStart(event, '${bindings.id}')" ondragend="handleMoeDragEnd(event)"` : ''}
+         onmousedown="beginMoeCanvasDrag(event, '${bindings.id}')"
          onclick="handleMoeItemClick(event, '${bindings.id}')"
          style="background: rgba(255,255,255,0.06); border: 2px solid #bbb; border-radius: 8px; padding: 12px 15px;
-                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!bindings.enabled ? 'opacity: 0.5;' : ''}">
+                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!bindings.enabled ? 'opacity: 0.5;' : ''} ${canvasStyle}">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span onclick="event.stopPropagation(); toggleMoeExpand('${bindings.id}')"
               style="color: #ddd; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>

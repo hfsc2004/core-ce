@@ -11,13 +11,17 @@ function renderEndpointRegistryRow(registryItem, index) {
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
   const state = ensureEndpointRegistryRenderState();
+  const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
+    ? window.getMoeItemCanvasStyle(registryItem, index)
+    : '';
   return `
     <div class="moe-item moe-endpoint-registry ${isExpanded ? 'expanded' : ''}"
          data-moe-id="${registryItem.id}" data-moe-type="endpoint_registry" data-index="${index}"
          ${editMode ? `draggable="true" ondragstart="handleMoeDragStart(event, '${registryItem.id}')" ondragend="handleMoeDragEnd(event)"` : ''}
+         onmousedown="beginMoeCanvasDrag(event, '${registryItem.id}')"
          onclick="handleMoeItemClick(event, '${registryItem.id}')"
          style="background: rgba(79,70,229,0.12); border: 2px solid rgba(129,140,248,0.8); border-radius: 8px; padding: 12px 15px;
-                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!registryItem.enabled ? 'opacity: 0.5;' : ''}">
+                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!registryItem.enabled ? 'opacity: 0.5;' : ''} ${canvasStyle}">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span onclick="event.stopPropagation(); toggleMoeExpand('${registryItem.id}')"
               style="color: #a5b4fc; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>

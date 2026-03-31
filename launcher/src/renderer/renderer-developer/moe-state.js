@@ -56,6 +56,7 @@ window.modelOrderingState = {
   moeDeployStatusSummary: 'IDLE',
   moeDeployLogLines: [],
   moeDeployFrameState: 'idle',
+  moeGraphMode: false,
   
   // MoE Model Filter
   showAllModels: false  // false = downloaded only, true = show full catalog

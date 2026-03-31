@@ -327,6 +327,7 @@ async function getMoePipelineStatus() {
 // ============================================================================
 
 function handleMoeDragStart(event, itemId) {
+  if (window.modelOrderingState?.moeGraphMode === true) return;
   window.modelOrderingState.draggedItem = itemId;
   event.dataTransfer.effectAllowed = 'move';
   event.dataTransfer.setData('text/plain', itemId);
@@ -339,11 +340,13 @@ function handleMoeDragEnd(event) {
 }
 
 function handleMoeDragOver(event) {
+  if (window.modelOrderingState?.moeGraphMode === true) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = 'move';
 }
 
 function handleMoeDrop(event) {
+  if (window.modelOrderingState?.moeGraphMode === true) return;
   event.preventDefault();
   const draggedId = window.modelOrderingState.draggedItem;
   if (!draggedId) return;

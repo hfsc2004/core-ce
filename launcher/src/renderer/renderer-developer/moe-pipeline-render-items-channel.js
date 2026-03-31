@@ -16,6 +16,9 @@ function renderChannelRow(channel, index) {
   const retryCount = Number.isInteger(Number(channel.retryCount)) ? Number(channel.retryCount) : 0;
   const timeoutMs = Number.isFinite(Number(channel.timeoutMs)) ? Number(channel.timeoutMs) : 120000;
   const onFailure = channel.onFailure === 'continue' ? 'continue' : 'stop';
+  const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
+    ? window.getMoeItemCanvasStyle(channel, index)
+    : '';
   const fromAgentId = String(channel.fromAgentId || '');
   const toAgentId = String(channel.toAgentId || '');
   const groupId = String(channel.groupId || '');
@@ -63,9 +66,10 @@ function renderChannelRow(channel, index) {
   return `
     <div class="moe-item moe-channel ${isExpanded ? 'expanded' : ''}" data-moe-id="${channel.id}" data-moe-type="channel" data-index="${index}"
          ${editMode ? `draggable="true" ondragstart="handleMoeDragStart(event, '${channel.id}')" ondragend="handleMoeDragEnd(event)"` : ''}
+         onmousedown="beginMoeCanvasDrag(event, '${channel.id}')"
          onclick="handleMoeItemClick(event, '${channel.id}')"
          style="background: rgba(255,165,0,0.08); border: 2px dashed #ffa500; border-radius: 6px; padding: 8px 15px;
-                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!channel.enabled ? 'opacity: 0.5;' : ''}">
+                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!channel.enabled ? 'opacity: 0.5;' : ''} ${canvasStyle}">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span onclick="event.stopPropagation(); toggleMoeExpand('${channel.id}')"
               style="color: #ffa500; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>

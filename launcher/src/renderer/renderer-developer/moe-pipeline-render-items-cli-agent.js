@@ -15,14 +15,18 @@ function renderCliAgentRow(cliAgent, index) {
   const enabledHooks = ['runCommand', 'writeFile', 'runTests', 'gitDiff', 'flashFirmware']
     .filter((key) => hooks[key] === true).length;
   const theme = getMoeTheme();
+  const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
+    ? window.getMoeItemCanvasStyle(cliAgent, index)
+    : '';
 
   return `
     <div class="moe-item moe-cli-agent ${isExpanded ? 'expanded' : ''}"
          data-moe-id="${cliAgent.id}" data-moe-type="cli_agent" data-index="${index}"
          ${editMode ? `draggable="true" ondragstart="handleMoeDragStart(event, '${cliAgent.id}')" ondragend="handleMoeDragEnd(event)"` : ''}
+         onmousedown="beginMoeCanvasDrag(event, '${cliAgent.id}')"
          onclick="handleMoeItemClick(event, '${cliAgent.id}')"
          style="background: rgba(188,140,255,0.12); border: 2px solid #bc8cff; border-radius: 8px; padding: 12px 15px;
-                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!cliAgent.enabled ? 'opacity: 0.5;' : ''}">
+                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!cliAgent.enabled ? 'opacity: 0.5;' : ''} ${canvasStyle}">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span onclick="event.stopPropagation(); toggleMoeExpand('${cliAgent.id}')"
               style="color:#bc8cff; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>

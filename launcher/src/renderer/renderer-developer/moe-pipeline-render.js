@@ -128,6 +128,7 @@ function renderMoePipeline() {
     : [];
   const deployDirty = window.modelOrderingState?.moePostDeployDirty === true;
   const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
+  const graphMode = window.modelOrderingState?.moeGraphMode === true;
   const frameBorderColor = deployFrameState === 'active'
     ? '#22c55e'
     : (deployFrameState === 'stopping' || deployFrameState === 'error' ? '#ef4444' : '#6b7280');
@@ -271,7 +272,9 @@ function renderMoePipeline() {
   return `
     <div id="moe-pipeline-frame" class="psf-relay-synth-frame"
          style="border:1px solid ${frameBorderColor}; box-shadow:${frameShadow}; border-radius:10px; padding:10px 12px 12px; transition:border-color 220ms ease, box-shadow 220ms ease; display:flex; flex-direction:column; max-height:min(72vh, 860px);">
-      <div class="psf-relay-synth-list" style="display: flex; flex-direction: column; gap: 4px; overflow-y:auto; padding-right:6px; min-height:260px; flex:1 1 auto;"
+      <div class="psf-relay-synth-list ${graphMode ? 'graph-mode' : 'list-mode'}" style="${graphMode
+        ? 'display:block; position:relative; overflow:auto; padding-right:6px; min-height:760px; flex:1 1 auto;'
+        : 'display:flex; flex-direction:column; gap:4px; overflow-y:auto; padding-right:6px; min-height:260px; flex:1 1 auto;'}"
            id="moe-pipeline-list"
            ondragover="handleMoeDragOver(event)"
            ondrop="handleMoeDrop(event)">

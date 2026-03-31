@@ -11,14 +11,18 @@ function renderGatewayRow(gateway, index) {
   const expandIcon = isExpanded ? '▼' : '▶';
   const enabledSources = Object.values(gateway.sources).filter(s => s.enabled).length;
   const theme = getMoeTheme();
+  const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
+    ? window.getMoeItemCanvasStyle(gateway, index)
+    : '';
   
   return `
     <div class="moe-item moe-gateway ${isExpanded ? 'expanded' : ''}"
          data-moe-id="${gateway.id}" data-moe-type="gateway" data-index="${index}"
          ${editMode ? `draggable="true" ondragstart="handleMoeDragStart(event, '${gateway.id}')" ondragend="handleMoeDragEnd(event)"` : ''}
+         onmousedown="beginMoeCanvasDrag(event, '${gateway.id}')"
          onclick="handleMoeItemClick(event, '${gateway.id}')"
          style="background: rgba(0,255,136,0.1); border: 2px solid ${theme.success}; border-radius: 8px; padding: 12px 15px;
-                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!gateway.enabled ? 'opacity: 0.5;' : ''}">
+                cursor: ${editMode ? 'grab' : 'pointer'}; transition: all 0.15s ease; ${!gateway.enabled ? 'opacity: 0.5;' : ''} ${canvasStyle}">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span onclick="event.stopPropagation(); toggleMoeExpand('${gateway.id}')" 
               style="color: ${theme.success}; cursor: pointer; user-select: none; font-size: 10px; width: 15px;">${expandIcon}</span>

@@ -71,6 +71,7 @@ if (!window.modelOrderingState) {
     moeDeployStatusSummary: 'IDLE',
     moeDeployLogLines: [],
     moeDeployFrameState: 'idle',
+    moeGraphMode: false,
     
     // MoE Model Filter
     showAllModels: false

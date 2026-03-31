@@ -145,6 +145,7 @@ function renderModelOrdering() {
   const { scopeMode, selectedModels, editMode } = window.modelOrderingState;
   const theme = getMoeTheme();
   const isPipelineMode = scopeMode === 'pipeline';
+  const graphModeOn = window.modelOrderingState?.moeGraphMode === true;
   const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
   const pipelineStatusDisplay = deployFrameState === 'active'
     ? '<span class="moe-status-line" style="color:#22c55e;">[RUNNING]</span><span class="moe-status-tail moe-status-tail-running" aria-hidden="true"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>'
@@ -153,7 +154,7 @@ function renderModelOrdering() {
       : '<span class="moe-status-line"><span style="color:#38bdf8;">[</span><span style="color:#6b7280;">IDLE</span><span style="color:#38bdf8;">]</span></span><span class="moe-status-tail moe-status-tail-idle" aria-hidden="true"><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span></span>');
 
   container.innerHTML = `
-    <div style="max-width: 1200px; position: relative; left: 50%; transform: translateX(-50%) scale(1.5); transform-origin: top center; width: calc(100% / 1.5);">
+    <div class="psf-relay-synth-root" style="max-width: 1200px; position: relative; left: 50%; transform: translateX(-50%) scale(1.5); transform-origin: top center; width: calc(100% / 1.5);">
 
       <!-- Controls Bar -->
       <div id="model-ordering-controls-bar" style="display:none; background: #161f2e; border: 1px solid rgba(88,166,255,0.22); border-radius: 6px; padding: 15px; margin-bottom: 12px; position: sticky; top: 76px; z-index: 35;">
@@ -249,6 +250,10 @@ function renderModelOrdering() {
                         style="padding: 7px 12px; min-height: 32px; background: transparent; border: 1px solid ${theme.warning}; border-radius: 5px; color: ${theme.warning}; cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap;">
                   Reorder
                 </button>
+                <button onclick="toggleMoeGraphMode()"
+                        style="padding: 7px 12px; min-height: 32px; background: transparent; border: 1px solid ${graphModeOn ? '#57e29d' : '#7fb5ff'}; border-radius: 5px; color: ${graphModeOn ? '#8df2bf' : '#a8ccff'}; cursor: pointer; font-size: 11px; font-weight: 600; white-space: nowrap;">
+                  Graph ${graphModeOn ? 'ON' : 'OFF'}
+                </button>
                 <span id="moe-pipeline-status-indicator"
                       style="padding: 7px 4px; min-height: 32px; display: inline-flex; align-items: center; font-size: 21px; font-weight: 700; white-space: nowrap; letter-spacing: 0.04em; line-height: 1; align-self: center;">
                   ${pipelineStatusDisplay}
@@ -295,6 +300,28 @@ function renderModelOrdering() {
     actionsBar.style.justifyContent = 'flex-start';
     actionsBar.style.flexWrap = 'wrap';
     headerControls.appendChild(actionsBar);
+    const actionButtons = actionsBar.querySelectorAll('button');
+    actionButtons.forEach((button) => {
+      button.classList.add('psf-synth-action-btn');
+      const label = String(button.textContent || '').toLowerCase();
+      if (button.id === 'moe-deploy-btn' || label.includes('deploy')) {
+        button.classList.add('psf-synth-action-btn-deploy');
+      } else if (button.id === 'moe-stop-btn' || label.includes('stop')) {
+        button.classList.add('psf-synth-action-btn-stop');
+      } else if (label.includes('open chat')) {
+        button.classList.add('psf-synth-action-btn-chat');
+      } else if (label.includes('save profile')) {
+        button.classList.add('psf-synth-action-btn-save');
+      } else if (label.includes('load profile')) {
+        button.classList.add('psf-synth-action-btn-load');
+      } else if (label.includes('delete profile')) {
+        button.classList.add('psf-synth-action-btn-delete');
+      } else if (label.includes('reorder')) {
+        button.classList.add('psf-synth-action-btn-reorder');
+      } else if (label.includes('graph')) {
+        button.classList.add('psf-synth-action-btn-chat');
+      }
+    });
   }
   if (typeof window.bindMoePostDeployChangeWatcher === 'function') {
     try { window.bindMoePostDeployChangeWatcher(); } catch (_) { /* no-op */ }
