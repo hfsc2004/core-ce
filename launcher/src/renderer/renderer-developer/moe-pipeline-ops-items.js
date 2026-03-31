@@ -207,6 +207,9 @@ function beginMoeCanvasDrag(event, itemId) {
     item.canvasPos = { x: nextX, y: nextY };
     cardEl.style.left = `${nextX}px`;
     cardEl.style.top = `${nextY}px`;
+    if (typeof window.refreshMoeGraphEdges === 'function') {
+      try { window.refreshMoeGraphEdges(); } catch (_) { /* no-op */ }
+    }
   };
 
   const up = () => {

@@ -278,6 +278,18 @@ function renderMoePipeline() {
            id="moe-pipeline-list"
            ondragover="handleMoeDragOver(event)"
            ondrop="handleMoeDrop(event)">
+        ${graphMode ? `
+        <svg id="moe-graph-edges" class="psf-relay-graph-edges" aria-hidden="true">
+          <defs>
+            <marker id="moe-edge-arrow-end" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L8,3.5 L0,7 z" fill="#86b8ff"></path>
+            </marker>
+            <marker id="moe-edge-arrow-start" markerWidth="9" markerHeight="7" refX="1" refY="3.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M8,0 L0,3.5 L8,7 z" fill="#86b8ff"></path>
+            </marker>
+          </defs>
+        </svg>
+        ` : ''}
         ${moeItems.map((item, index) => renderMoeItem(item, index, modelsForDropdown)).join('')}
       </div>
 
@@ -330,6 +342,123 @@ function renderMoePipeline() {
       </div>
     </div>
   `;
+}
+
+function getGraphSourceAgentId(channel, items, channelIndex) {
+  const explicit = String(channel?.fromAgentId || '').trim();
+  if (explicit) return explicit;
+  for (let i = channelIndex - 1; i >= 0; i -= 1) {
+    const item = items[i];
+    if (item?.type === 'agent' && item?.enabled !== false) return String(item.id || '').trim();
+  }
+  return '';
+}
+
+function getGraphTargetAgentIds(channel, items, sourceAgentId, channelIndex) {
+  const mode = String(channel?.mode || 'direct').trim().toLowerCase();
+  const enabledAgents = items.filter((item) => item?.type === 'agent' && item?.enabled !== false);
+  if (mode === 'broadcast') {
+    return enabledAgents
+      .map((agent) => String(agent.id || '').trim())
+      .filter((id) => id && id !== sourceAgentId);
+  }
+  if (mode === 'group') {
+    const groupId = String(channel?.groupId || '').trim();
+    if (!groupId) return [];
+    return enabledAgents
+      .filter((agent) => Array.isArray(agent.groups) && agent.groups.map((g) => String(g || '').trim()).includes(groupId))
+      .map((agent) => String(agent.id || '').trim())
+      .filter((id) => id && id !== sourceAgentId);
+  }
+  const explicit = String(channel?.toAgentId || '').trim();
+  if (explicit) return [explicit];
+  for (let i = channelIndex + 1; i < items.length; i += 1) {
+    const item = items[i];
+    if (item?.type === 'agent' && item?.enabled !== false) {
+      const id = String(item.id || '').trim();
+      if (id && id !== sourceAgentId) return [id];
+      break;
+    }
+  }
+  return [];
+}
+
+function getGraphAnchor(el, side) {
+  const left = Number(el.offsetLeft || 0);
+  const top = Number(el.offsetTop || 0);
+  const width = Number(el.offsetWidth || 0);
+  const height = Number(el.offsetHeight || 0);
+  const y = top + Math.max(24, Math.round(height * 0.45));
+  if (side === 'left') return { x: left + 2, y };
+  return { x: left + Math.max(8, width - 2), y };
+}
+
+function buildEdgePath(from, to) {
+  const forward = from.x <= to.x;
+  const sourceSide = forward ? 'right' : 'left';
+  const targetSide = forward ? 'left' : 'right';
+  const dx = Math.max(40, Math.round(Math.abs(to.x - from.x) * 0.35));
+  const c1x = from.x + (sourceSide === 'right' ? dx : -dx);
+  const c2x = to.x + (targetSide === 'left' ? -dx : dx);
+  return `M ${from.x} ${from.y} C ${c1x} ${from.y}, ${c2x} ${to.y}, ${to.x} ${to.y}`;
+}
+
+function refreshMoeGraphEdges() {
+  if (window.modelOrderingState?.moeGraphMode !== true) return;
+  const list = document.getElementById('moe-pipeline-list');
+  const svg = document.getElementById('moe-graph-edges');
+  if (!(list instanceof HTMLElement) || !(svg instanceof SVGElement)) return;
+
+  const items = Array.isArray(window.modelOrderingState?.moeItems) ? window.modelOrderingState.moeItems : [];
+  const channels = items
+    .map((item, index) => ({ item, index }))
+    .filter((row) => row.item?.type === 'channel' && row.item?.enabled !== false);
+
+  const cardEls = list.querySelectorAll('.moe-item[data-moe-id]');
+  const cardMap = new Map();
+  cardEls.forEach((el) => {
+    const id = String(el.getAttribute('data-moe-id') || '').trim();
+    if (id) cardMap.set(id, el);
+  });
+
+  const canvasW = Math.max(list.scrollWidth, list.clientWidth, 1200);
+  const canvasH = Math.max(list.scrollHeight, list.clientHeight, 760);
+  svg.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
+  svg.setAttribute('width', String(canvasW));
+  svg.setAttribute('height', String(canvasH));
+
+  const defs = svg.querySelector('defs');
+  const lines = [];
+  for (const row of channels) {
+    const channel = row.item;
+    const sourceId = getGraphSourceAgentId(channel, items, row.index);
+    const targets = getGraphTargetAgentIds(channel, items, sourceId, row.index);
+    if (!sourceId || !targets.length) continue;
+    const sourceEl = cardMap.get(sourceId);
+    if (!sourceEl) continue;
+
+    for (const targetId of targets) {
+      const targetEl = cardMap.get(targetId);
+      if (!targetEl) continue;
+      const sourceForward = Number(sourceEl.offsetLeft || 0) <= Number(targetEl.offsetLeft || 0);
+      const from = getGraphAnchor(sourceEl, sourceForward ? 'right' : 'left');
+      const to = getGraphAnchor(targetEl, sourceForward ? 'left' : 'right');
+      const d = buildEdgePath(from, to);
+      const dir = String(channel?.direction || 'bidirectional').trim().toLowerCase();
+      const markerEnd = 'url(#moe-edge-arrow-end)';
+      const markerStart = dir === 'bidirectional' ? 'url(#moe-edge-arrow-start)' : '';
+      lines.push(`
+        <path d="${d}" stroke="rgba(134,184,255,0.22)" stroke-width="5" fill="none"></path>
+        <path d="${d}" stroke="#86b8ff" stroke-width="1.6" fill="none"
+              marker-end="${markerEnd}" ${markerStart ? `marker-start="${markerStart}"` : ''}></path>
+      `);
+    }
+  }
+
+  svg.innerHTML = `${defs ? defs.outerHTML : ''}
+    <g class="psf-relay-graph-edge-layer">
+      ${lines.join('')}
+    </g>`;
 }
 
 /**
@@ -461,4 +590,5 @@ window.getMoeTheme = getMoeTheme;
 window.getDownloadedModels = getDownloadedModels;
 window.getAllModelsForDropdown = getAllModelsForDropdown;
 window.renderMoePipeline = renderMoePipeline;
+window.refreshMoeGraphEdges = refreshMoeGraphEdges;
 window.toggleShowAllModels = toggleShowAllModels;

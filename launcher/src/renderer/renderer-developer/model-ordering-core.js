@@ -332,6 +332,9 @@ function renderModelOrdering() {
   if (typeof window.enhanceMoeSelects === 'function') {
     try { window.enhanceMoeSelects(container); } catch (_) { /* no-op */ }
   }
+  if (typeof window.refreshMoeGraphEdges === 'function') {
+    try { requestAnimationFrame(() => window.refreshMoeGraphEdges()); } catch (_) { /* no-op */ }
+  }
 
   container.scrollTop = previousContainerScrollTop;
   container.scrollLeft = previousContainerScrollLeft;
