@@ -71,6 +71,25 @@ function createMoEHandlers() {
         fileName: path.basename(filePath)
       };
     },
+    'moe-pick-directory': async (ctx) => {
+      if (!ctx.dialog || typeof ctx.dialog.showOpenDialog !== 'function') {
+        return { ok: false, error: 'directory picker unavailable' };
+      }
+      const result = await ctx.dialog.showOpenDialog({
+        title: 'Select Project Root',
+        properties: ['openDirectory', 'dontAddToRecent']
+      });
+      if (result?.canceled || !Array.isArray(result?.filePaths) || result.filePaths.length === 0) {
+        return { ok: true, canceled: true, path: '' };
+      }
+      const dirPath = String(result.filePaths[0] || '');
+      return {
+        ok: true,
+        canceled: false,
+        path: dirPath,
+        name: path.basename(dirPath)
+      };
+    },
     'moe-read-text-file': async (ctx, event, filePath, options = {}) => {
       try {
         const resolved = path.resolve(String(filePath || '').trim());

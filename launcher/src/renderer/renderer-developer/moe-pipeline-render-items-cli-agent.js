@@ -68,6 +68,7 @@ function renderCliAgentDetails(cliAgent) {
   const stepBudget = Number.isInteger(Number(cliAgent.stepBudget)) ? Math.max(1, Math.min(500, Number(cliAgent.stepBudget))) : 50;
   const tokenBudget = Number.isInteger(Number(cliAgent.tokenBudget)) ? Math.max(256, Math.min(200000, Number(cliAgent.tokenBudget))) : 8000;
   const timeoutMs = Number.isInteger(Number(cliAgent.timeoutMs)) ? Math.max(1000, Math.min(3600000, Number(cliAgent.timeoutMs))) : 300000;
+  const projectPath = String(cliAgent.projectPath || '').trim();
 
   return `
     <div onclick="event.stopPropagation()" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(188,140,255,0.35); display:flex; flex-direction:column; gap:12px;">
@@ -95,6 +96,15 @@ function renderCliAgentDetails(cliAgent) {
           <option value="workspace-write" ${policyProfile === 'workspace-write' ? 'selected' : ''}>workspace-write</option>
           <option value="privileged-approval" ${policyProfile === 'privileged-approval' ? 'selected' : ''}>privileged-approval</option>
         </select>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="color:#999; font-size:12px; min-width:90px;">Project Root</label>
+        <input type="text" value="${escapeBinding(projectPath)}"
+               placeholder="/tmp/psf-cli-agent-sandbox"
+               onchange="updateCliAgentConfig('${cliAgent.id}', 'projectPath', this.value)"
+               style="min-width: 420px; max-width: 100%; flex:1; padding:6px 8px; background: rgba(255,255,255,0.1); border: 1px solid #555; border-radius: 4px; color: #fff;">
+        <button onclick="event.stopPropagation(); pickCliAgentProjectPath('${cliAgent.id}')"
+                style="padding:6px 10px; background: rgba(255,255,255,0.08); border: 1px solid #666; border-radius: 4px; color: #ddd; cursor: pointer; font-size: 11px;">Browse</button>
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <label style="color:#999; font-size:12px;">Step Budget</label>

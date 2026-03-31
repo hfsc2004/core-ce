@@ -57,6 +57,14 @@ function toggleAgentRlmAssist(agentId, enabled) {
   renderModelOrdering();
 }
 
+function updateAgentMultiGpuSplit(agentId, enabled) {
+  const agent = window.modelOrderingState.moeItems.find(i => i.id === agentId && i.type === 'agent');
+  if (!agent) return;
+  agent.multiGpuSplit = enabled === true;
+  console.log('[MoE] Updated agent multiGpuSplit:', agentId, agent.multiGpuSplit);
+  renderModelOrdering();
+}
+
 async function openMoeAttachmentManager(scope, agentId) {
   const safeScope = String(scope || 'agent').trim().toLowerCase() === 'shared' ? 'shared' : 'agent';
   const agent = window.modelOrderingState.moeItems.find((i) => i.id === agentId && i.type === 'agent');
@@ -479,5 +487,6 @@ window.assignModelToAgent = assignModelToAgent;
 window.updateAgentProvider = updateAgentProvider;
 window.toggleAgentRoutingMode = toggleAgentRoutingMode;
 window.toggleAgentRlmAssist = toggleAgentRlmAssist;
+window.updateAgentMultiGpuSplit = updateAgentMultiGpuSplit;
 window.openMoeAttachmentManager = openMoeAttachmentManager;
 window.openMoeRoutingHelp = openMoeRoutingHelp;

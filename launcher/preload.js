@@ -281,6 +281,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   pingMoEAgents: () => ipcRenderer.invoke('moe-ping-agents'),
   listMoESerialPorts: () => ipcRenderer.invoke('moe-list-serial-ports'),
   moePickCodeFile: () => ipcRenderer.invoke('moe-pick-code-file'),
+  moePickDirectory: () => ipcRenderer.invoke('moe-pick-directory'),
   moeReadTextFile: (filePath, options = {}) => ipcRenderer.invoke('moe-read-text-file', filePath, options),
 
   // Deterministic Tools Runtime APIs (shared core)

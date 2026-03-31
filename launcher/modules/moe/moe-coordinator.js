@@ -82,6 +82,7 @@ function normalizeCliAgentNode(item = {}) {
     type: String(item.type || 'cli_agent').trim(),
     name: String(item.name || 'CLI Agent').trim() || 'CLI Agent',
     ownerAgentId: String(item.ownerAgentId || '').trim(),
+    projectPath: String(item.projectPath || '').trim(),
     executionMode: String(item.executionMode || 'on-tool').trim().toLowerCase(),
     policyProfile: String(item.policyProfile || 'workspace-write').trim().toLowerCase(),
     stepBudget: Number.isInteger(Number(item.stepBudget)) ? Math.max(1, Math.min(500, Number(item.stepBudget))) : 50,
@@ -105,18 +106,46 @@ function collectCliAgentNodes(configItems = []) {
     .filter((item) => item.enabled !== false);
 }
 
-function buildCliToolContextForOwner(ownerAgentId, cliAgents = []) {
-  const owned = cliAgents.filter((node) => node.ownerAgentId && node.ownerAgentId === ownerAgentId);
+function matchesOwnerToken(nodeOwner, agent = {}) {
+  const token = String(nodeOwner || '').trim();
+  if (!token) return false;
+  const agentId = String(agent?.id || '').trim();
+  const agentName = String(agent?.name || '').trim();
+  if (!agentId && !agentName) return false;
+  if (token === agentId) return true;
+  return agentName && token.toLowerCase() === agentName.toLowerCase();
+}
+
+function getOwnedCliAgentsForAgent(agent, cliAgents = [], orderedAgents = []) {
+  const totalAgents = Array.isArray(orderedAgents) ? orderedAgents.length : 0;
+  return (Array.isArray(cliAgents) ? cliAgents : []).filter((node) => {
+    const owner = String(node?.ownerAgentId || '').trim();
+    if (owner) {
+      if (matchesOwnerToken(owner, agent)) return true;
+      // Resilient fallback for stale saved owner IDs when only one agent is active.
+      return totalAgents === 1;
+    }
+    return totalAgents === 1;
+  });
+}
+
+function buildCliToolContextForAgent(agent, cliAgents = [], orderedAgents = []) {
+  const owned = getOwnedCliAgentsForAgent(agent, cliAgents, orderedAgents);
   const active = owned.filter((node) => node.executionMode === 'on-tool' || node.executionMode === 'auto');
   if (!active.length) return '';
   const lines = [
     'CLI Agent capability is available on this hop via owner assignment.',
     'When a deterministic tool action is needed, emit one or more lines in this exact format:',
-    'CLI_TOOL_JSON: {"tool":"run_command|write_file|run_tests|git_diff","args":{...}}',
+    'CLI_TOOL_JSON: {"tool":"run_command|write_file|read_file|list_files|search_code|read_file_chunk|apply_patch|run_tests|git_diff","args":{...}}',
     'Allowed args:',
     '- run_command: {"cmd":"<shell command>","cwd":"<relative optional>"}',
     '- run_tests: {"cmd":"<test command>","cwd":"<relative optional>"}',
     '- write_file: {"path":"<relative file path>","content":"<full file content>"}',
+    '- read_file: {"path":"<relative file path>"}',
+    '- list_files: {"path":"<relative optional, default .>","max_depth":2,"limit":200}',
+    '- search_code: {"query":"<text or regex>","path":"<relative optional, default .>","limit":100,"regex":false}',
+    '- read_file_chunk: {"path":"<relative file path>","start":1,"count":200}',
+    '- apply_patch: {"path":"<relative file path>","old_text":"<existing text>","new_text":"<replacement text>"}',
     '- git_diff: {"cwd":"<relative optional>"}',
     'Do not emit CLI_TOOL_JSON unless action is explicitly needed for the user task.'
   ];
@@ -171,22 +200,33 @@ function isCommandPotentiallyDestructive(cmd) {
   return blockedPatterns.some((pattern) => pattern.test(value));
 }
 
-function resolveWithinWorkspace(inputPath, { allowDirectory = true } = {}) {
+function resolveNodeWorkspaceRoot(node = {}) {
+  const configured = String(node?.projectPath || '').trim();
+  if (!configured) return CLI_AGENT_WORKSPACE_ROOT;
+  const absolute = path.resolve(configured);
+  if (!fs.existsSync(absolute) || !fs.statSync(absolute).isDirectory()) {
+    throw new Error(`CLI Agent project root not found: ${configured}`);
+  }
+  return absolute;
+}
+
+function resolveWithinWorkspace(inputPath, workspaceRoot, { allowDirectory = true } = {}) {
+  const root = path.resolve(String(workspaceRoot || CLI_AGENT_WORKSPACE_ROOT));
   const candidate = String(inputPath || '').trim();
-  if (!candidate) return CLI_AGENT_WORKSPACE_ROOT;
+  if (!candidate) return root;
   const absolute = path.isAbsolute(candidate)
     ? path.resolve(candidate)
-    : path.resolve(CLI_AGENT_WORKSPACE_ROOT, candidate);
-  const rootWithSep = `${CLI_AGENT_WORKSPACE_ROOT}${path.sep}`;
-  const isRoot = absolute === CLI_AGENT_WORKSPACE_ROOT;
+    : path.resolve(root, candidate);
+  const rootWithSep = `${root}${path.sep}`;
+  const isRoot = absolute === root;
   const isInside = absolute.startsWith(rootWithSep);
   if (!isRoot && !isInside) {
     throw new Error(`Path escapes workspace: ${candidate}`);
   }
   if (!allowDirectory) {
     const parent = path.dirname(absolute);
-    const parentWithSep = `${CLI_AGENT_WORKSPACE_ROOT}${path.sep}`;
-    const parentInside = parent === CLI_AGENT_WORKSPACE_ROOT || parent.startsWith(parentWithSep);
+    const parentWithSep = `${root}${path.sep}`;
+    const parentInside = parent === root || parent.startsWith(parentWithSep);
     if (!parentInside) {
       throw new Error(`File path escapes workspace: ${candidate}`);
     }
@@ -200,7 +240,7 @@ function isCliToolAllowedByPolicy(node, toolName) {
     return { allowed: false, reason: 'policy profile requires privileged approval' };
   }
   if (String(node?.policyProfile || '').toLowerCase() === 'read-only') {
-    if (tool !== 'git_diff' && tool !== 'run_tests') {
+    if (!['git_diff', 'run_tests', 'read_file', 'list_files', 'search_code', 'read_file_chunk'].includes(tool)) {
       return { allowed: false, reason: 'read-only policy blocks mutating tools' };
     }
   }
@@ -208,6 +248,11 @@ function isCliToolAllowedByPolicy(node, toolName) {
   const hookMap = {
     run_command: hooks.runCommand === true,
     write_file: hooks.writeFile === true,
+    read_file: hooks.writeFile === true,
+    list_files: hooks.writeFile === true,
+    search_code: hooks.writeFile === true,
+    read_file_chunk: hooks.writeFile === true,
+    apply_patch: hooks.writeFile === true,
     run_tests: hooks.runTests === true,
     git_diff: hooks.gitDiff === true,
     flash_firmware: hooks.flashFirmware === true
@@ -218,9 +263,38 @@ function isCliToolAllowedByPolicy(node, toolName) {
   return { allowed: true, reason: 'ok' };
 }
 
+function listFilesRecursive(rootDir, options = {}) {
+  const maxDepth = Math.max(0, Math.min(Number(options.maxDepth) || 2, 8));
+  const limit = Math.max(1, Math.min(Number(options.limit) || 200, 2000));
+  const out = [];
+  const stack = [{ dir: rootDir, depth: 0 }];
+  while (stack.length > 0 && out.length < limit) {
+    const current = stack.pop();
+    let entries = [];
+    try {
+      entries = fs.readdirSync(current.dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of entries) {
+      const full = path.join(current.dir, entry.name);
+      if (entry.isDirectory()) {
+        if (current.depth < maxDepth) stack.push({ dir: full, depth: current.depth + 1 });
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      out.push(full);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
 async function executeCliToolRequest(node, request) {
   const tool = normalizeCliToolName(request?.tool);
   const args = request?.args && typeof request.args === 'object' ? request.args : {};
+  const workspaceRoot = resolveNodeWorkspaceRoot(node);
   const gate = isCliToolAllowedByPolicy(node, tool);
   if (!gate.allowed) {
     return { success: false, tool, error: gate.reason };
@@ -230,18 +304,141 @@ async function executeCliToolRequest(node, request) {
     const relPath = String(args.path || '').trim();
     if (!relPath) return { success: false, tool, error: 'write_file requires args.path' };
     const nextContent = String(args.content ?? '');
-    const fullPath = resolveWithinWorkspace(relPath, { allowDirectory: false });
+    const fullPath = resolveWithinWorkspace(relPath, workspaceRoot, { allowDirectory: false });
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, nextContent, 'utf8');
     return {
       success: true,
       tool,
-      output: `Wrote ${Buffer.byteLength(nextContent, 'utf8')} bytes to ${path.relative(CLI_AGENT_WORKSPACE_ROOT, fullPath)}`
+      output: `Wrote ${Buffer.byteLength(nextContent, 'utf8')} bytes to ${path.relative(workspaceRoot, fullPath)}`
+    };
+  }
+
+  if (tool === 'read_file') {
+    const relPath = String(args.path || '').trim();
+    if (!relPath) return { success: false, tool, error: 'read_file requires args.path' };
+    const fullPath = resolveWithinWorkspace(relPath, workspaceRoot, { allowDirectory: false });
+    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+      return { success: false, tool, error: `file not found: ${relPath}` };
+    }
+    const content = fs.readFileSync(fullPath, 'utf8');
+    return {
+      success: true,
+      tool,
+      output: `Path: ${path.relative(workspaceRoot, fullPath)}\n\n${String(content || '').slice(0, 200000)}`
+    };
+  }
+
+  if (tool === 'list_files') {
+    const relPath = String(args.path || '.').trim() || '.';
+    const maxDepth = Math.max(0, Math.min(Number(args.max_depth ?? args.maxDepth ?? 2), 8));
+    const limit = Math.max(1, Math.min(Number(args.limit ?? 200), 2000));
+    const targetDir = resolveWithinWorkspace(relPath, workspaceRoot, { allowDirectory: true });
+    if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
+      return { success: false, tool, error: `directory not found: ${relPath}` };
+    }
+    const files = listFilesRecursive(targetDir, { maxDepth, limit })
+      .map((entry) => path.relative(workspaceRoot, entry).split(path.sep).join('/'));
+    return {
+      success: true,
+      tool,
+      output: `Path: ${path.relative(workspaceRoot, targetDir) || '.'}\nCount: ${files.length}\n\n${files.join('\n')}`
+    };
+  }
+
+  if (tool === 'search_code') {
+    const query = String(args.query || '').trim();
+    if (!query) return { success: false, tool, error: 'search_code requires args.query' };
+    const relPath = String(args.path || '.').trim() || '.';
+    const limit = Math.max(1, Math.min(Number(args.limit ?? 100), 1000));
+    const maxDepth = Math.max(0, Math.min(Number(args.max_depth ?? args.maxDepth ?? 5), 10));
+    const regex = args.regex === true;
+    const targetDir = resolveWithinWorkspace(relPath, workspaceRoot, { allowDirectory: true });
+    if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
+      return { success: false, tool, error: `directory not found: ${relPath}` };
+    }
+    let matcher = null;
+    if (regex) {
+      try {
+        matcher = new RegExp(query, 'i');
+      } catch (err) {
+        return { success: false, tool, error: `invalid regex: ${String(err?.message || err)}` };
+      }
+    }
+    const files = listFilesRecursive(targetDir, { maxDepth, limit: 5000 });
+    const hits = [];
+    for (const filePath of files) {
+      if (hits.length >= limit) break;
+      let content = '';
+      try {
+        content = fs.readFileSync(filePath, 'utf8');
+      } catch {
+        continue;
+      }
+      const lines = String(content || '').split(/\r?\n/);
+      for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i];
+        const matched = regex ? matcher.test(line) : line.toLowerCase().includes(query.toLowerCase());
+        if (!matched) continue;
+        hits.push(`${path.relative(workspaceRoot, filePath).split(path.sep).join('/')}:${i + 1}: ${line}`);
+        if (hits.length >= limit) break;
+      }
+    }
+    return {
+      success: true,
+      tool,
+      output: `Query: ${query}\nMatches: ${hits.length}\n\n${hits.join('\n')}`
+    };
+  }
+
+  if (tool === 'read_file_chunk') {
+    const relPath = String(args.path || '').trim();
+    if (!relPath) return { success: false, tool, error: 'read_file_chunk requires args.path' };
+    const start = Math.max(1, Number(args.start ?? 1));
+    const count = Math.max(1, Math.min(Number(args.count ?? 200), 5000));
+    const fullPath = resolveWithinWorkspace(relPath, workspaceRoot, { allowDirectory: false });
+    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+      return { success: false, tool, error: `file not found: ${relPath}` };
+    }
+    const lines = String(fs.readFileSync(fullPath, 'utf8') || '').split(/\r?\n/);
+    const startIdx = Math.min(Math.max(0, start - 1), Math.max(0, lines.length - 1));
+    const endIdx = Math.min(lines.length, startIdx + count);
+    const chunk = [];
+    for (let i = startIdx; i < endIdx; i += 1) {
+      chunk.push(`${i + 1}: ${lines[i]}`);
+    }
+    return {
+      success: true,
+      tool,
+      output: `Path: ${path.relative(workspaceRoot, fullPath)}\nRange: ${startIdx + 1}-${endIdx}\n\n${chunk.join('\n')}`
+    };
+  }
+
+  if (tool === 'apply_patch') {
+    const relPath = String(args.path || '').trim();
+    const oldText = String(args.old_text ?? args.oldText ?? '').replace(/\r\n/g, '\n');
+    const newText = String(args.new_text ?? args.newText ?? '').replace(/\r\n/g, '\n');
+    if (!relPath) return { success: false, tool, error: 'apply_patch requires args.path' };
+    if (!oldText) return { success: false, tool, error: 'apply_patch requires args.old_text' };
+    const fullPath = resolveWithinWorkspace(relPath, workspaceRoot, { allowDirectory: false });
+    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+      return { success: false, tool, error: `file not found: ${relPath}` };
+    }
+    const current = String(fs.readFileSync(fullPath, 'utf8') || '');
+    if (!current.includes(oldText)) {
+      return { success: false, tool, error: 'old_text not found in target file' };
+    }
+    const next = current.replace(oldText, newText);
+    fs.writeFileSync(fullPath, next, 'utf8');
+    return {
+      success: true,
+      tool,
+      output: `Patched ${path.relative(workspaceRoot, fullPath)} (${Buffer.byteLength(oldText, 'utf8')} bytes replaced)`
     };
   }
 
   if (tool === 'git_diff') {
-    const cwd = resolveWithinWorkspace(String(args.cwd || ''), { allowDirectory: true });
+    const cwd = resolveWithinWorkspace(String(args.cwd || ''), workspaceRoot, { allowDirectory: true });
     const cmd = `git -C ${JSON.stringify(cwd)} diff -- .`;
     const { stdout, stderr } = await execAsync(cmd, {
       timeout: Math.min(120000, Number(node?.timeoutMs || 120000)),
@@ -260,7 +457,7 @@ async function executeCliToolRequest(node, request) {
     if (isCommandPotentiallyDestructive(cmd)) {
       return { success: false, tool, error: `blocked potentially destructive command: ${cmd}` };
     }
-    const cwd = resolveWithinWorkspace(String(args.cwd || ''), { allowDirectory: true });
+    const cwd = resolveWithinWorkspace(String(args.cwd || ''), workspaceRoot, { allowDirectory: true });
     const { stdout, stderr } = await execAsync(cmd, {
       cwd,
       timeout: Math.min(240000, Number(node?.timeoutMs || 240000)),
@@ -669,7 +866,7 @@ async function routeMessage(userMessage, options = {}) {
         deterministicToolsRuntime,
         attachmentStore
       });
-      const cliToolContext = buildCliToolContextForOwner(agent.id, cliAgentNodes);
+      const cliToolContext = buildCliToolContextForAgent(agent, cliAgentNodes, agents);
 
       const messages = transport.buildAgentMessages(
         agent,
@@ -769,7 +966,7 @@ async function routeMessage(userMessage, options = {}) {
       Object.assign(structuredRecord, buildStructuredUpdateFromStep(normalizedOutput || response.content));
       currentContext = normalizedOutput || response.content;
 
-      const ownedCliAgents = cliAgentNodes.filter((node) => node.ownerAgentId === agent.id);
+      const ownedCliAgents = getOwnedCliAgentsForAgent(agent, cliAgentNodes, agents);
       for (const cliNode of ownedCliAgents) {
         const mode = String(cliNode.executionMode || 'on-tool').toLowerCase();
         if (mode !== 'on-tool' && mode !== 'auto') continue;
@@ -975,7 +1172,13 @@ async function sendToAgent(agentId, message, options = {}) {
   if (!agent) return { success: false, error: `Agent not found: ${agentId}` };
   const deploymentStatus = deploymentManager?.getStatus?.() || null;
   const cliAgentNodes = collectCliAgentNodes(deploymentStatus?.config?.items || []);
-  const cliToolContext = buildCliToolContextForOwner(agent.id, cliAgentNodes);
+  const orderedAgents = Array.isArray(deploymentStatus?.config?.items)
+    ? deploymentStatus.config.items
+      .filter((item) => item?.enabled !== false && item?.type === 'agent')
+      .map((item) => ({ id: String(item.id || '').trim(), name: String(item.name || '').trim() }))
+      .filter((item) => item.id)
+    : [];
+  const cliToolContext = buildCliToolContextForAgent(agent, cliAgentNodes, orderedAgents);
 
   const rlmAssistContext = await buildAgentRlmAssistContext({
     agent,
@@ -1006,7 +1209,7 @@ async function sendToAgent(agentId, message, options = {}) {
   if (!response?.success) return response;
 
   let finalContent = String(response.content || '');
-  const ownedCliAgents = cliAgentNodes.filter((node) => node.ownerAgentId === agent.id);
+  const ownedCliAgents = getOwnedCliAgentsForAgent(agent, cliAgentNodes, orderedAgents);
   for (const cliNode of ownedCliAgents) {
     const mode = String(cliNode.executionMode || 'on-tool').toLowerCase();
     if (mode !== 'on-tool' && mode !== 'auto') continue;

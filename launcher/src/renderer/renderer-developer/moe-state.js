@@ -75,11 +75,13 @@ function createAgent(name = 'New Agent') {
     id: `agent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     type: 'agent',
     name: name,
+    provider: 'llama.cpp',
     modelId: null,
     modelName: null,
     collectionKey: null,
     filename: null,
     systemPrompt: '',
+    multiGpuSplit: true,
     routingMode: 'dynamic',
     routingRules: [],
     groups: [],
@@ -241,6 +243,7 @@ function createCliAgent(name = 'CLI Agent') {
     type: 'cli_agent',
     name,
     ownerAgentId: '',
+    projectPath: '',
     executionMode: 'on-tool', // on-tool | auto | manual | on-control
     policyProfile: 'workspace-write', // read-only | workspace-write | privileged-approval
     stepBudget: 50,

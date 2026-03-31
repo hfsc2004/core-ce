@@ -115,6 +115,8 @@ function renderAgentDetails(agent, counts = {}) {
   const theme = getMoeTheme();
   const agentCount = Number(counts?.agentCount || 0);
   const sharedCount = Number(counts?.sharedCount || 0);
+  const provider = String(agent.provider || '').trim().toLowerCase() === 'llama.cpp' ? 'llama.cpp' : 'ollama';
+  const multiGpuSplit = agent.multiGpuSplit !== false;
 
   return `
     <div onclick="event.stopPropagation()" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid ${theme.accent}33;">
@@ -158,6 +160,17 @@ function renderAgentDetails(agent, counts = {}) {
           </button>
         </div>
       </div>
+      ${provider === 'llama.cpp' ? `
+      <div style="margin-bottom: 15px; background: rgba(0,0,0,0.18); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+        <label style="display:flex; align-items:center; gap:8px; color:#ddd; font-size:12px; cursor:pointer;">
+          <input type="checkbox" ${multiGpuSplit ? 'checked' : ''} onchange="updateAgentMultiGpuSplit('${agent.id}', this.checked)">
+          <span><strong>Allow Multi-GPU Split</strong> (llama.cpp)</span>
+        </label>
+        <div style="color:#888; font-size:11px; margin-top:6px;">
+          ON: model can split layers across multiple GPUs. OFF: force single-GPU load (split-mode none).
+        </div>
+      </div>
+      ` : ''}
       ${agent.routingMode === 'static' ? `
         <div style="margin-bottom: 15px;">
           <label style="color: #888; font-size: 12px; display: block; margin-bottom: 5px;">Static Routing Rules (one per line)</label>

@@ -341,6 +341,7 @@ async function deployAgent(agent, appPath, gpuInfo) {
         ? Number(agent.gpuLayers)
         : DEFAULT_LLAMA_GPU_LAYERS,
       forceCpu: agent?.forceCpu === true,
+      splitMode: agent?.multiGpuSplit === false ? 'none' : null,
       contextSize: Number.isFinite(Number(agent?.contextSize)) ? Number(agent.contextSize) : 8192,
       threads: Number.isFinite(Number(agent?.threads)) ? Number(agent.threads) : 0,
       parallel: Number.isFinite(Number(agent?.parallel)) ? Number(agent.parallel) : 1
@@ -528,6 +529,7 @@ function deployCliAgent(node) {
     name: node.name || 'CLI Agent',
     enabled: node.enabled !== false,
     ownerAgentId: String(node.ownerAgentId || '').trim(),
+    projectPath: String(node.projectPath || '').trim(),
     executionMode: String(node.executionMode || 'on-tool').trim().toLowerCase(),
     policyProfile: String(node.policyProfile || 'workspace-write').trim().toLowerCase(),
     stepBudget: Number.isInteger(Number(node.stepBudget)) ? Number(node.stepBudget) : 50,

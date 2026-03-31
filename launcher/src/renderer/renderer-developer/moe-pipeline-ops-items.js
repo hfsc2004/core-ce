@@ -179,6 +179,9 @@ function updateCliAgentConfig(itemId, key, value) {
     case 'ownerAgentId':
       item.ownerAgentId = String(value || '').trim();
       break;
+    case 'projectPath':
+      item.projectPath = String(value || '').trim();
+      break;
     case 'executionMode': {
       const normalized = String(value || '').trim().toLowerCase();
       item.executionMode = ['on-tool', 'on-control', 'auto', 'manual'].includes(normalized)
@@ -230,6 +233,20 @@ function updateCliAgentConfig(itemId, key, value) {
   renderModelOrdering();
 }
 
+async function pickCliAgentProjectPath(itemId) {
+  try {
+    const picker = window.electronAPI?.moePickDirectory;
+    if (typeof picker !== 'function') return;
+    const result = await picker();
+    if (!result?.ok || result?.canceled) return;
+    const selected = String(result.path || '').trim();
+    if (!selected) return;
+    updateCliAgentConfig(itemId, 'projectPath', selected);
+  } catch (err) {
+    console.warn('[MoE] CLI Agent project picker failed:', err?.message || err);
+  }
+}
+
 window.addMoeAgent = addMoeAgent;
 window.addMoeChannel = addMoeChannel;
 window.addMoeGateway = addMoeGateway;
@@ -241,3 +258,4 @@ window.toggleMoeExpand = toggleMoeExpand;
 window.handleMoeItemClick = handleMoeItemClick;
 window.toggleMoeItemEnabled = toggleMoeItemEnabled;
 window.updateCliAgentConfig = updateCliAgentConfig;
+window.pickCliAgentProjectPath = pickCliAgentProjectPath;

@@ -73,6 +73,9 @@ function validateItem(item, index) {
       if (item.groups != null && !Array.isArray(item.groups)) {
         errors.push(`${prefix}: groups must be array`);
       }
+      if (item.multiGpuSplit != null && typeof item.multiGpuSplit !== 'boolean') {
+        errors.push(`${prefix}: multiGpuSplit must be boolean`);
+      }
       if (Array.isArray(item.groups)) {
         item.groups.forEach((groupId, groupIndex) => {
           if (typeof groupId !== 'string') {
@@ -212,6 +215,9 @@ function validateItem(item, index) {
       }
       if (item.ownerAgentId != null && typeof item.ownerAgentId !== 'string') {
         errors.push(`${prefix}: ownerAgentId must be string`);
+      }
+      if (item.projectPath != null && typeof item.projectPath !== 'string') {
+        errors.push(`${prefix}: projectPath must be string`);
       }
       if (item.executionMode != null) {
         const mode = String(item.executionMode).trim().toLowerCase();
