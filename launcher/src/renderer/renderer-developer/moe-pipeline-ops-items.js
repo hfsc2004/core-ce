@@ -146,6 +146,40 @@ function isMoeGraphModeEnabled() {
   return window.modelOrderingState?.moeGraphMode === true;
 }
 
+function getMoeGraphSelectionSet() {
+  const raw = window.modelOrderingState?.moeGraphSelectedIds;
+  const list = Array.isArray(raw) ? raw : [];
+  return new Set(list.map((id) => String(id || '').trim()).filter(Boolean));
+}
+
+function setMoeGraphSelection(ids) {
+  if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return;
+  const unique = Array.from(new Set((Array.isArray(ids) ? ids : [])
+    .map((id) => String(id || '').trim())
+    .filter(Boolean)));
+  window.modelOrderingState.moeGraphSelectedIds = unique;
+  syncMoeGraphSelectionUi();
+}
+
+function syncMoeGraphSelectionUi() {
+  const selected = getMoeGraphSelectionSet();
+  const cards = document.querySelectorAll('#moe-graph-canvas .moe-item[data-moe-id]');
+  cards.forEach((card) => {
+    if (!(card instanceof HTMLElement)) return;
+    const id = String(card.getAttribute('data-moe-id') || '').trim();
+    if (!id) return;
+    card.classList.toggle('moe-graph-selected', selected.has(id));
+  });
+}
+
+function escapeCssIdent(value) {
+  const raw = String(value || '');
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(raw);
+  }
+  return raw.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+}
+
 function clampMoeGraphZoom(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 0.7;
@@ -344,6 +378,27 @@ function beginMoeCanvasDrag(event, itemId) {
   const item = (window.modelOrderingState?.moeItems || []).find((entry) => entry?.id === itemId);
   if (!item) return;
 
+  const additive = event.ctrlKey === true || event.metaKey === true;
+  const selected = getMoeGraphSelectionSet();
+  if (!selected.has(itemId)) {
+    if (additive) {
+      selected.add(itemId);
+      setMoeGraphSelection(Array.from(selected));
+    } else {
+      setMoeGraphSelection([itemId]);
+    }
+  } else if (additive) {
+    // Keep current set when dragging an already-selected card with additive modifier.
+    setMoeGraphSelection(Array.from(selected));
+  }
+  const dragSelection = getMoeGraphSelectionSet();
+  const dragIds = dragSelection.has(itemId) && dragSelection.size > 1
+    ? Array.from(dragSelection)
+    : [itemId];
+  if (!dragSelection.has(itemId)) {
+    setMoeGraphSelection([itemId]);
+  }
+
   const canvas = cardEl.closest('#moe-graph-canvas');
   const canvasScale = (() => {
     if (!(canvas instanceof HTMLElement)) return 1;
@@ -355,15 +410,26 @@ function beginMoeCanvasDrag(event, itemId) {
   })();
   const scale = canvasScale;
 
-  const pos = item.canvasPos && typeof item.canvasPos === 'object'
-    ? item.canvasPos
-    : { x: Number(cardEl.style.left?.replace('px', '')) || 8, y: Number(cardEl.style.top?.replace('px', '')) || 8 };
-  item.canvasPos = { x: Number(pos.x) || 8, y: Number(pos.y) || 8 };
+  const itemLookup = new Map((window.modelOrderingState?.moeItems || []).map((entry) => [String(entry?.id || ''), entry]));
+  const originById = new Map();
+  dragIds.forEach((id) => {
+    const dragItem = itemLookup.get(String(id || ''));
+    if (!dragItem || typeof dragItem !== 'object') return;
+    const card = document.querySelector(`#moe-graph-canvas .moe-item[data-moe-id="${escapeCssIdent(String(id))}"]`);
+    const basePos = dragItem.canvasPos && typeof dragItem.canvasPos === 'object'
+      ? dragItem.canvasPos
+      : {
+          x: Number((card instanceof HTMLElement ? card.style.left : '').replace('px', '')) || Number((card instanceof HTMLElement ? card.offsetLeft : 0)) || 8,
+          y: Number((card instanceof HTMLElement ? card.style.top : '').replace('px', '')) || Number((card instanceof HTMLElement ? card.offsetTop : 0)) || 8
+        };
+    const ox = Number(basePos.x) || 8;
+    const oy = Number(basePos.y) || 8;
+    dragItem.canvasPos = { x: ox, y: oy };
+    originById.set(String(id), { x: ox, y: oy });
+  });
 
   const startX = Number(event.clientX || 0);
   const startY = Number(event.clientY || 0);
-  const originX = item.canvasPos.x;
-  const originY = item.canvasPos.y;
   window.__moeCanvasDidDrag = false;
 
   const move = (moveEvent) => {
@@ -372,11 +438,19 @@ function beginMoeCanvasDrag(event, itemId) {
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
       window.__moeCanvasDidDrag = true;
     }
-    const nextX = Math.max(8, Math.round(originX + dx));
-    const nextY = Math.max(8, Math.round(originY + dy));
-    item.canvasPos = { x: nextX, y: nextY };
-    cardEl.style.left = `${nextX}px`;
-    cardEl.style.top = `${nextY}px`;
+    dragIds.forEach((id) => {
+      const dragItem = itemLookup.get(String(id || ''));
+      const origin = originById.get(String(id || ''));
+      if (!dragItem || !origin) return;
+      const nextX = Math.max(8, Math.round(origin.x + dx));
+      const nextY = Math.max(8, Math.round(origin.y + dy));
+      dragItem.canvasPos = { x: nextX, y: nextY };
+      const dragEl = document.querySelector(`#moe-graph-canvas .moe-item[data-moe-id="${escapeCssIdent(String(id))}"]`);
+      if (dragEl instanceof HTMLElement) {
+        dragEl.style.left = `${nextX}px`;
+        dragEl.style.top = `${nextY}px`;
+      }
+    });
     if (typeof window.refreshMoeGraphEdges === 'function') {
       try { window.refreshMoeGraphEdges(); } catch (_) { /* no-op */ }
     }
@@ -407,6 +481,101 @@ function handleMoeGraphPanAuxClick(event) {
   if (!isMoeGraphModeEnabled()) return;
   if (!event || event.button !== 1) return;
   event.preventDefault();
+}
+
+function beginMoeGraphMarqueeSelection(event) {
+  if (!isMoeGraphModeEnabled()) return;
+  if (!event || event.button !== 0) return;
+  const list = document.getElementById('moe-pipeline-list');
+  if (!(list instanceof HTMLElement)) return;
+  if (event.target?.closest?.('.moe-graph-controls-overlay')) return;
+  if (event.target?.closest?.('.moe-item[data-moe-id]')) return;
+  if (event.target?.closest?.('input, textarea, select, button, label, [contenteditable]:not([contenteditable="false"])')) return;
+
+  const additive = event.ctrlKey === true || event.metaKey === true;
+  const baseSet = additive ? getMoeGraphSelectionSet() : new Set();
+  if (!additive) {
+    setMoeGraphSelection([]);
+  }
+
+  const listRect = list.getBoundingClientRect();
+  const startClientX = Number(event.clientX || 0);
+  const startClientY = Number(event.clientY || 0);
+  const startLeft = startClientX - listRect.left;
+  const startTop = startClientY - listRect.top;
+
+  const box = document.createElement('div');
+  box.className = 'moe-graph-selection-box';
+  box.style.left = `${Math.round(startLeft)}px`;
+  box.style.top = `${Math.round(startTop)}px`;
+  box.style.width = '0px';
+  box.style.height = '0px';
+  list.appendChild(box);
+
+  let moved = false;
+
+  const move = (moveEvent) => {
+    const cx = Number(moveEvent.clientX || 0);
+    const cy = Number(moveEvent.clientY || 0);
+    const currentLeft = cx - listRect.left;
+    const currentTop = cy - listRect.top;
+    const minX = Math.min(startLeft, currentLeft);
+    const minY = Math.min(startTop, currentTop);
+    const width = Math.abs(currentLeft - startLeft);
+    const height = Math.abs(currentTop - startTop);
+    box.style.left = `${Math.round(minX)}px`;
+    box.style.top = `${Math.round(minY)}px`;
+    box.style.width = `${Math.round(width)}px`;
+    box.style.height = `${Math.round(height)}px`;
+
+    moved = moved || width > 4 || height > 4;
+    if (!moved) return;
+    window.__moeCanvasDidDrag = true;
+
+    const selectRect = {
+      left: Math.min(startClientX, cx),
+      right: Math.max(startClientX, cx),
+      top: Math.min(startClientY, cy),
+      bottom: Math.max(startClientY, cy)
+    };
+
+    const selectedNow = new Set(baseSet);
+    const cards = document.querySelectorAll('#moe-graph-canvas .moe-item[data-moe-id]');
+    cards.forEach((card) => {
+      if (!(card instanceof HTMLElement)) return;
+      const id = String(card.getAttribute('data-moe-id') || '').trim();
+      if (!id) return;
+      const rect = card.getBoundingClientRect();
+      const intersects = !(
+        rect.right < selectRect.left ||
+        rect.left > selectRect.right ||
+        rect.bottom < selectRect.top ||
+        rect.top > selectRect.bottom
+      );
+      if (intersects) selectedNow.add(id);
+    });
+    setMoeGraphSelection(Array.from(selectedNow));
+  };
+
+  const up = () => {
+    window.removeEventListener('mousemove', move, true);
+    window.removeEventListener('mouseup', up, true);
+    if (box.parentElement) box.parentElement.removeChild(box);
+    if (!moved && !additive) {
+      setMoeGraphSelection([]);
+    }
+    if (moved) {
+      setTimeout(() => { window.__moeCanvasDidDrag = false; }, 0);
+    }
+  };
+
+  window.addEventListener('mousemove', move, true);
+  window.addEventListener('mouseup', up, true);
+}
+
+function handleMoeGraphMouseDown(event) {
+  handleMoeGraphPanMouseDown(event);
+  beginMoeGraphMarqueeSelection(event);
 }
 
 function handleMoeGraphPanMouseDown(event) {
@@ -554,8 +723,10 @@ window.setMoeGraphZoom = setMoeGraphZoom;
 window.adjustMoeGraphZoom = adjustMoeGraphZoom;
 window.toggleMoeGraphFullscreen = toggleMoeGraphFullscreen;
 window.beginMoeCanvasDrag = beginMoeCanvasDrag;
+window.handleMoeGraphMouseDown = handleMoeGraphMouseDown;
 window.handleMoeGraphPanMouseDown = handleMoeGraphPanMouseDown;
 window.handleMoeGraphPanAuxClick = handleMoeGraphPanAuxClick;
+window.syncMoeGraphSelectionUi = syncMoeGraphSelectionUi;
 
 if (!window.__moeGraphFullscreenChangeBound) {
   document.addEventListener('fullscreenchange', () => {

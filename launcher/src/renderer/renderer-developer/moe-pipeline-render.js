@@ -280,7 +280,7 @@ function renderMoePipeline() {
         ? 'display:block; position:relative; overflow:auto; padding-right:6px; min-height:760px; flex:1 1 auto;'
         : 'display:flex; flex-direction:column; gap:4px; overflow-y:auto; padding-right:6px; min-height:260px; flex:1 1 auto;'}"
            id="moe-pipeline-list"
-           onmousedown="handleMoeGraphPanMouseDown(event)"
+           onmousedown="handleMoeGraphMouseDown(event)"
            onauxclick="handleMoeGraphPanAuxClick(event)"
            ondragover="handleMoeDragOver(event)"
            ondrop="handleMoeDrop(event)">

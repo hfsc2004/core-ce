@@ -338,6 +338,9 @@ function renderModelOrdering() {
   if (typeof window.refreshMoeGraphEdges === 'function') {
     try { requestAnimationFrame(() => window.refreshMoeGraphEdges()); } catch (_) { /* no-op */ }
   }
+  if (typeof window.syncMoeGraphSelectionUi === 'function') {
+    try { requestAnimationFrame(() => window.syncMoeGraphSelectionUi()); } catch (_) { /* no-op */ }
+  }
   if (typeof window.enforceMoeGraphFitZoom === 'function') {
     try { requestAnimationFrame(() => window.enforceMoeGraphFitZoom()); } catch (_) { /* no-op */ }
   }

@@ -59,6 +59,7 @@ window.modelOrderingState = {
   moeGraphMode: false,
   moeGraphZoom: 0.7,
   moeGraphFullscreen: false,
+  moeGraphSelectedIds: [],
   
   // MoE Model Filter
   showAllModels: false  // false = downloaded only, true = show full catalog
