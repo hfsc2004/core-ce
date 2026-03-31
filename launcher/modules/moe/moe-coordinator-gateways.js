@@ -84,7 +84,8 @@ function getInputGateway(deploymentManager) {
   const status = deploymentManager.getStatus?.();
   const gateways = Object.entries(status?.gateways || {});
   for (const [id, gateway] of gateways) {
-    if ((gateway?.position || '').toLowerCase() !== 'input') continue;
+    const position = String(gateway?.position || '').toLowerCase();
+    if (position !== 'input' && position !== 'bidirectional') continue;
     const bindings = collectEnabledBindingsForGateway(status?.bindings, id);
     return { id, ...gateway, bindings };
   }

@@ -66,7 +66,11 @@ function updateAgentRoutingRules(agentId, rawRules) {
 function updateChannelDirection(channelId, direction) {
   const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
   if (channel) {
-    channel.direction = direction;
+    const normalized = String(direction || '').trim().toLowerCase();
+    channel.direction = ['bidirectional', 'unidirectional_ingress', 'unidirectional_egress', 'unidirectional'].includes(normalized)
+      ? normalized
+      : 'bidirectional';
+    if (channel.direction === 'unidirectional') channel.direction = 'unidirectional_egress';
     console.log('[MoE] Updated channel direction:', channelId, direction);
     renderModelOrdering();
   }

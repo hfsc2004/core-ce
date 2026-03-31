@@ -278,6 +278,8 @@ function renderMoePipeline() {
         ? 'display:block; position:relative; overflow:auto; padding-right:6px; min-height:760px; flex:1 1 auto;'
         : 'display:flex; flex-direction:column; gap:4px; overflow-y:auto; padding-right:6px; min-height:260px; flex:1 1 auto;'}"
            id="moe-pipeline-list"
+           onmousedown="handleMoeGraphPanMouseDown(event)"
+           onauxclick="handleMoeGraphPanAuxClick(event)"
            ondragover="handleMoeDragOver(event)"
            ondrop="handleMoeDrop(event)">
         ${graphMode ? `
@@ -290,6 +292,18 @@ function renderMoePipeline() {
               </marker>
               <marker id="moe-edge-arrow-start" markerWidth="9" markerHeight="7" refX="1" refY="3.5" orient="auto" markerUnits="strokeWidth">
                 <path d="M8,0 L0,3.5 L8,7 z" fill="#86b8ff"></path>
+              </marker>
+              <marker id="moe-edge-arrow-end-blue" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L8,3.5 L0,7 z" fill="#58a6ff"></path>
+              </marker>
+              <marker id="moe-edge-arrow-start-blue" markerWidth="9" markerHeight="7" refX="1" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                <path d="M8,0 L0,3.5 L8,7 z" fill="#58a6ff"></path>
+              </marker>
+              <marker id="moe-edge-arrow-end-white" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L8,3.5 L0,7 z" fill="#ffffff"></path>
+              </marker>
+              <marker id="moe-edge-arrow-start-white" markerWidth="9" markerHeight="7" refX="1" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                <path d="M8,0 L0,3.5 L8,7 z" fill="#ffffff"></path>
               </marker>
             </defs>
           </svg>
@@ -324,6 +338,14 @@ function renderMoePipeline() {
         <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
           <div style="width:10px; height:10px; border-radius:2px; background:rgba(188,140,255,0.25); border:1px solid #bc8cff;"></div>
           CLI Agent - Stateless Tool Execution
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
+          <span style="width:24px; height:0; border-top:2px solid #86b8ff; display:inline-block;"></span>
+          Solid Wire - Communication Flow
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
+          <span style="width:24px; height:0; border-top:2px dashed #86b8ff; display:inline-block;"></span>
+          Dashed Wire - Ownership / Membership
         </div>
       </div>
       </div>
@@ -421,9 +443,12 @@ function getGraphAnchor(el, side) {
     endpoint_registry: -2
   };
   const outward = Number.isFinite(Number(outwardByType[cardType])) ? Number(outwardByType[cardType]) : 0;
-  const y = top + Math.max(24, Math.round(height * 0.45));
-  if (side === 'left') return { x: left + 1 - outward, y };
-  return { x: left + Math.max(8, width - 1) + outward, y };
+  const centerX = left + Math.round(width * 0.5);
+  const centerY = top + Math.max(24, Math.round(height * 0.45));
+  if (side === 'left') return { x: left + 1 - outward, y: centerY };
+  if (side === 'top') return { x: centerX, y: top + 1 - outward };
+  if (side === 'bottom') return { x: centerX, y: top + Math.max(8, height - 1) + outward };
+  return { x: left + Math.max(8, width - 1) + outward, y: centerY };
 }
 
 function buildEdgePath(from, to) {
@@ -436,16 +461,172 @@ function buildEdgePath(from, to) {
   return `M ${from.x} ${from.y} C ${c1x} ${from.y}, ${c2x} ${to.y}, ${to.x} ${to.y}`;
 }
 
+function isPointInRect(point, rect, padding = 0) {
+  const x = Number(point?.x || 0);
+  const y = Number(point?.y || 0);
+  const left = Number(rect?.left || 0) - padding;
+  const right = Number(rect?.right || 0) + padding;
+  const top = Number(rect?.top || 0) - padding;
+  const bottom = Number(rect?.bottom || 0) + padding;
+  return x > left && x < right && y > top && y < bottom;
+}
+
+function ccw(a, b, c) {
+  return (Number(c.y) - Number(a.y)) * (Number(b.x) - Number(a.x))
+    > (Number(b.y) - Number(a.y)) * (Number(c.x) - Number(a.x));
+}
+
+function segmentsIntersect(a, b, c, d) {
+  const ab = ccw(a, c, d) !== ccw(b, c, d);
+  const cd = ccw(a, b, c) !== ccw(a, b, d);
+  return ab && cd;
+}
+
+function segmentIntersectsRect(a, b, rect, padding = 0) {
+  if (!rect) return false;
+  if (isPointInRect(a, rect, padding) || isPointInRect(b, rect, padding)) return true;
+  const left = Number(rect.left || 0) - padding;
+  const right = Number(rect.right || 0) + padding;
+  const top = Number(rect.top || 0) - padding;
+  const bottom = Number(rect.bottom || 0) + padding;
+  const r1 = { x: left, y: top };
+  const r2 = { x: right, y: top };
+  const r3 = { x: right, y: bottom };
+  const r4 = { x: left, y: bottom };
+  return (
+    segmentsIntersect(a, b, r1, r2) ||
+    segmentsIntersect(a, b, r2, r3) ||
+    segmentsIntersect(a, b, r3, r4) ||
+    segmentsIntersect(a, b, r4, r1)
+  );
+}
+
+function polylineIntersectionCount(points, rects, padding = 2) {
+  if (!Array.isArray(points) || points.length < 2) return 0;
+  if (!Array.isArray(rects) || rects.length === 0) return 0;
+  let hits = 0;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i];
+    const b = points[i + 1];
+    for (const rect of rects) {
+      if (segmentIntersectsRect(a, b, rect, padding)) {
+        hits += 1;
+      }
+    }
+  }
+  return hits;
+}
+
+function pathFromPoints(points) {
+  if (!Array.isArray(points) || points.length === 0) return '';
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i += 1) {
+    path += ` L ${points[i].x} ${points[i].y}`;
+  }
+  return path;
+}
+
+function smoothPathFromPoints(points, radius = 22) {
+  if (!Array.isArray(points) || points.length < 2) return '';
+  if (points.length === 2) return buildEdgePath(points[0], points[1]);
+  const safeRadius = Math.max(0, Number(radius) || 0);
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+    const v1x = curr.x - prev.x;
+    const v1y = curr.y - prev.y;
+    const v2x = next.x - curr.x;
+    const v2y = next.y - curr.y;
+    const len1 = Math.hypot(v1x, v1y);
+    const len2 = Math.hypot(v2x, v2y);
+    if (len1 < 1 || len2 < 1) {
+      d += ` L ${curr.x} ${curr.y}`;
+      continue;
+    }
+    const r = Math.min(safeRadius, len1 * 0.45, len2 * 0.45);
+    const inX = curr.x - (v1x / len1) * r;
+    const inY = curr.y - (v1y / len1) * r;
+    const outX = curr.x + (v2x / len2) * r;
+    const outY = curr.y + (v2y / len2) * r;
+    d += ` L ${inX} ${inY} Q ${curr.x} ${curr.y} ${outX} ${outY}`;
+  }
+  const last = points[points.length - 1];
+  d += ` L ${last.x} ${last.y}`;
+  return d;
+}
+
+function buildRoutedEdgePath(from, to, options = {}) {
+  const direct = buildEdgePath(from, to);
+  const obstacles = Array.isArray(options.obstacles) ? options.obstacles : [];
+  if (obstacles.length === 0) return direct;
+  const excludeSet = new Set((Array.isArray(options.excludeIds) ? options.excludeIds : []).map((id) => String(id || '').trim()).filter(Boolean));
+  const relevant = obstacles.filter((rect) => !excludeSet.has(String(rect?.id || '').trim()));
+  if (relevant.length === 0) return direct;
+
+  // Quick accept: if straight segment between anchors does not intersect cards, keep smooth path.
+  if (polylineIntersectionCount([from, to], relevant, 2) === 0) return direct;
+
+  const minTop = Math.min(...relevant.map((r) => Number(r.top || 0)), Number(from.y), Number(to.y));
+  const maxBottom = Math.max(...relevant.map((r) => Number(r.bottom || 0)), Number(from.y), Number(to.y));
+  const minLeft = Math.min(...relevant.map((r) => Number(r.left || 0)), Number(from.x), Number(to.x));
+  const maxRight = Math.max(...relevant.map((r) => Number(r.right || 0)), Number(from.x), Number(to.x));
+  const bounds = options?.routeBounds && typeof options.routeBounds === 'object'
+    ? options.routeBounds
+    : {};
+  const minX = Number.isFinite(Number(bounds.minX)) ? Number(bounds.minX) : 16;
+  const maxX = Number.isFinite(Number(bounds.maxX)) ? Number(bounds.maxX) : 4000;
+  const minY = Number.isFinite(Number(bounds.minY)) ? Number(bounds.minY) : 16;
+  const maxY = Number.isFinite(Number(bounds.maxY)) ? Number(bounds.maxY) : 4000;
+  const lanePads = [34, 72, 120, 180, 250, 330];
+  const candidates = [];
+  lanePads.forEach((pad) => {
+    const topLane = Math.max(minY, minTop - pad);
+    const bottomLane = Math.min(maxY, maxBottom + pad);
+    const leftLane = Math.max(minX, minLeft - pad);
+    const rightLane = Math.min(maxX, maxRight + pad);
+    candidates.push([from, { x: from.x, y: topLane }, { x: to.x, y: topLane }, to]);
+    candidates.push([from, { x: from.x, y: bottomLane }, { x: to.x, y: bottomLane }, to]);
+    candidates.push([from, { x: leftLane, y: from.y }, { x: leftLane, y: to.y }, to]);
+    candidates.push([from, { x: rightLane, y: from.y }, { x: rightLane, y: to.y }, to]);
+  });
+  let best = candidates[0];
+  let bestHits = Number.POSITIVE_INFINITY;
+  let bestLen = Number.POSITIVE_INFINITY;
+  for (const poly of candidates) {
+    const hits = polylineIntersectionCount(poly, relevant, 2);
+    let len = 0;
+    for (let i = 0; i < poly.length - 1; i += 1) {
+      len += Math.hypot(poly[i + 1].x - poly[i].x, poly[i + 1].y - poly[i].y);
+    }
+    if (hits < bestHits || (hits === bestHits && len < bestLen)) {
+      best = poly;
+      bestHits = hits;
+      bestLen = len;
+    }
+    if (hits === 0 && len <= bestLen) break;
+  }
+  return smoothPathFromPoints(best, 22);
+}
+
 function pushGraphEdge(lines, from, to, options = {}) {
   if (!from || !to) return;
-  const d = buildEdgePath(from, to);
+  const d = buildRoutedEdgePath(from, to, options);
+  pushGraphPath(lines, d, options);
+}
+
+function pushGraphPath(lines, d, options = {}) {
+  if (!d) return;
   const color = String(options.color || '#86b8ff');
   const glowWidth = Number.isFinite(Number(options.glowWidth)) ? Number(options.glowWidth) : 5;
   const strokeWidth = Number.isFinite(Number(options.strokeWidth)) ? Number(options.strokeWidth) : 1.6;
   const glowOpacity = Number.isFinite(Number(options.glowOpacity)) ? Number(options.glowOpacity) : 0.22;
   const dash = String(options.dash || '').trim();
-  const markerEnd = options.markerEnd === false ? '' : 'url(#moe-edge-arrow-end)';
-  const markerStart = options.markerStart === true ? 'url(#moe-edge-arrow-start)' : '';
+  const markerEndId = String(options.markerEndId || 'moe-edge-arrow-end').trim();
+  const markerStartId = String(options.markerStartId || 'moe-edge-arrow-start').trim();
+  const markerEnd = options.markerEnd === false ? '' : `url(#${markerEndId})`;
+  const markerStart = options.markerStart === true ? `url(#${markerStartId})` : '';
   lines.push(`
     <path d="${d}" stroke="${color}" stroke-opacity="${glowOpacity}" stroke-width="${glowWidth}" stroke-linecap="round" fill="none" ${dash ? `stroke-dasharray="${dash}"` : ''}></path>
     <path d="${d}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" fill="none"
@@ -453,6 +634,163 @@ function pushGraphEdge(lines, from, to, options = {}) {
           ${markerEnd ? `marker-end="${markerEnd}"` : ''}
           ${markerStart ? `marker-start="${markerStart}"` : ''}></path>
   `);
+}
+
+function pushAlternatingDottedEdge(lines, from, to, options = {}) {
+  if (!from || !to) return;
+  const d = buildRoutedEdgePath(from, to, options);
+  const colorA = String(options.colorA || '#58a6ff');
+  const colorB = String(options.colorB || '#ffffff');
+  const dashLen = Number.isFinite(Number(options.dashLen)) ? Number(options.dashLen) : 8;
+  const gapLen = Number.isFinite(Number(options.gapLen)) ? Number(options.gapLen) : 8;
+  const strokeWidth = Number.isFinite(Number(options.strokeWidth)) ? Number(options.strokeWidth) : 2;
+  const markerStart = options.markerStart === true ? `url(#${String(options.markerStartId || 'moe-edge-arrow-start')})` : '';
+  const markerEnd = options.markerEnd === false ? '' : `url(#${String(options.markerEndId || 'moe-edge-arrow-end')})`;
+  const pattern = `${dashLen} ${dashLen + gapLen}`;
+  const offset = `${dashLen + gapLen}`;
+  lines.push(`
+    <path d="${d}" stroke="${colorA}" stroke-width="${strokeWidth}" stroke-linecap="round" fill="none"
+          stroke-dasharray="${pattern}" stroke-dashoffset="0"
+          ${markerStart ? `marker-start="${markerStart}"` : ''}
+          ${markerEnd ? `marker-end="${markerEnd}"` : ''}></path>
+    <path d="${d}" stroke="${colorB}" stroke-width="${strokeWidth}" stroke-linecap="round" fill="none"
+          stroke-dasharray="${pattern}" stroke-dashoffset="${offset}"></path>
+  `);
+}
+
+function getDirectAnchorSides(fromEl, toEl) {
+  const fromCx = Number(fromEl.offsetLeft || 0) + Number(fromEl.offsetWidth || 0) * 0.5;
+  const fromCy = Number(fromEl.offsetTop || 0) + Number(fromEl.offsetHeight || 0) * 0.5;
+  const toCx = Number(toEl.offsetLeft || 0) + Number(toEl.offsetWidth || 0) * 0.5;
+  const toCy = Number(toEl.offsetTop || 0) + Number(toEl.offsetHeight || 0) * 0.5;
+  const dx = toCx - fromCx;
+  const dy = toCy - fromCy;
+  if (Math.abs(dy) > Math.abs(dx)) {
+    return {
+      fromSide: dy >= 0 ? 'bottom' : 'top',
+      toSide: dy >= 0 ? 'top' : 'bottom'
+    };
+  }
+  return {
+    fromSide: dx >= 0 ? 'right' : 'left',
+    toSide: dx >= 0 ? 'left' : 'right'
+  };
+}
+
+function getVerticalAnchorSides(fromEl, toEl) {
+  const fromCy = Number(fromEl.offsetTop || 0) + Number(fromEl.offsetHeight || 0) * 0.5;
+  const toCy = Number(toEl.offsetTop || 0) + Number(toEl.offsetHeight || 0) * 0.5;
+  const fromSide = toCy >= fromCy ? 'bottom' : 'top';
+  const toSide = toCy >= fromCy ? 'top' : 'bottom';
+  return { fromSide, toSide };
+}
+
+function drawGatewayToAgentEdge(lines, gatewayEl, agentEl, position, options = {}) {
+  const mode = String(position || 'input').trim().toLowerCase();
+  if (mode === 'bidirectional') {
+    const sides = getDirectAnchorSides(gatewayEl, agentEl);
+    const from = getGraphAnchor(gatewayEl, sides.fromSide);
+    const to = getGraphAnchor(agentEl, sides.toSide);
+    pushAlternatingDottedEdge(lines, from, to, {
+      colorA: '#58a6ff',
+      colorB: '#ffffff',
+      markerStart: true,
+      markerEnd: true,
+      markerStartId: 'moe-edge-arrow-start-blue',
+      markerEndId: 'moe-edge-arrow-end-white',
+      obstacles: options?.obstacles || [],
+      excludeIds: options?.excludeIds || []
+    });
+    return;
+  }
+  if (mode === 'output') {
+    const gatewayAnchor = getGraphAnchor(gatewayEl, 'right');
+    const targetSide = Number(gatewayEl.offsetLeft || 0) <= Number(agentEl.offsetLeft || 0) ? 'left' : 'right';
+    const targetAnchor = getGraphAnchor(agentEl, targetSide);
+    pushGraphEdge(lines, gatewayAnchor, targetAnchor, {
+      color: '#ffffff',
+      markerStart: false,
+      markerEnd: true,
+      markerEndId: 'moe-edge-arrow-end-white',
+      glowOpacity: 0.14,
+      glowWidth: 4,
+      obstacles: options?.obstacles || [],
+      excludeIds: options?.excludeIds || []
+    });
+    return;
+  }
+  const sourceIsRight = Number(agentEl.offsetLeft || 0) > Number(gatewayEl.offsetLeft || 0);
+  const sourceSide = sourceIsRight ? 'left' : 'right';
+  const sourceAnchor = getGraphAnchor(agentEl, sourceSide);
+  const gatewayAnchor = getGraphAnchor(gatewayEl, 'left');
+  if (sourceIsRight) {
+    const sourceTop = Number(agentEl.offsetTop || 0);
+    const sourceBottom = sourceTop + Number(agentEl.offsetHeight || 0);
+    const gatewayTop = Number(gatewayEl.offsetTop || 0);
+    const gatewayBottom = gatewayTop + Number(gatewayEl.offsetHeight || 0);
+    const routeAbove = sourceTop <= gatewayTop;
+    const bounds = options?.routeBounds && typeof options.routeBounds === 'object'
+      ? options.routeBounds
+      : {};
+    const minY = Number.isFinite(Number(bounds.minY)) ? Number(bounds.minY) : 16;
+    const maxY = Number.isFinite(Number(bounds.maxY)) ? Number(bounds.maxY) : 4000;
+    const minX = Number.isFinite(Number(bounds.minX)) ? Number(bounds.minX) : 16;
+    const baseViaY = routeAbove
+      ? Math.min(sourceAnchor.y, gatewayAnchor.y) - 42
+      : Math.max(sourceBottom, gatewayBottom) + 42;
+    const gatewayLeft = Number(gatewayEl.offsetLeft || 0);
+    const baseApproachX = Math.max(minX, gatewayLeft - 42);
+    const pads = [0, 40, 90, 150, 220];
+    let bestPoints = null;
+    let bestHits = Number.POSITIVE_INFINITY;
+    for (const p of pads) {
+      const viaY = routeAbove
+        ? Math.max(minY, baseViaY - p)
+        : Math.min(maxY, baseViaY + p);
+      const approachX = Math.max(minX, baseApproachX - Math.round(p * 0.4));
+      const poly = [
+        sourceAnchor,
+        { x: sourceAnchor.x - 70 - p, y: sourceAnchor.y },
+        { x: sourceAnchor.x - 70 - p, y: viaY },
+        { x: approachX, y: viaY },
+        { x: approachX, y: gatewayAnchor.y },
+        gatewayAnchor
+      ];
+      const hits = polylineIntersectionCount(
+        poly,
+        Array.isArray(options?.obstacles) ? options.obstacles.filter((r) => {
+          const exclude = new Set((Array.isArray(options?.excludeIds) ? options.excludeIds : []).map((id) => String(id || '').trim()).filter(Boolean));
+          return !exclude.has(String(r?.id || '').trim());
+        }) : [],
+        2
+      );
+      if (hits < bestHits) {
+        bestHits = hits;
+        bestPoints = poly;
+      }
+      if (hits === 0) break;
+    }
+    const d = smoothPathFromPoints(bestPoints || [sourceAnchor, gatewayAnchor], 20);
+    pushGraphPath(lines, d, {
+      color: '#58a6ff',
+      markerStart: false,
+      markerEnd: true,
+      markerEndId: 'moe-edge-arrow-end-blue',
+      obstacles: options?.obstacles || [],
+      excludeIds: options?.excludeIds || [],
+      routeBounds: options?.routeBounds || null
+    });
+    return;
+  }
+  pushGraphEdge(lines, sourceAnchor, gatewayAnchor, {
+    color: '#58a6ff',
+    markerStart: false,
+    markerEnd: true,
+    markerEndId: 'moe-edge-arrow-end-blue',
+    obstacles: options?.obstacles || [],
+    excludeIds: options?.excludeIds || [],
+    routeBounds: options?.routeBounds || null
+  });
 }
 
 function findNearestAgentId(items, fromIndex, direction = 'forward') {
@@ -479,6 +817,85 @@ function findNearestAgentId(items, fromIndex, direction = 'forward') {
   return '';
 }
 
+function resolveChannelDirection(directionRaw) {
+  const dir = String(directionRaw || 'bidirectional').trim().toLowerCase();
+  if (dir === 'unidirectional') return 'unidirectional_egress';
+  if (dir === 'unidirectional_ingress' || dir === 'unidirectional_egress' || dir === 'bidirectional') return dir;
+  return 'bidirectional';
+}
+
+function getChannelArrowMode(directionRaw) {
+  const dir = resolveChannelDirection(directionRaw);
+  if (dir === 'unidirectional_ingress') {
+    return {
+      markerStart: true,
+      markerEnd: false,
+      color: '#58a6ff',
+      markerStartId: 'moe-edge-arrow-start-blue',
+      markerEndId: 'moe-edge-arrow-end-blue'
+    };
+  }
+  if (dir === 'unidirectional_egress') {
+    return {
+      markerStart: false,
+      markerEnd: true,
+      color: '#ffffff',
+      markerStartId: 'moe-edge-arrow-start-white',
+      markerEndId: 'moe-edge-arrow-end-white',
+      glowOpacity: 0.14,
+      glowWidth: 4
+    };
+  }
+  return {
+    markerStart: true,
+    markerEnd: true,
+    color: '#86b8ff',
+    markerStartId: 'moe-edge-arrow-start',
+    markerEndId: 'moe-edge-arrow-end'
+  };
+}
+
+function drawChannelEdge(lines, fromEl, toEl, directionRaw, options = {}) {
+  const fromId = String(fromEl?.getAttribute?.('data-moe-id') || '').trim();
+  const toId = String(toEl?.getAttribute?.('data-moe-id') || '').trim();
+  const direction = resolveChannelDirection(directionRaw);
+  const arrows = getChannelArrowMode(direction);
+  const sides = direction === 'bidirectional'
+    ? getDirectAnchorSides(fromEl, toEl)
+    : getVerticalAnchorSides(fromEl, toEl);
+  const from = getGraphAnchor(fromEl, sides.fromSide);
+  const to = getGraphAnchor(toEl, sides.toSide);
+  if (direction === 'bidirectional') {
+    pushAlternatingDottedEdge(lines, from, to, {
+      colorA: '#58a6ff',
+      colorB: '#ffffff',
+      markerStart: true,
+      markerEnd: true,
+      markerStartId: 'moe-edge-arrow-start-blue',
+      markerEndId: 'moe-edge-arrow-end-white',
+      dashLen: 7,
+      gapLen: 7,
+      strokeWidth: 1.9,
+      obstacles: options?.obstacles || [],
+      excludeIds: [fromId, toId],
+      routeBounds: options?.routeBounds || null
+    });
+    return;
+  }
+  pushGraphEdge(lines, from, to, {
+    color: arrows.color,
+    markerStart: arrows.markerStart,
+    markerEnd: arrows.markerEnd,
+    markerStartId: arrows.markerStartId,
+    markerEndId: arrows.markerEndId,
+    glowOpacity: arrows.glowOpacity,
+    glowWidth: arrows.glowWidth,
+    obstacles: options?.obstacles || [],
+    excludeIds: [fromId, toId],
+    routeBounds: options?.routeBounds || null
+  });
+}
+
 function refreshMoeGraphEdges() {
   if (window.modelOrderingState?.moeGraphMode !== true) return;
   const list = document.getElementById('moe-pipeline-list');
@@ -500,6 +917,40 @@ function refreshMoeGraphEdges() {
 
   const canvasW = Math.max(canvas.scrollWidth, canvas.clientWidth, 1200);
   const canvasH = Math.max(canvas.scrollHeight, canvas.clientHeight, 760);
+  const edgeMargin = 72;
+  let adjustedCards = false;
+  for (const [id, el] of cardMap.entries()) {
+    const item = items.find((entry) => String(entry?.id || '').trim() === id);
+    if (!item) continue;
+    const width = Number(el.offsetWidth || 0);
+    const height = Number(el.offsetHeight || 0);
+    const currentX = Number(item?.canvasPos?.x ?? el.offsetLeft ?? 0);
+    const currentY = Number(item?.canvasPos?.y ?? el.offsetTop ?? 0);
+    const clampedX = Math.max(edgeMargin, Math.min(Math.max(edgeMargin, canvasW - width - edgeMargin), Math.round(currentX)));
+    const clampedY = Math.max(edgeMargin, Math.min(Math.max(edgeMargin, canvasH - height - edgeMargin), Math.round(currentY)));
+    if (clampedX !== currentX || clampedY !== currentY) {
+      item.canvasPos = { x: clampedX, y: clampedY };
+      el.style.left = `${clampedX}px`;
+      el.style.top = `${clampedY}px`;
+      adjustedCards = true;
+    }
+  }
+  if (adjustedCards) {
+    cardMap.forEach((el) => { el.getBoundingClientRect(); });
+  }
+  const obstacleRects = Array.from(cardMap.entries()).map(([id, el]) => ({
+    id,
+    left: Number(el.offsetLeft || 0),
+    top: Number(el.offsetTop || 0),
+    right: Number(el.offsetLeft || 0) + Number(el.offsetWidth || 0),
+    bottom: Number(el.offsetTop || 0) + Number(el.offsetHeight || 0)
+  }));
+  const routeBounds = {
+    minX: edgeMargin * 0.5,
+    maxX: canvasW - edgeMargin * 0.5,
+    minY: edgeMargin * 0.5,
+    maxY: canvasH - edgeMargin * 0.5
+  };
   svg.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
   svg.setAttribute('width', String(canvasW));
   svg.setAttribute('height', String(canvasH));
@@ -516,35 +967,16 @@ function refreshMoeGraphEdges() {
     if (!channelId || !sourceIds.length || !targets.length) continue;
     const channelEl = cardMap.get(channelId);
     if (!channelEl) continue;
-    const dir = String(channel?.direction || 'bidirectional').trim().toLowerCase();
-
     for (const sourceId of sourceIds) {
       const sourceEl = cardMap.get(sourceId);
       if (!sourceEl) continue;
-
-      // Segment A: source card <-> channel card.
-      const sourceToChannelForward = Number(sourceEl.offsetLeft || 0) <= Number(channelEl.offsetLeft || 0);
-      const sourceAnchor = getGraphAnchor(sourceEl, sourceToChannelForward ? 'right' : 'left');
-      const channelInAnchor = getGraphAnchor(channelEl, sourceToChannelForward ? 'left' : 'right');
-      pushGraphEdge(lines, sourceAnchor, channelInAnchor, {
-        color: '#86b8ff',
-        markerStart: dir === 'bidirectional',
-        markerEnd: true
-      });
+      drawChannelEdge(lines, sourceEl, channelEl, channel?.direction, { obstacles: obstacleRects, routeBounds });
     }
 
     for (const targetId of targets) {
       const targetEl = cardMap.get(targetId);
       if (!targetEl) continue;
-      // Segment B: channel card <-> target card.
-      const channelToTargetForward = Number(channelEl.offsetLeft || 0) <= Number(targetEl.offsetLeft || 0);
-      const channelOutAnchor = getGraphAnchor(channelEl, channelToTargetForward ? 'right' : 'left');
-      const targetAnchor = getGraphAnchor(targetEl, channelToTargetForward ? 'left' : 'right');
-      pushGraphEdge(lines, channelOutAnchor, targetAnchor, {
-        color: '#86b8ff',
-        markerStart: dir === 'bidirectional',
-        markerEnd: true
-      });
+      drawChannelEdge(lines, channelEl, targetEl, channel?.direction, { obstacles: obstacleRects, routeBounds });
     }
   }
 
@@ -574,15 +1006,10 @@ function refreshMoeGraphEdges() {
       for (const targetAgentId of explicitTargets) {
         const agentEl = cardMap.get(targetAgentId);
         if (!agentEl) continue;
-        const fromEl = position === 'output' ? agentEl : gatewayEl;
-        const toEl = position === 'output' ? gatewayEl : agentEl;
-        const sourceForward = Number(fromEl.offsetLeft || 0) <= Number(toEl.offsetLeft || 0);
-        const from = getGraphAnchor(fromEl, sourceForward ? 'right' : 'left');
-        const to = getGraphAnchor(toEl, sourceForward ? 'left' : 'right');
-        pushGraphEdge(lines, from, to, {
-          color: '#3fb950',
-          dash: '5 4',
-          markerEnd: false
+        drawGatewayToAgentEdge(lines, gatewayEl, agentEl, position, {
+          obstacles: obstacleRects,
+          excludeIds: [gatewayId, targetAgentId],
+          routeBounds
         });
       }
       continue;
@@ -608,16 +1035,10 @@ function refreshMoeGraphEdges() {
     if (!targetAgentId) continue;
     const agentEl = cardMap.get(targetAgentId);
     if (!agentEl) continue;
-
-    const fromEl = position === 'output' ? agentEl : gatewayEl;
-    const toEl = position === 'output' ? gatewayEl : agentEl;
-    const sourceForward = Number(fromEl.offsetLeft || 0) <= Number(toEl.offsetLeft || 0);
-    const from = getGraphAnchor(fromEl, sourceForward ? 'right' : 'left');
-    const to = getGraphAnchor(toEl, sourceForward ? 'left' : 'right');
-    pushGraphEdge(lines, from, to, {
-      color: '#3fb950',
-      dash: '5 4',
-      markerEnd: false
+    drawGatewayToAgentEdge(lines, gatewayEl, agentEl, position, {
+      obstacles: obstacleRects,
+      excludeIds: [gatewayId, targetAgentId],
+      routeBounds
     });
   }
 
@@ -649,7 +1070,10 @@ function refreshMoeGraphEdges() {
       pushGraphEdge(lines, from, to, {
         color: '#d2991e',
         dash: '3 4',
-        markerEnd: false
+        markerEnd: false,
+        obstacles: obstacleRects,
+        excludeIds: [bindingsId, gatewayId],
+        routeBounds
       });
     }
   }
@@ -672,7 +1096,10 @@ function refreshMoeGraphEdges() {
     pushGraphEdge(lines, from, to, {
       color: '#bc8cff',
       dash: '2 3',
-      markerEnd: false
+      markerEnd: false,
+      obstacles: obstacleRects,
+      excludeIds: [ownerId, cliId],
+      routeBounds
     });
   }
 

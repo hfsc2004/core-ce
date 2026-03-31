@@ -12,6 +12,10 @@ function renderChannelRow(channel, index) {
   const theme = getMoeTheme();
   const flowCondition = String(channel.when || channel.flowCondition || 'always').toLowerCase();
   const mode = String(channel.mode || 'direct').toLowerCase();
+  const channelDirectionRaw = String(channel.direction || 'bidirectional').trim().toLowerCase();
+  const channelDirection = channelDirectionRaw === 'unidirectional'
+    ? 'unidirectional_egress'
+    : channelDirectionRaw;
   const matchRule = String(channel.matchRule || '');
   const retryCount = Number.isInteger(Number(channel.retryCount)) ? Number(channel.retryCount) : 0;
   const timeoutMs = Number.isFinite(Number(channel.timeoutMs)) ? Number(channel.timeoutMs) : 120000;
@@ -107,9 +111,10 @@ function renderChannelRow(channel, index) {
         </span>
         <span style="color:#fff; font-weight:bold; font-size:12px; min-width:80px; padding:4px; border-bottom:1px solid transparent;">Channel</span>
         <select onchange="updateChannelDirection('${channel.id}', this.value)" onclick="event.stopPropagation()"
-                style="padding: 4px 10px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
-          <option value="bidirectional" ${channel.direction === 'bidirectional' ? 'selected' : ''}>↔ Bi-directional</option>
-          <option value="unidirectional" ${channel.direction === 'unidirectional' ? 'selected' : ''}>↓ Uni-directional</option>
+                style="min-width: 230px; padding: 4px 10px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
+          <option value="bidirectional" ${channelDirection === 'bidirectional' ? 'selected' : ''}>↔ Bi-directional</option>
+          <option value="unidirectional_ingress" ${channelDirection === 'unidirectional_ingress' ? 'selected' : ''}>← Uni-directional Ingress</option>
+          <option value="unidirectional_egress" ${channelDirection === 'unidirectional_egress' ? 'selected' : ''}>→ Uni-directional Egress</option>
         </select>
         <input type="text" value="${channel.label || ''}" placeholder="Optional label..." onchange="updateMoeItemLabel('${channel.id}', this.value)" onclick="event.stopPropagation()"
                style="background: transparent; border: none; border-bottom: 1px solid transparent; color: #888; font-size: 12px; padding: 4px; flex: 1;"

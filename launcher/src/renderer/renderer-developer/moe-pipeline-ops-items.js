@@ -232,6 +232,43 @@ function beginMoeCanvasDrag(event, itemId) {
   window.addEventListener('mouseup', up, true);
 }
 
+function handleMoeGraphPanAuxClick(event) {
+  if (!isMoeGraphModeEnabled()) return;
+  if (!event || event.button !== 1) return;
+  event.preventDefault();
+}
+
+function handleMoeGraphPanMouseDown(event) {
+  if (!isMoeGraphModeEnabled()) return;
+  if (!event || event.button !== 1) return;
+  const list = document.getElementById('moe-pipeline-list');
+  if (!(list instanceof HTMLElement)) return;
+
+  event.preventDefault();
+  const startX = Number(event.clientX || 0);
+  const startY = Number(event.clientY || 0);
+  const originLeft = Number(list.scrollLeft || 0);
+  const originTop = Number(list.scrollTop || 0);
+  const previousCursor = list.style.cursor;
+  list.style.cursor = 'grabbing';
+
+  const move = (moveEvent) => {
+    const dx = Number(moveEvent.clientX || 0) - startX;
+    const dy = Number(moveEvent.clientY || 0) - startY;
+    list.scrollLeft = Math.max(0, Math.round(originLeft - dx));
+    list.scrollTop = Math.max(0, Math.round(originTop - dy));
+  };
+
+  const up = () => {
+    window.removeEventListener('mousemove', move, true);
+    window.removeEventListener('mouseup', up, true);
+    list.style.cursor = previousCursor;
+  };
+
+  window.addEventListener('mousemove', move, true);
+  window.addEventListener('mouseup', up, true);
+}
+
 function toggleMoeItemEnabled(itemId, enabled) {
   const item = window.modelOrderingState.moeItems.find(i => i.id === itemId);
   if (item) {
@@ -345,3 +382,5 @@ window.toggleMoeGraphMode = toggleMoeGraphMode;
 window.setMoeGraphZoom = setMoeGraphZoom;
 window.adjustMoeGraphZoom = adjustMoeGraphZoom;
 window.beginMoeCanvasDrag = beginMoeCanvasDrag;
+window.handleMoeGraphPanMouseDown = handleMoeGraphPanMouseDown;
+window.handleMoeGraphPanAuxClick = handleMoeGraphPanAuxClick;

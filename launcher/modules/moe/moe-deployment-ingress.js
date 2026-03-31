@@ -6,7 +6,8 @@ function createIngressTools(deps = {}) {
   function getInputApiGatewayConfig() {
     const gateways = Object.values(getActiveDeployment()?.gateways || {});
     for (const gateway of gateways) {
-      if (String(gateway?.position || '').toLowerCase() !== 'input') continue;
+      const position = String(gateway?.position || '').toLowerCase();
+      if (position !== 'input' && position !== 'bidirectional') continue;
       if (gateway?.enabled === false) continue;
       const api = gateway?.sources?.api || {};
       const rawPort = Number.parseInt(String(api.port || ''), 10);

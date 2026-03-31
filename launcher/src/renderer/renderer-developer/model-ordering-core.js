@@ -261,7 +261,7 @@ function renderModelOrdering() {
                   <button onclick="adjustMoeGraphZoom(-0.1)"
                           title="Zoom out"
                           style="width:22px; height:22px; line-height:20px; text-align:center; padding:0; background:transparent; border:1px solid #466; border-radius:4px; color:#9ab; cursor:pointer; font-size:14px;">−</button>
-                  <input type="range" min="70" max="150" step="5" value="${Math.max(70, Math.min(150, graphZoomPct))}"
+                  <input type="range" min="45" max="150" step="1" value="${Math.max(45, Math.min(150, graphZoomPct))}"
                          oninput="setMoeGraphZoom(Number(this.value) / 100, true)"
                          title="Pipeline zoom"
                          style="width:120px; accent-color:#58a6ff; cursor:pointer;">

@@ -14,6 +14,7 @@ function renderGatewayRow(gateway, index) {
   const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
     ? window.getMoeItemCanvasStyle(gateway, index)
     : '';
+  const gatewayPosition = String(gateway.position || 'input').trim().toLowerCase();
   const assignedAgentCount = Array.isArray(gateway?.assignedAgentIds)
     ? gateway.assignedAgentIds.map((id) => String(id || '').trim()).filter(Boolean).length
     : 0;
@@ -45,7 +46,7 @@ function renderGatewayRow(gateway, index) {
               ${renameHoverIn ? `onmouseover="${renameHoverIn}"` : ''}
               ${renameHoverOut ? `onmouseout="${renameHoverOut}"` : ''}>${escapeBinding(gateway.name)}</span>
         <span style="background: rgba(0,255,136,0.2); color: ${theme.success}; padding: 3px 10px; border-radius: 10px; font-size: 11px;">
-          ${gateway.position === 'input' ? '⬇️ Input' : '⬆️ Output'}
+          ${gatewayPosition === 'output' ? '⬆️ Output' : (gatewayPosition === 'bidirectional' ? '↕️ Bi-directional' : '⬇️ Input')}
         </span>
         <span style="background: rgba(255,255,255,0.10); color: #cbd5e1; padding: 3px 10px; border-radius: 10px; font-size: 11px;">
           Agents ${assignedAgentCount}
@@ -274,6 +275,10 @@ function renderGatewayDetails(gateway) {
                   style="padding: 8px 20px; background: ${gateway.position === 'output' ? 'rgba(0,255,136,0.3)' : 'rgba(255,255,255,0.05)'}; 
                          border: 1px solid ${gateway.position === 'output' ? theme.success : '#555'}; border-radius: 6px; 
                          color: ${gateway.position === 'output' ? theme.success : '#888'}; cursor: pointer; font-size: 12px;">⬆️ Output</button>
+          <button onclick="updateGatewayPosition('${gateway.id}', 'bidirectional')"
+                  style="padding: 8px 20px; background: ${gateway.position === 'bidirectional' ? 'rgba(0,255,136,0.3)' : 'rgba(255,255,255,0.05)'}; 
+                         border: 1px solid ${gateway.position === 'bidirectional' ? theme.success : '#555'}; border-radius: 6px; 
+                         color: ${gateway.position === 'bidirectional' ? theme.success : '#888'}; cursor: pointer; font-size: 12px;">↕️ Bi-directional</button>
         </div>
       </div>
 
