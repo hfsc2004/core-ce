@@ -388,9 +388,18 @@ function getGraphAnchor(el, side) {
   const top = Number(el.offsetTop || 0);
   const width = Number(el.offsetWidth || 0);
   const height = Number(el.offsetHeight || 0);
+  const cardType = String(el.getAttribute('data-moe-type') || '').trim().toLowerCase();
+  const outwardByType = {
+    gateway: 4,
+    agent: -4,
+    cli_agent: -9,
+    bindings: -2,
+    endpoint_registry: -2
+  };
+  const outward = Number.isFinite(Number(outwardByType[cardType])) ? Number(outwardByType[cardType]) : 0;
   const y = top + Math.max(24, Math.round(height * 0.45));
-  if (side === 'left') return { x: left + 2, y };
-  return { x: left + Math.max(8, width - 2), y };
+  if (side === 'left') return { x: left + 1 - outward, y };
+  return { x: left + Math.max(8, width - 1) + outward, y };
 }
 
 function buildEdgePath(from, to) {
@@ -401,6 +410,49 @@ function buildEdgePath(from, to) {
   const c1x = from.x + (sourceSide === 'right' ? dx : -dx);
   const c2x = to.x + (targetSide === 'left' ? -dx : dx);
   return `M ${from.x} ${from.y} C ${c1x} ${from.y}, ${c2x} ${to.y}, ${to.x} ${to.y}`;
+}
+
+function pushGraphEdge(lines, from, to, options = {}) {
+  if (!from || !to) return;
+  const d = buildEdgePath(from, to);
+  const color = String(options.color || '#86b8ff');
+  const glowWidth = Number.isFinite(Number(options.glowWidth)) ? Number(options.glowWidth) : 5;
+  const strokeWidth = Number.isFinite(Number(options.strokeWidth)) ? Number(options.strokeWidth) : 1.6;
+  const glowOpacity = Number.isFinite(Number(options.glowOpacity)) ? Number(options.glowOpacity) : 0.22;
+  const dash = String(options.dash || '').trim();
+  const markerEnd = options.markerEnd === false ? '' : 'url(#moe-edge-arrow-end)';
+  const markerStart = options.markerStart === true ? 'url(#moe-edge-arrow-start)' : '';
+  lines.push(`
+    <path d="${d}" stroke="${color}" stroke-opacity="${glowOpacity}" stroke-width="${glowWidth}" stroke-linecap="round" fill="none" ${dash ? `stroke-dasharray="${dash}"` : ''}></path>
+    <path d="${d}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" fill="none"
+          ${dash ? `stroke-dasharray="${dash}"` : ''}
+          ${markerEnd ? `marker-end="${markerEnd}"` : ''}
+          ${markerStart ? `marker-start="${markerStart}"` : ''}></path>
+  `);
+}
+
+function findNearestAgentId(items, fromIndex, direction = 'forward') {
+  if (!Array.isArray(items) || !Number.isInteger(fromIndex)) return '';
+  if (direction === 'backward') {
+    for (let i = fromIndex - 1; i >= 0; i -= 1) {
+      const item = items[i];
+      if (item?.type === 'agent' && item?.enabled !== false) return String(item.id || '').trim();
+    }
+    for (let i = items.length - 1; i >= 0; i -= 1) {
+      const item = items[i];
+      if (item?.type === 'agent' && item?.enabled !== false) return String(item.id || '').trim();
+    }
+    return '';
+  }
+  for (let i = fromIndex + 1; i < items.length; i += 1) {
+    const item = items[i];
+    if (item?.type === 'agent' && item?.enabled !== false) return String(item.id || '').trim();
+  }
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    if (item?.type === 'agent' && item?.enabled !== false) return String(item.id || '').trim();
+  }
+  return '';
 }
 
 function refreshMoeGraphEdges() {
@@ -429,6 +481,8 @@ function refreshMoeGraphEdges() {
 
   const defs = svg.querySelector('defs');
   const lines = [];
+
+  // Channel links (direction-aware: uni vs bi).
   for (const row of channels) {
     const channel = row.item;
     const sourceId = getGraphSourceAgentId(channel, items, row.index);
@@ -443,16 +497,91 @@ function refreshMoeGraphEdges() {
       const sourceForward = Number(sourceEl.offsetLeft || 0) <= Number(targetEl.offsetLeft || 0);
       const from = getGraphAnchor(sourceEl, sourceForward ? 'right' : 'left');
       const to = getGraphAnchor(targetEl, sourceForward ? 'left' : 'right');
-      const d = buildEdgePath(from, to);
       const dir = String(channel?.direction || 'bidirectional').trim().toLowerCase();
-      const markerEnd = 'url(#moe-edge-arrow-end)';
-      const markerStart = dir === 'bidirectional' ? 'url(#moe-edge-arrow-start)' : '';
-      lines.push(`
-        <path d="${d}" stroke="rgba(134,184,255,0.22)" stroke-width="5" fill="none"></path>
-        <path d="${d}" stroke="#86b8ff" stroke-width="1.6" fill="none"
-              marker-end="${markerEnd}" ${markerStart ? `marker-start="${markerStart}"` : ''}></path>
-      `);
+      pushGraphEdge(lines, from, to, {
+        color: '#86b8ff',
+        markerStart: dir === 'bidirectional',
+        markerEnd: true
+      });
     }
+  }
+
+  // Gateway links (fixed direction by position).
+  const gateways = items
+    .map((item, index) => ({ item, index }))
+    .filter((row) => row.item?.type === 'gateway' && row.item?.enabled !== false);
+  for (const row of gateways) {
+    const gateway = row.item;
+    const gatewayId = String(gateway.id || '').trim();
+    if (!gatewayId) continue;
+    const gatewayEl = cardMap.get(gatewayId);
+    if (!gatewayEl) continue;
+    const position = String(gateway?.position || 'input').trim().toLowerCase();
+    const targetAgentId = position === 'output'
+      ? findNearestAgentId(items, row.index, 'backward')
+      : findNearestAgentId(items, row.index, 'forward');
+    if (!targetAgentId) continue;
+    const agentEl = cardMap.get(targetAgentId);
+    if (!agentEl) continue;
+
+    const fromEl = position === 'output' ? agentEl : gatewayEl;
+    const toEl = position === 'output' ? gatewayEl : agentEl;
+    const sourceForward = Number(fromEl.offsetLeft || 0) <= Number(toEl.offsetLeft || 0);
+    const from = getGraphAnchor(fromEl, sourceForward ? 'right' : 'left');
+    const to = getGraphAnchor(toEl, sourceForward ? 'left' : 'right');
+    pushGraphEdge(lines, from, to, {
+      color: '#3fb950',
+      dash: '5 4',
+      markerEnd: false
+    });
+  }
+
+  // Runtime bindings feed agents (one-way).
+  const bindingsRows = items
+    .map((item, index) => ({ item, index }))
+    .filter((row) => row.item?.type === 'bindings' && row.item?.enabled !== false);
+  const enabledAgentIds = items
+    .filter((item) => item?.type === 'agent' && item?.enabled !== false)
+    .map((item) => String(item.id || '').trim())
+    .filter(Boolean);
+  for (const row of bindingsRows) {
+    const bindingsId = String(row.item.id || '').trim();
+    const bindingsEl = cardMap.get(bindingsId);
+    if (!bindingsEl) continue;
+    for (const agentId of enabledAgentIds) {
+      const agentEl = cardMap.get(agentId);
+      if (!agentEl) continue;
+      const sourceForward = Number(bindingsEl.offsetLeft || 0) <= Number(agentEl.offsetLeft || 0);
+      const from = getGraphAnchor(bindingsEl, sourceForward ? 'right' : 'left');
+      const to = getGraphAnchor(agentEl, sourceForward ? 'left' : 'right');
+      pushGraphEdge(lines, from, to, {
+        color: '#d2991e',
+        dash: '3 4',
+        markerEnd: false
+      });
+    }
+  }
+
+  // CLI Agent ownership links (owner agent -> CLI agent).
+  const cliRows = items
+    .map((item, index) => ({ item, index }))
+    .filter((row) => row.item?.type === 'cli_agent' && row.item?.enabled !== false);
+  for (const row of cliRows) {
+    const cliItem = row.item;
+    const cliId = String(cliItem.id || '').trim();
+    const ownerId = String(cliItem.ownerAgentId || '').trim();
+    if (!cliId || !ownerId) continue;
+    const cliEl = cardMap.get(cliId);
+    const ownerEl = cardMap.get(ownerId);
+    if (!cliEl || !ownerEl) continue;
+    const sourceForward = Number(ownerEl.offsetLeft || 0) <= Number(cliEl.offsetLeft || 0);
+    const from = getGraphAnchor(ownerEl, sourceForward ? 'right' : 'left');
+    const to = getGraphAnchor(cliEl, sourceForward ? 'left' : 'right');
+    pushGraphEdge(lines, from, to, {
+      color: '#bc8cff',
+      dash: '2 3',
+      markerEnd: false
+    });
   }
 
   svg.innerHTML = `${defs ? defs.outerHTML : ''}
