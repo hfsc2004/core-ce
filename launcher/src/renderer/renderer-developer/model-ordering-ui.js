@@ -93,6 +93,7 @@ if (!window.createAgent) {
       id: `agent-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'agent',
       name: name,
+      provider: 'llama.cpp',
       modelId: null,
       modelName: null,
       collectionKey: null,
@@ -107,6 +108,7 @@ if (!window.createAgent) {
       rlmSharedAttachmentBucketId: '',
       rlmSharedAttachmentSessionId: '',
       tools: [],
+      multiGpuSplit: true,
       enabled: true
     };
   };
@@ -233,6 +235,7 @@ if (!window.createCliAgent) {
       type: 'cli_agent',
       name,
       ownerAgentId: '',
+      projectPath: '',
       executionMode: 'on-tool',
       policyProfile: 'workspace-write',
       stepBudget: 50,

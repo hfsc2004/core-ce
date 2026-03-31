@@ -165,7 +165,7 @@ function extractCliToolRequests(text) {
       continue;
     }
     try {
-      const parsed = JSON.parse(blob);
+      const parsed = parseCliToolJson(blob);
       const tool = normalizeCliToolName(parsed?.tool || parsed?.name || '');
       if (!tool) {
         match = regex.exec(raw);
@@ -179,6 +179,71 @@ function extractCliToolRequests(text) {
     match = regex.exec(raw);
   }
   return requests;
+}
+
+function parseCliToolJson(blob) {
+  const source = String(blob || '').trim();
+  if (!source) throw new Error('empty tool json');
+  try {
+    return JSON.parse(source);
+  } catch (_) {
+    // Tolerate common weak-model truncation: missing trailing braces.
+    const open = (source.match(/\{/g) || []).length;
+    const close = (source.match(/\}/g) || []).length;
+    if (open > close) {
+      const repaired = `${source}${'}'.repeat(open - close)}`;
+      return JSON.parse(repaired);
+    }
+    throw _;
+  }
+}
+
+function extractRequestedReadFilePath(instructionText) {
+  const raw = String(instructionText || '');
+  if (!raw) return '';
+  const match = raw.match(/step\s*2\s*:\s*read_file\s+path\s*=\s*([^\s,;]+)/i);
+  if (!match) return '';
+  return String(match[1] || '').trim();
+}
+
+function guessPrimaryFilePathFromRequests(requests) {
+  const list = Array.isArray(requests) ? requests : [];
+  for (const req of list) {
+    const tool = normalizeCliToolName(req?.tool);
+    if (!['write_file', 'apply_patch', 'read_file', 'read_file_chunk'].includes(tool)) continue;
+    const p = String(req?.args?.path || '').trim();
+    if (p) return p;
+  }
+  return '';
+}
+
+function normalizeRequestedReadPath(requestedPath, requests) {
+  const base = String(requestedPath || '').trim();
+  if (!base) return '';
+  const hasLikelyExt = /\.[a-z0-9]{1,8}$/i.test(base);
+  if (hasLikelyExt) return base;
+  const list = Array.isArray(requests) ? requests : [];
+  const candidates = list
+    .map((req) => String(req?.args?.path || '').trim())
+    .filter(Boolean);
+  const prefixMatch = candidates.find((candidate) => candidate.startsWith(base));
+  if (prefixMatch) return prefixMatch;
+  return base;
+}
+
+function ensureInstructionFollowThrough(requests, instructionText) {
+  const list = Array.isArray(requests) ? [...requests] : [];
+  const requestedReadPathRaw = extractRequestedReadFilePath(instructionText);
+  const requestedReadPath = normalizeRequestedReadPath(requestedReadPathRaw, list) || guessPrimaryFilePathFromRequests(list);
+  if (!requestedReadPath) return list;
+  const hasRead = list.some((req) => normalizeCliToolName(req?.tool) === 'read_file');
+  if (!hasRead) {
+    list.push({
+      tool: 'read_file',
+      args: { path: requestedReadPath }
+    });
+  }
+  return list;
 }
 
 function isCommandPotentiallyDestructive(cmd) {
@@ -478,8 +543,9 @@ async function executeCliToolRequest(node, request) {
   return { success: false, tool, error: `unknown tool: ${tool}` };
 }
 
-async function executeCliAgentNode(node, ownerOutput) {
-  const requests = extractCliToolRequests(ownerOutput);
+async function executeCliAgentNode(node, ownerOutput, ownerInstruction = '') {
+  const extracted = extractCliToolRequests(ownerOutput);
+  const requests = ensureInstructionFollowThrough(extracted, ownerInstruction);
   if (!requests.length) {
     return { handled: false, summary: '', requests: [] };
   }
@@ -971,7 +1037,7 @@ async function routeMessage(userMessage, options = {}) {
         const mode = String(cliNode.executionMode || 'on-tool').toLowerCase();
         if (mode !== 'on-tool' && mode !== 'auto') continue;
         const execStart = Date.now();
-        const cliExec = await executeCliAgentNode(cliNode, currentContext);
+        const cliExec = await executeCliAgentNode(cliNode, currentContext, step.input);
         if (!cliExec.handled) continue;
         const success = cliExec.results.every((row) => row.success === true);
         const output = String(cliExec.summary || '').trim();
@@ -1213,7 +1279,7 @@ async function sendToAgent(agentId, message, options = {}) {
   for (const cliNode of ownedCliAgents) {
     const mode = String(cliNode.executionMode || 'on-tool').toLowerCase();
     if (mode !== 'on-tool' && mode !== 'auto') continue;
-    const cliExec = await executeCliAgentNode(cliNode, finalContent);
+    const cliExec = await executeCliAgentNode(cliNode, finalContent, message);
     if (!cliExec.handled) continue;
     finalContent = `${finalContent}\n\n${cliExec.summary}`.trim();
   }
