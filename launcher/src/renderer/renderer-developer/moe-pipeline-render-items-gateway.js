@@ -14,6 +14,15 @@ function renderGatewayRow(gateway, index) {
   const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
     ? window.getMoeItemCanvasStyle(gateway, index)
     : '';
+  const assignedAgentCount = Array.isArray(gateway?.assignedAgentIds)
+    ? gateway.assignedAgentIds.map((id) => String(id || '').trim()).filter(Boolean).length
+    : 0;
+  const renameAttrs = isExpanded
+    ? `onclick="event.stopPropagation(); promptRenameMoeItem('${gateway.id}')" onmousedown="event.stopPropagation();"`
+    : '';
+  const renameCursor = isExpanded ? 'text' : 'default';
+  const renameHoverIn = isExpanded ? `this.style.borderBottomColor='${theme.success}'` : '';
+  const renameHoverOut = isExpanded ? `this.style.borderBottomColor='transparent'` : '';
   
   return `
     <div class="moe-item moe-gateway ${isExpanded ? 'expanded' : ''}"
@@ -31,11 +40,15 @@ function renderGatewayRow(gateway, index) {
         <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(63,185,80,0.15);">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3fb950" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="14" height="10" rx="2"/><line x1="4" y1="7" x2="8" y2="7"/><line x1="4" y1="10" x2="12" y2="10"/></svg>
         </span>
-        <span onclick="event.stopPropagation(); promptRenameMoeItem('${gateway.id}')" onmousedown="event.stopPropagation();"
-              style="color:#fff; font-weight:bold; font-size:12px; min-width:150px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
-              onmouseover="this.style.borderBottomColor='${theme.success}'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(gateway.name)}</span>
+        <span ${renameAttrs}
+              style="color:#fff; font-weight:bold; font-size:12px; min-width:150px; padding:4px; border-bottom:1px solid transparent; cursor:${renameCursor};"
+              ${renameHoverIn ? `onmouseover="${renameHoverIn}"` : ''}
+              ${renameHoverOut ? `onmouseout="${renameHoverOut}"` : ''}>${escapeBinding(gateway.name)}</span>
         <span style="background: rgba(0,255,136,0.2); color: ${theme.success}; padding: 3px 10px; border-radius: 10px; font-size: 11px;">
           ${gateway.position === 'input' ? '⬇️ Input' : '⬆️ Output'}
+        </span>
+        <span style="background: rgba(255,255,255,0.10); color: #cbd5e1; padding: 3px 10px; border-radius: 10px; font-size: 11px;">
+          Agents ${assignedAgentCount}
         </span>
         <div style="flex: 1; display: flex; gap: 8px; align-items: center;">
           ${gateway.sources.terminal.enabled ? '<span style="background: var(--psf-accent-medium, rgba(0,212,255,0.2)); color: var(--psf-accent, #00d4ff); padding: 2px 8px; border-radius: 10px; font-size: 10px;">Terminal</span>' : ''}
@@ -192,7 +205,7 @@ function renderGatewayDetails(gateway) {
       wifiControl: false,
       drivePad: false,
       staticNetwork: false,
-      cameraSidecar: true
+      cameraSidecar: false
     });
   const esp32Sections = (esp32SectionsRaw && typeof esp32SectionsRaw === 'object')
     ? esp32SectionsRaw
@@ -200,12 +213,12 @@ function renderGatewayDetails(gateway) {
       wifiControl: false,
       drivePad: false,
       staticNetwork: false,
-      cameraSidecar: true
+      cameraSidecar: false
     };
   const esp32WifiExpanded = esp32Sections.wifiControl === true;
   const esp32DriveExpanded = esp32Sections.drivePad === true;
   const esp32StaticExpanded = esp32Sections.staticNetwork === true;
-  const esp32CameraExpanded = esp32Sections.cameraSidecar !== false;
+  const esp32CameraExpanded = esp32Sections.cameraSidecar === true;
   const renderEsp32SectionHeader = (sectionKey, title, expanded, borderColor = '#666', textColor = '#ddd') => `
     <button onclick="event.stopPropagation(); toggleGatewayEsp32Section('${gateway.id}', '${sectionKey}')"
             style="display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:7px 10px; background: rgba(255,255,255,0.04); border:1px solid ${borderColor}; border-radius:6px; color:${textColor}; cursor:pointer; font-size:11px; font-weight:600;">
@@ -223,6 +236,25 @@ function renderGatewayDetails(gateway) {
       return `<option value="${escapeBinding(id)}" ${id === esp32AiDriveAgentId ? 'selected' : ''}>${escapeBinding(label)}</option>`;
     })
     .join('');
+  const gatewayAgentItems = (Array.isArray(window.modelOrderingState?.moeItems) ? window.modelOrderingState.moeItems : [])
+    .filter((item) => item?.type === 'agent' && item?.enabled !== false)
+    .map((item) => ({
+      id: String(item.id || '').trim(),
+      label: String(item.name || item.id || '').trim() || String(item.id || '').trim()
+    }))
+    .filter((item) => item.id);
+  const assignedAgentIds = Array.isArray(gateway?.assignedAgentIds)
+    ? gateway.assignedAgentIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
+  const assignedAgentSet = new Set(assignedAgentIds);
+  const gatewayAgentAssignmentsHtml = gatewayAgentItems.length > 0
+    ? gatewayAgentItems.map((agent) => `
+      <label onclick="event.stopPropagation()" style="display:inline-flex; align-items:center; gap:6px; color:#d5e8ff; font-size:11px; border:1px solid rgba(88,166,255,0.35); border-radius:999px; padding:3px 8px; background:rgba(88,166,255,0.08);">
+        <input type="checkbox" ${assignedAgentSet.has(agent.id) ? 'checked' : ''} onchange="toggleGatewayAssignedAgent('${gateway.id}', '${agent.id}', this.checked)">
+        <span>${escapeBinding(agent.label)}</span>
+      </label>
+    `).join('')
+    : '<span style="color:#777; font-size:11px;">No enabled agents available.</span>';
   const selectedSerialPort = String(serialSource.port || 'auto').trim() || 'auto';
   const updatedAt = window.modelOrderingState?.serialDevicesUpdatedAt
     ? new Date(window.modelOrderingState.serialDevicesUpdatedAt).toLocaleTimeString()
@@ -242,6 +274,16 @@ function renderGatewayDetails(gateway) {
                   style="padding: 8px 20px; background: ${gateway.position === 'output' ? 'rgba(0,255,136,0.3)' : 'rgba(255,255,255,0.05)'}; 
                          border: 1px solid ${gateway.position === 'output' ? theme.success : '#555'}; border-radius: 6px; 
                          color: ${gateway.position === 'output' ? theme.success : '#888'}; cursor: pointer; font-size: 12px;">⬆️ Output</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="color: #888; font-size: 12px; display: block; margin-bottom: 8px;">Agent(s) Assignment (optional)</label>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; background: rgba(88,166,255,0.06); border:1px solid rgba(88,166,255,0.25); border-radius:6px; padding:10px;">
+          ${gatewayAgentAssignmentsHtml}
+        </div>
+        <div style="color:#666; font-size:11px; margin-top:6px;">
+          If empty, graph wiring falls back to automatic nearest/mapped agent behavior.
         </div>
       </div>
       

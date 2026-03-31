@@ -57,6 +57,7 @@ window.modelOrderingState = {
   moeDeployLogLines: [],
   moeDeployFrameState: 'idle',
   moeGraphMode: false,
+  moeGraphZoom: 0.7,
   
   // MoE Model Filter
   showAllModels: false  // false = downloaded only, true = show full catalog
@@ -132,6 +133,7 @@ function createGateway(name = 'User Gateway') {
     type: 'gateway',
     name: name,
     position: 'input',
+    assignedAgentIds: [],
     sources: {
       api: { enabled: false, port: 52434, endpoint: '/v1/chat' },
       terminal: { enabled: true },

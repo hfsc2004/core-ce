@@ -1075,14 +1075,14 @@ function getGatewayEsp32SectionState(gatewayId) {
       wifiControl: false,
       drivePad: false,
       staticNetwork: false,
-      cameraSidecar: collapseAllByDefault ? false : true
+      cameraSidecar: false
     };
   }
   return {
     wifiControl: state.sections.wifiControl === true,
     drivePad: state.sections.drivePad === true,
     staticNetwork: state.sections.staticNetwork === true,
-    cameraSidecar: state.sections.cameraSidecar !== false
+    cameraSidecar: state.sections.cameraSidecar === true
   };
 }
 
@@ -1093,7 +1093,7 @@ function toggleGatewayEsp32Section(gatewayId, sectionKey) {
       wifiControl: false,
       drivePad: false,
       staticNetwork: false,
-      cameraSidecar: true
+      cameraSidecar: false
     };
   }
   const key = String(sectionKey || '').trim();

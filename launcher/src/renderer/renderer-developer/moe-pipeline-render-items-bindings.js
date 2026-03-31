@@ -14,6 +14,12 @@ function renderBindingsRow(bindings, index) {
   const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
     ? window.getMoeItemCanvasStyle(bindings, index)
     : '';
+  const renameAttrs = isExpanded
+    ? `onclick="event.stopPropagation(); promptRenameMoeItem('${bindings.id}')" onmousedown="event.stopPropagation();"`
+    : '';
+  const renameCursor = isExpanded ? 'text' : 'default';
+  const renameHoverIn = isExpanded ? `this.style.borderBottomColor='#ddd'` : '';
+  const renameHoverOut = isExpanded ? `this.style.borderBottomColor='transparent'` : '';
 
   return `
     <div class="moe-item moe-bindings ${isExpanded ? 'expanded' : ''}"
@@ -31,9 +37,10 @@ function renderBindingsRow(bindings, index) {
         <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(210,153,34,0.15);">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d2991e" stroke-width="1.8" stroke-linecap="round"><path d="M4,8 C4,5.5 12,5.5 12,8 C12,10.5 4,10.5 4,8Z"/><line x1="1" y1="8" x2="4" y2="8"/><line x1="12" y1="8" x2="15" y2="8"/></svg>
         </span>
-        <span onclick="event.stopPropagation(); promptRenameMoeItem('${bindings.id}')" onmousedown="event.stopPropagation();"
-              style="color:#fff; font-weight:bold; font-size:12px; min-width:200px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
-              onmouseover="this.style.borderBottomColor='#ddd'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(bindings.name || '')}</span>
+        <span ${renameAttrs}
+              style="color:#fff; font-weight:bold; font-size:12px; min-width:200px; padding:4px; border-bottom:1px solid transparent; cursor:${renameCursor};"
+              ${renameHoverIn ? `onmouseover="${renameHoverIn}"` : ''}
+              ${renameHoverOut ? `onmouseout="${renameHoverOut}"` : ''}>${escapeBinding(bindings.name || '')}</span>
         <div style="flex:1; color:#999; font-size:12px;">${entries.length} binding${entries.length !== 1 ? 's' : ''}</div>
         <label onclick="event.stopPropagation()" style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
           <input type="checkbox" ${bindings.enabled ? 'checked' : ''} onchange="toggleMoeItemEnabled('${bindings.id}', this.checked)">

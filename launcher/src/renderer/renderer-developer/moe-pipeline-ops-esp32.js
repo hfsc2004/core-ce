@@ -39,7 +39,7 @@ function resolveInitialGatewayEsp32Sections() {
     wifiControl: false,
     drivePad: false,
     staticNetwork: false,
-    cameraSidecar: true
+    cameraSidecar: false
   };
 }
 

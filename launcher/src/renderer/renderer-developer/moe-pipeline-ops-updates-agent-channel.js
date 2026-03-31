@@ -199,6 +199,23 @@ function updateGatewayPosition(gatewayId, position) {
   }
 }
 
+function toggleGatewayAssignedAgent(gatewayId, agentId, enabled) {
+  const gateway = window.modelOrderingState.moeItems.find(i => i.id === gatewayId && i.type === 'gateway');
+  if (!gateway) return;
+  if (!Array.isArray(gateway.assignedAgentIds)) gateway.assignedAgentIds = [];
+  const id = String(agentId || '').trim();
+  if (!id) return;
+  const current = gateway.assignedAgentIds
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+  const set = new Set(current);
+  if (enabled === true) set.add(id);
+  else set.delete(id);
+  gateway.assignedAgentIds = Array.from(set);
+  console.log('[MoE] Updated gateway assigned agents:', gatewayId, gateway.assignedAgentIds);
+  renderModelOrdering();
+}
+
 function toggleGatewaySource(gatewayId, sourceType, enabled) {
   const gateway = window.modelOrderingState.moeItems.find(i => i.id === gatewayId && i.type === 'gateway');
   if (gateway && gateway.sources[sourceType]) {
@@ -234,5 +251,6 @@ window.updateChannelRetryCount = updateChannelRetryCount;
 window.updateChannelTimeoutMs = updateChannelTimeoutMs;
 window.updateChannelFailurePolicy = updateChannelFailurePolicy;
 window.updateGatewayPosition = updateGatewayPosition;
+window.toggleGatewayAssignedAgent = toggleGatewayAssignedAgent;
 window.toggleGatewaySource = toggleGatewaySource;
 window.updateGatewaySourceConfig = updateGatewaySourceConfig;

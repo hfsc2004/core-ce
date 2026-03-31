@@ -18,6 +18,12 @@ function renderCliAgentRow(cliAgent, index) {
   const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
     ? window.getMoeItemCanvasStyle(cliAgent, index)
     : '';
+  const renameAttrs = isExpanded
+    ? `onclick="event.stopPropagation(); promptRenameMoeItem('${cliAgent.id}')" onmousedown="event.stopPropagation();"`
+    : '';
+  const renameCursor = isExpanded ? 'text' : 'default';
+  const renameHoverIn = isExpanded ? `this.style.borderBottomColor='#bc8cff'` : '';
+  const renameHoverOut = isExpanded ? `this.style.borderBottomColor='transparent'` : '';
 
   return `
     <div class="moe-item moe-cli-agent ${isExpanded ? 'expanded' : ''}"
@@ -35,9 +41,10 @@ function renderCliAgentRow(cliAgent, index) {
         <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(188,140,255,0.2);">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#bc8cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 3.5h13v9h-13z"/><path d="M3.5 6.2l2.2 1.8-2.2 1.8"/><line x1="7.8" y1="10" x2="12" y2="10"/></svg>
         </span>
-        <span onclick="event.stopPropagation(); promptRenameMoeItem('${cliAgent.id}')" onmousedown="event.stopPropagation();"
-              style="color:#fff; font-weight:bold; font-size:12px; min-width:150px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
-              onmouseover="this.style.borderBottomColor='#bc8cff'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(cliAgent.name || 'CLI Agent')}</span>
+        <span ${renameAttrs}
+              style="color:#fff; font-weight:bold; font-size:12px; min-width:150px; padding:4px; border-bottom:1px solid transparent; cursor:${renameCursor};"
+              ${renameHoverIn ? `onmouseover="${renameHoverIn}"` : ''}
+              ${renameHoverOut ? `onmouseout="${renameHoverOut}"` : ''}>${escapeBinding(cliAgent.name || 'CLI Agent')}</span>
         <div style="flex:1; display:flex; align-items:center; gap:8px; color:#bbb; font-size:11px;">
           <span style="background:rgba(188,140,255,0.2); color:#dec8ff; padding:2px 8px; border-radius:10px;">${escapeBinding(ownerLabel)}</span>
           <span style="background:rgba(255,255,255,0.1); color:#ccc; padding:2px 8px; border-radius:10px;">${escapeBinding(mode)}</span>

@@ -129,6 +129,8 @@ function renderMoePipeline() {
   const deployDirty = window.modelOrderingState?.moePostDeployDirty === true;
   const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
   const graphMode = window.modelOrderingState?.moeGraphMode === true;
+  const graphZoomRaw = Number(window.modelOrderingState?.moeGraphZoom);
+  const graphZoom = Number.isFinite(graphZoomRaw) ? Math.max(0.45, Math.min(1.5, graphZoomRaw)) : 0.7;
   const frameBorderColor = deployFrameState === 'active'
     ? '#22c55e'
     : (deployFrameState === 'stopping' || deployFrameState === 'error' ? '#ef4444' : '#6b7280');
@@ -279,18 +281,21 @@ function renderMoePipeline() {
            ondragover="handleMoeDragOver(event)"
            ondrop="handleMoeDrop(event)">
         ${graphMode ? `
-        <svg id="moe-graph-edges" class="psf-relay-graph-edges" aria-hidden="true">
-          <defs>
-            <marker id="moe-edge-arrow-end" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L8,3.5 L0,7 z" fill="#86b8ff"></path>
-            </marker>
-            <marker id="moe-edge-arrow-start" markerWidth="9" markerHeight="7" refX="1" refY="3.5" orient="auto" markerUnits="strokeWidth">
-              <path d="M8,0 L0,3.5 L8,7 z" fill="#86b8ff"></path>
-            </marker>
-          </defs>
-        </svg>
-        ` : ''}
-        ${moeItems.map((item, index) => renderMoeItem(item, index, modelsForDropdown)).join('')}
+        <div id="moe-graph-canvas"
+             style="position:relative; min-height:1200px; width:2200px; transform:scale(${graphZoom}); transform-origin: top left;">
+          <svg id="moe-graph-edges" class="psf-relay-graph-edges" aria-hidden="true">
+            <defs>
+              <marker id="moe-edge-arrow-end" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L8,3.5 L0,7 z" fill="#86b8ff"></path>
+              </marker>
+              <marker id="moe-edge-arrow-start" markerWidth="9" markerHeight="7" refX="1" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                <path d="M8,0 L0,3.5 L8,7 z" fill="#86b8ff"></path>
+              </marker>
+            </defs>
+          </svg>
+          ${moeItems.map((item, index) => renderMoeItem(item, index, modelsForDropdown)).join('')}
+        </div>
+        ` : moeItems.map((item, index) => renderMoeItem(item, index, modelsForDropdown)).join('')}
       </div>
 
       <!-- Pipeline Legend -->
@@ -458,23 +463,24 @@ function findNearestAgentId(items, fromIndex, direction = 'forward') {
 function refreshMoeGraphEdges() {
   if (window.modelOrderingState?.moeGraphMode !== true) return;
   const list = document.getElementById('moe-pipeline-list');
+  const canvas = document.getElementById('moe-graph-canvas');
   const svg = document.getElementById('moe-graph-edges');
-  if (!(list instanceof HTMLElement) || !(svg instanceof SVGElement)) return;
+  if (!(list instanceof HTMLElement) || !(canvas instanceof HTMLElement) || !(svg instanceof SVGElement)) return;
 
   const items = Array.isArray(window.modelOrderingState?.moeItems) ? window.modelOrderingState.moeItems : [];
   const channels = items
     .map((item, index) => ({ item, index }))
     .filter((row) => row.item?.type === 'channel' && row.item?.enabled !== false);
 
-  const cardEls = list.querySelectorAll('.moe-item[data-moe-id]');
+  const cardEls = canvas.querySelectorAll('.moe-item[data-moe-id]');
   const cardMap = new Map();
   cardEls.forEach((el) => {
     const id = String(el.getAttribute('data-moe-id') || '').trim();
     if (id) cardMap.set(id, el);
   });
 
-  const canvasW = Math.max(list.scrollWidth, list.clientWidth, 1200);
-  const canvasH = Math.max(list.scrollHeight, list.clientHeight, 760);
+  const canvasW = Math.max(canvas.scrollWidth, canvas.clientWidth, 1200);
+  const canvasH = Math.max(canvas.scrollHeight, canvas.clientHeight, 760);
   svg.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
   svg.setAttribute('width', String(canvasW));
   svg.setAttribute('height', String(canvasH));
@@ -510,6 +516,12 @@ function refreshMoeGraphEdges() {
   const gateways = items
     .map((item, index) => ({ item, index }))
     .filter((row) => row.item?.type === 'gateway' && row.item?.enabled !== false);
+  const gatewayInputRows = gateways.filter((row) => String(row.item?.position || 'input').trim().toLowerCase() !== 'output');
+  const gatewayOutputRows = gateways.filter((row) => String(row.item?.position || 'input').trim().toLowerCase() === 'output');
+  const gatewayAgentIds = items
+    .filter((item) => item?.type === 'agent' && item?.enabled !== false)
+    .map((item) => String(item.id || '').trim())
+    .filter(Boolean);
   for (const row of gateways) {
     const gateway = row.item;
     const gatewayId = String(gateway.id || '').trim();
@@ -517,9 +529,46 @@ function refreshMoeGraphEdges() {
     const gatewayEl = cardMap.get(gatewayId);
     if (!gatewayEl) continue;
     const position = String(gateway?.position || 'input').trim().toLowerCase();
-    const targetAgentId = position === 'output'
-      ? findNearestAgentId(items, row.index, 'backward')
-      : findNearestAgentId(items, row.index, 'forward');
+    const assignedIds = Array.isArray(gateway?.assignedAgentIds)
+      ? gateway.assignedAgentIds.map((id) => String(id || '').trim()).filter(Boolean)
+      : [];
+    const explicitTargets = assignedIds.filter((id) => gatewayAgentIds.includes(id));
+
+    if (explicitTargets.length > 0) {
+      for (const targetAgentId of explicitTargets) {
+        const agentEl = cardMap.get(targetAgentId);
+        if (!agentEl) continue;
+        const fromEl = position === 'output' ? agentEl : gatewayEl;
+        const toEl = position === 'output' ? gatewayEl : agentEl;
+        const sourceForward = Number(fromEl.offsetLeft || 0) <= Number(toEl.offsetLeft || 0);
+        const from = getGraphAnchor(fromEl, sourceForward ? 'right' : 'left');
+        const to = getGraphAnchor(toEl, sourceForward ? 'left' : 'right');
+        pushGraphEdge(lines, from, to, {
+          color: '#3fb950',
+          dash: '5 4',
+          markerEnd: false
+        });
+      }
+      continue;
+    }
+
+    let targetAgentId = '';
+    if (gatewayAgentIds.length > 0) {
+      if (position === 'output') {
+        const outputIdx = Math.max(0, gatewayOutputRows.findIndex((entry) => String(entry?.item?.id || '') === gatewayId));
+        const agentIdx = Math.max(0, gatewayAgentIds.length - 1 - Math.min(outputIdx, gatewayAgentIds.length - 1));
+        targetAgentId = gatewayAgentIds[agentIdx] || '';
+      } else {
+        const inputIdx = Math.max(0, gatewayInputRows.findIndex((entry) => String(entry?.item?.id || '') === gatewayId));
+        const agentIdx = Math.min(inputIdx, gatewayAgentIds.length - 1);
+        targetAgentId = gatewayAgentIds[agentIdx] || '';
+      }
+    }
+    if (!targetAgentId) {
+      targetAgentId = position === 'output'
+        ? findNearestAgentId(items, row.index, 'backward')
+        : findNearestAgentId(items, row.index, 'forward');
+    }
     if (!targetAgentId) continue;
     const agentEl = cardMap.get(targetAgentId);
     if (!agentEl) continue;
@@ -588,6 +637,42 @@ function refreshMoeGraphEdges() {
     <g class="psf-relay-graph-edge-layer">
       ${lines.join('')}
     </g>`;
+}
+
+function enforceMoeGraphFitZoom() {
+  if (window.modelOrderingState?.moeGraphMode !== true) return false;
+  const canvas = document.getElementById('moe-graph-canvas');
+  if (!(canvas instanceof HTMLElement)) return false;
+  const cards = canvas.querySelectorAll('.moe-item[data-moe-id]');
+  if (!cards || cards.length === 0) return false;
+
+  let maxRight = 0;
+  let maxBottom = 0;
+  cards.forEach((el) => {
+    const right = Number(el.offsetLeft || 0) + Number(el.offsetWidth || 0) + 24;
+    const bottom = Number(el.offsetTop || 0) + Number(el.offsetHeight || 0) + 24;
+    if (right > maxRight) maxRight = right;
+    if (bottom > maxBottom) maxBottom = bottom;
+  });
+
+  const canvasW = Number(canvas.clientWidth || canvas.offsetWidth || 0);
+  const canvasH = Number(canvas.clientHeight || canvas.offsetHeight || 0);
+  if (canvasW <= 0 || canvasH <= 0) return false;
+
+  const currentZoomRaw = Number(window.modelOrderingState?.moeGraphZoom);
+  const currentZoom = Number.isFinite(currentZoomRaw) ? Math.max(0.45, Math.min(1.5, currentZoomRaw)) : 0.7;
+  // Auto-fit only when cards exceed the graph canvas dimensions, not the viewport.
+  // This avoids repeatedly forcing tiny zoom levels during normal editing.
+  const minZoom = 0.7;
+  const exceedsCanvas = (maxRight > canvasW) || (maxBottom > canvasH);
+  if (exceedsCanvas && currentZoom > minZoom + 0.0001) {
+    window.modelOrderingState.moeGraphZoom = minZoom;
+    if (typeof renderModelOrdering === 'function') {
+      renderModelOrdering();
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -720,4 +805,5 @@ window.getDownloadedModels = getDownloadedModels;
 window.getAllModelsForDropdown = getAllModelsForDropdown;
 window.renderMoePipeline = renderMoePipeline;
 window.refreshMoeGraphEdges = refreshMoeGraphEdges;
+window.enforceMoeGraphFitZoom = enforceMoeGraphFitZoom;
 window.toggleShowAllModels = toggleShowAllModels;

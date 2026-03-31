@@ -24,6 +24,12 @@ function renderAgentRow(agent, index, modelsForDropdown) {
   const counts = (window.modelOrderingState?.moeAttachmentCounts?.byAgentId || {})[agent.id] || {};
   const agentCount = Number(counts.agentCount || 0);
   const sharedCount = Number(counts.sharedCount || 0);
+  const renameAttrs = isExpanded
+    ? `onclick="event.stopPropagation(); promptRenameMoeItem('${agent.id}')" onmousedown="event.stopPropagation();"`
+    : '';
+  const renameCursor = isExpanded ? 'text' : 'default';
+  const renameHoverIn = isExpanded ? `this.style.borderBottomColor='${theme.accent}'` : '';
+  const renameHoverOut = isExpanded ? `this.style.borderBottomColor='transparent'` : '';
 
   return `
     <div class="moe-item moe-agent ${isExpanded ? 'expanded' : ''}"
@@ -41,9 +47,10 @@ function renderAgentRow(agent, index, modelsForDropdown) {
         <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(56,189,248,0.15);">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="3"/><path d="M2,15 Q2,11 8,11 Q14,11 14,15"/></svg>
         </span>
-        <span onclick="event.stopPropagation(); promptRenameMoeItem('${agent.id}')" onmousedown="event.stopPropagation();"
-              style="color:#fff; font-weight:bold; font-size:12px; min-width:120px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
-              onmouseover="this.style.borderBottomColor='${theme.accent}'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(agent.name)}</span>
+        <span ${renameAttrs}
+              style="color:#fff; font-weight:bold; font-size:12px; min-width:120px; padding:4px; border-bottom:1px solid transparent; cursor:${renameCursor};"
+              ${renameHoverIn ? `onmouseover="${renameHoverIn}"` : ''}
+              ${renameHoverOut ? `onmouseout="${renameHoverOut}"` : ''}>${escapeBinding(agent.name)}</span>
         <div style="flex: 1; display: flex; align-items: center; justify-content: flex-start; gap: 8px;">
           <span style="color: #888;">→</span>
           <select onchange="updateAgentProvider('${agent.id}', this.value)" onclick="event.stopPropagation()"

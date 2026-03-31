@@ -49,6 +49,16 @@ select option {
     linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.16) 100%);
 }
 
+.psf-relay-synth-list.list-mode {
+  align-items: stretch;
+}
+
+.psf-relay-synth-list.list-mode .moe-item {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
 .psf-relay-graph-edges {
   position: absolute;
   inset: 0;

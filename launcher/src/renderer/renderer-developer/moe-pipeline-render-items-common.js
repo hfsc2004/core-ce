@@ -71,10 +71,10 @@ function getMoeItemCanvasStyle(item, index) {
   let x = Number(existing?.x);
   let y = Number(existing?.y);
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    const col = Number(index) % 3;
-    const row = Math.floor(Number(index) / 3);
-    x = 24 + (col * 280);
-    y = 18 + (row * 150);
+    const col = Number(index) % 4;
+    const row = Math.floor(Number(index) / 4);
+    x = 24 + (col * 420);
+    y = 18 + (row * 220);
     item.canvasPos = { x, y };
   }
   x = Math.max(8, Math.round(x));

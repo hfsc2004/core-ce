@@ -158,6 +158,24 @@ function isMoeGraphModeEnabled() {
   return window.modelOrderingState?.moeGraphMode === true;
 }
 
+function clampMoeGraphZoom(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0.7;
+  return Math.max(0.45, Math.min(1.5, parsed));
+}
+
+function setMoeGraphZoom(value, rerender = true) {
+  if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return;
+  window.modelOrderingState.moeGraphZoom = clampMoeGraphZoom(value);
+  if (rerender) renderModelOrdering();
+}
+
+function adjustMoeGraphZoom(delta) {
+  const current = clampMoeGraphZoom(window.modelOrderingState?.moeGraphZoom);
+  const next = Math.round((current + Number(delta || 0)) * 100) / 100;
+  setMoeGraphZoom(next, true);
+}
+
 function toggleMoeGraphMode() {
   if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return;
   window.modelOrderingState.moeGraphMode = !isMoeGraphModeEnabled();
@@ -175,15 +193,16 @@ function beginMoeCanvasDrag(event, itemId) {
   const item = (window.modelOrderingState?.moeItems || []).find((entry) => entry?.id === itemId);
   if (!item) return;
 
-  const root = cardEl.closest('.psf-relay-synth-root');
-  const scale = (() => {
-    if (!(root instanceof HTMLElement)) return 1;
-    const rect = root.getBoundingClientRect();
-    const width = Number(root.offsetWidth || 0);
+  const canvas = cardEl.closest('#moe-graph-canvas');
+  const canvasScale = (() => {
+    if (!(canvas instanceof HTMLElement)) return 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = Number(canvas.offsetWidth || 0);
     if (!width || !rect.width) return 1;
     const s = rect.width / width;
     return Number.isFinite(s) && s > 0 ? s : 1;
   })();
+  const scale = canvasScale;
 
   const pos = item.canvasPos && typeof item.canvasPos === 'object'
     ? item.canvasPos
@@ -335,4 +354,6 @@ window.toggleMoeItemEnabled = toggleMoeItemEnabled;
 window.updateCliAgentConfig = updateCliAgentConfig;
 window.pickCliAgentProjectPath = pickCliAgentProjectPath;
 window.toggleMoeGraphMode = toggleMoeGraphMode;
+window.setMoeGraphZoom = setMoeGraphZoom;
+window.adjustMoeGraphZoom = adjustMoeGraphZoom;
 window.beginMoeCanvasDrag = beginMoeCanvasDrag;

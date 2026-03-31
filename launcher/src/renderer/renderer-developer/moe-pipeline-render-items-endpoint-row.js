@@ -14,6 +14,12 @@ function renderEndpointRegistryRow(registryItem, index) {
   const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
     ? window.getMoeItemCanvasStyle(registryItem, index)
     : '';
+  const renameAttrs = isExpanded
+    ? `onclick="event.stopPropagation(); promptRenameMoeItem('${registryItem.id}')" onmousedown="event.stopPropagation();"`
+    : '';
+  const renameCursor = isExpanded ? 'text' : 'default';
+  const renameHoverIn = isExpanded ? `this.style.borderBottomColor='#a5b4fc'` : '';
+  const renameHoverOut = isExpanded ? `this.style.borderBottomColor='transparent'` : '';
   return `
     <div class="moe-item moe-endpoint-registry ${isExpanded ? 'expanded' : ''}"
          data-moe-id="${registryItem.id}" data-moe-type="endpoint_registry" data-index="${index}"
@@ -30,9 +36,10 @@ function renderEndpointRegistryRow(registryItem, index) {
         <span style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:rgba(240,136,62,0.15);">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f0883e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.2"/><circle cx="8" cy="8" r="6.2"/><line x1="8" y1="1.5" x2="8" y2="5"/><line x1="8" y1="11" x2="8" y2="14.5"/><line x1="1.5" y1="8" x2="5" y2="8"/><line x1="11" y1="8" x2="14.5" y2="8"/></svg>
         </span>
-        <span onclick="event.stopPropagation(); promptRenameMoeItem('${registryItem.id}')" onmousedown="event.stopPropagation();"
-              style="color:#fff; font-weight:bold; font-size:12px; min-width:220px; padding:4px; border-bottom:1px solid transparent; cursor:text;"
-              onmouseover="this.style.borderBottomColor='#a5b4fc'" onmouseout="this.style.borderBottomColor='transparent'">${escapeBinding(registryItem.name || 'Distributed Endpoint Registry')}</span>
+        <span ${renameAttrs}
+              style="color:#fff; font-weight:bold; font-size:12px; min-width:220px; padding:4px; border-bottom:1px solid transparent; cursor:${renameCursor};"
+              ${renameHoverIn ? `onmouseover="${renameHoverIn}"` : ''}
+              ${renameHoverOut ? `onmouseout="${renameHoverOut}"` : ''}>${escapeBinding(registryItem.name || 'Distributed Endpoint Registry')}</span>
         <div style="flex:1; color:#9ca3af; font-size:12px;">
           ${state.enabled ? 'Enabled' : 'Disabled'} • ${flattenEndpointWorkers(state.roles).length} worker(s)
         </div>
