@@ -491,6 +491,13 @@ async function executeCliToolRequest(node, request) {
     }
     const current = String(fs.readFileSync(fullPath, 'utf8') || '');
     if (!current.includes(oldText)) {
+      if (newText && current.includes(newText)) {
+        return {
+          success: true,
+          tool,
+          output: `No-op patch for ${path.relative(workspaceRoot, fullPath)} (already contains replacement text)`
+        };
+      }
       return { success: false, tool, error: 'old_text not found in target file' };
     }
     const next = current.replace(oldText, newText);
