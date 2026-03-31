@@ -130,7 +130,9 @@ function renderMoePipeline() {
   const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
   const graphMode = window.modelOrderingState?.moeGraphMode === true;
   const graphZoomRaw = Number(window.modelOrderingState?.moeGraphZoom);
-  const graphZoom = Number.isFinite(graphZoomRaw) ? Math.max(0.45, Math.min(1.5, graphZoomRaw)) : 0.7;
+  const graphZoom = Number.isFinite(graphZoomRaw) ? Math.max(0.45, Math.min(3.0, graphZoomRaw)) : 0.7;
+  const graphZoomPct = Math.round(graphZoom * 100);
+  const graphFullscreen = graphMode && window.modelOrderingState?.moeGraphFullscreen === true;
   const frameBorderColor = deployFrameState === 'active'
     ? '#22c55e'
     : (deployFrameState === 'stopping' || deployFrameState === 'error' ? '#ef4444' : '#6b7280');
@@ -272,7 +274,7 @@ function renderMoePipeline() {
   }
   
   return `
-    <div id="moe-pipeline-frame" class="psf-relay-synth-frame"
+    <div id="moe-pipeline-frame" class="psf-relay-synth-frame ${graphFullscreen ? 'moe-graph-fullscreen' : ''}"
          style="border:1px solid ${frameBorderColor}; box-shadow:${frameShadow}; border-radius:10px; padding:10px 12px 12px; transition:border-color 220ms ease, box-shadow 220ms ease; display:flex; flex-direction:column; max-height:min(72vh, 860px);">
       <div class="psf-relay-synth-list ${graphMode ? 'graph-mode' : 'list-mode'}" style="${graphMode
         ? 'display:block; position:relative; overflow:auto; padding-right:6px; min-height:760px; flex:1 1 auto;'
@@ -283,6 +285,25 @@ function renderMoePipeline() {
            ondragover="handleMoeDragOver(event)"
            ondrop="handleMoeDrop(event)">
         ${graphMode ? `
+        <div class="moe-graph-controls-overlay" aria-label="Graph controls">
+          <div class="moe-graph-zoom-control">
+            <button onclick="adjustMoeGraphZoom(-0.1)" title="Zoom out" aria-label="Zoom out">−</button>
+            <input type="range" min="45" max="300" step="1" value="${Math.max(45, Math.min(300, graphZoomPct))}"
+                   oninput="setMoeGraphZoom(Number(this.value) / 100, true)"
+                   title="Pipeline zoom"
+                   aria-label="Pipeline zoom">
+            <button onclick="adjustMoeGraphZoom(0.1)" title="Zoom in" aria-label="Zoom in">+</button>
+            <span>${graphZoomPct}%</span>
+          </div>
+          <button class="moe-graph-fullscreen-btn"
+                  onclick="toggleMoeGraphFullscreen()"
+                  title="${graphFullscreen ? 'Restore graph size' : 'Expand graph fullscreen'}"
+                  aria-label="${graphFullscreen ? 'Restore graph size' : 'Expand graph fullscreen'}">
+            ${graphFullscreen
+              ? '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 1H1v4"/><path d="M1 1l4 4"/><path d="M9 13h4V9"/><path d="M13 13l-4-4"/></svg>'
+              : '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 1H1v4"/><path d="M1 1l4 4"/><path d="M9 1h4v4"/><path d="M13 1L9 5"/><path d="M1 9v4h4"/><path d="M1 13l4-4"/><path d="M13 9v4H9"/><path d="M13 13L9 9"/></svg>'}
+          </button>
+        </div>
         <div id="moe-graph-canvas"
              style="position:relative; min-height:1200px; width:2200px; transform:scale(${graphZoom}); transform-origin: top left;">
           <svg id="moe-graph-edges" class="psf-relay-graph-edges" aria-hidden="true">
@@ -526,15 +547,50 @@ function pathFromPoints(points) {
   return path;
 }
 
+function normalizeRoutePoints(points, minSegment = 18) {
+  if (!Array.isArray(points) || points.length < 2) return Array.isArray(points) ? points : [];
+  const out = [];
+  for (const raw of points) {
+    const p = { x: Number(raw?.x || 0), y: Number(raw?.y || 0) };
+    if (out.length === 0) {
+      out.push(p);
+      continue;
+    }
+    const prev = out[out.length - 1];
+    const dist = Math.hypot(p.x - prev.x, p.y - prev.y);
+    if (dist < minSegment) continue;
+    out.push(p);
+  }
+  if (out.length < 2) return points;
+
+  const simplified = [out[0]];
+  for (let i = 1; i < out.length - 1; i += 1) {
+    const a = simplified[simplified.length - 1];
+    const b = out[i];
+    const c = out[i + 1];
+    const abx = b.x - a.x;
+    const aby = b.y - a.y;
+    const bcx = c.x - b.x;
+    const bcy = c.y - b.y;
+    const cross = Math.abs(abx * bcy - aby * bcx);
+    const nearlyCollinear = cross < 0.001;
+    if (nearlyCollinear) continue;
+    simplified.push(b);
+  }
+  simplified.push(out[out.length - 1]);
+  return simplified;
+}
+
 function smoothPathFromPoints(points, radius = 22) {
   if (!Array.isArray(points) || points.length < 2) return '';
-  if (points.length === 2) return buildEdgePath(points[0], points[1]);
+  const clean = normalizeRoutePoints(points, 16);
+  if (clean.length === 2) return buildEdgePath(clean[0], clean[1]);
   const safeRadius = Math.max(0, Number(radius) || 0);
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length - 1; i += 1) {
-    const prev = points[i - 1];
-    const curr = points[i];
-    const next = points[i + 1];
+  let d = `M ${clean[0].x} ${clean[0].y}`;
+  for (let i = 1; i < clean.length - 1; i += 1) {
+    const prev = clean[i - 1];
+    const curr = clean[i];
+    const next = clean[i + 1];
     const v1x = curr.x - prev.x;
     const v1y = curr.y - prev.y;
     const v2x = next.x - curr.x;
@@ -552,7 +608,7 @@ function smoothPathFromPoints(points, radius = 22) {
     const outY = curr.y + (v2y / len2) * r;
     d += ` L ${inX} ${inY} Q ${curr.x} ${curr.y} ${outX} ${outY}`;
   }
-  const last = points[points.length - 1];
+  const last = clean[clean.length - 1];
   d += ` L ${last.x} ${last.y}`;
   return d;
 }
@@ -677,6 +733,17 @@ function getDirectAnchorSides(fromEl, toEl) {
   };
 }
 
+function getCardType(el) {
+  return String(el?.getAttribute?.('data-moe-type') || '').trim().toLowerCase();
+}
+
+function enforceAgentAnchorSides(fromEl, toEl, sides) {
+  const out = { ...(sides || {}) };
+  if (getCardType(fromEl) === 'agent') out.fromSide = 'right';
+  if (getCardType(toEl) === 'agent') out.toSide = 'left';
+  return out;
+}
+
 function getVerticalAnchorSides(fromEl, toEl) {
   const fromCy = Number(fromEl.offsetTop || 0) + Number(fromEl.offsetHeight || 0) * 0.5;
   const toCy = Number(toEl.offsetTop || 0) + Number(toEl.offsetHeight || 0) * 0.5;
@@ -688,7 +755,7 @@ function getVerticalAnchorSides(fromEl, toEl) {
 function drawGatewayToAgentEdge(lines, gatewayEl, agentEl, position, options = {}) {
   const mode = String(position || 'input').trim().toLowerCase();
   if (mode === 'bidirectional') {
-    const sides = getDirectAnchorSides(gatewayEl, agentEl);
+    const sides = enforceAgentAnchorSides(gatewayEl, agentEl, getDirectAnchorSides(gatewayEl, agentEl));
     const from = getGraphAnchor(gatewayEl, sides.fromSide);
     const to = getGraphAnchor(agentEl, sides.toSide);
     pushAlternatingDottedEdge(lines, from, to, {
@@ -705,7 +772,7 @@ function drawGatewayToAgentEdge(lines, gatewayEl, agentEl, position, options = {
   }
   if (mode === 'output') {
     const gatewayAnchor = getGraphAnchor(gatewayEl, 'right');
-    const targetSide = Number(gatewayEl.offsetLeft || 0) <= Number(agentEl.offsetLeft || 0) ? 'left' : 'right';
+    const targetSide = 'left';
     const targetAnchor = getGraphAnchor(agentEl, targetSide);
     pushGraphEdge(lines, gatewayAnchor, targetAnchor, {
       color: '#ffffff',
@@ -720,7 +787,7 @@ function drawGatewayToAgentEdge(lines, gatewayEl, agentEl, position, options = {
     return;
   }
   const sourceIsRight = Number(agentEl.offsetLeft || 0) > Number(gatewayEl.offsetLeft || 0);
-  const sourceSide = sourceIsRight ? 'left' : 'right';
+  const sourceSide = 'right';
   const sourceAnchor = getGraphAnchor(agentEl, sourceSide);
   const gatewayAnchor = getGraphAnchor(gatewayEl, 'left');
   if (sourceIsRight) {
@@ -860,9 +927,10 @@ function drawChannelEdge(lines, fromEl, toEl, directionRaw, options = {}) {
   const toId = String(toEl?.getAttribute?.('data-moe-id') || '').trim();
   const direction = resolveChannelDirection(directionRaw);
   const arrows = getChannelArrowMode(direction);
-  const sides = direction === 'bidirectional'
+  const computedSides = direction === 'bidirectional'
     ? getDirectAnchorSides(fromEl, toEl)
     : getVerticalAnchorSides(fromEl, toEl);
+  const sides = enforceAgentAnchorSides(fromEl, toEl, computedSides);
   const from = getGraphAnchor(fromEl, sides.fromSide);
   const to = getGraphAnchor(toEl, sides.toSide);
   if (direction === 'bidirectional') {
@@ -1091,7 +1159,7 @@ function refreshMoeGraphEdges() {
     const ownerEl = cardMap.get(ownerId);
     if (!cliEl || !ownerEl) continue;
     const sourceForward = Number(ownerEl.offsetLeft || 0) <= Number(cliEl.offsetLeft || 0);
-    const from = getGraphAnchor(ownerEl, sourceForward ? 'right' : 'left');
+    const from = getGraphAnchor(ownerEl, getCardType(ownerEl) === 'agent' ? 'right' : (sourceForward ? 'right' : 'left'));
     const to = getGraphAnchor(cliEl, sourceForward ? 'left' : 'right');
     pushGraphEdge(lines, from, to, {
       color: '#bc8cff',
@@ -1130,7 +1198,7 @@ function enforceMoeGraphFitZoom() {
   if (canvasW <= 0 || canvasH <= 0) return false;
 
   const currentZoomRaw = Number(window.modelOrderingState?.moeGraphZoom);
-  const currentZoom = Number.isFinite(currentZoomRaw) ? Math.max(0.45, Math.min(1.5, currentZoomRaw)) : 0.7;
+  const currentZoom = Number.isFinite(currentZoomRaw) ? Math.max(0.45, Math.min(3.0, currentZoomRaw)) : 0.7;
   // Auto-fit only when cards exceed the graph canvas dimensions, not the viewport.
   // This avoids repeatedly forcing tiny zoom levels during normal editing.
   const minZoom = 0.7;

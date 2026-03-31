@@ -147,7 +147,7 @@ function renderModelOrdering() {
   const isPipelineMode = scopeMode === 'pipeline';
   const graphModeOn = window.modelOrderingState?.moeGraphMode === true;
   const graphZoomRaw = Number(window.modelOrderingState?.moeGraphZoom);
-  const graphZoom = Number.isFinite(graphZoomRaw) ? Math.max(0.45, Math.min(1.5, graphZoomRaw)) : 0.7;
+  const graphZoom = Number.isFinite(graphZoomRaw) ? Math.max(0.45, Math.min(3.0, graphZoomRaw)) : 0.7;
   const graphZoomPct = Math.round(graphZoom * 100);
   const deployFrameState = String(window.modelOrderingState?.moeDeployFrameState || 'idle').toLowerCase();
   const pipelineStatusDisplay = deployFrameState === 'active'
@@ -255,21 +255,8 @@ function renderModelOrdering() {
                 </button>
                 <button onclick="toggleMoeGraphMode()"
                         style="padding: 7px 12px; min-height: 32px; background: transparent; border: 1px solid ${graphModeOn ? '#57e29d' : '#7fb5ff'}; border-radius: 5px; color: ${graphModeOn ? '#8df2bf' : '#a8ccff'}; cursor: pointer; font-size: 11px; font-weight: 600; white-space: nowrap;">
-                  Graph ${graphModeOn ? 'ON' : 'OFF'}
+                  Graph
                 </button>
-                <div style="display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border:1px solid rgba(88,166,255,0.28); border-radius:6px; background:rgba(12,20,34,0.55); min-height:32px;">
-                  <button onclick="adjustMoeGraphZoom(-0.1)"
-                          title="Zoom out"
-                          style="width:22px; height:22px; line-height:20px; text-align:center; padding:0; background:transparent; border:1px solid #466; border-radius:4px; color:#9ab; cursor:pointer; font-size:14px;">−</button>
-                  <input type="range" min="45" max="150" step="1" value="${Math.max(45, Math.min(150, graphZoomPct))}"
-                         oninput="setMoeGraphZoom(Number(this.value) / 100, true)"
-                         title="Pipeline zoom"
-                         style="width:120px; accent-color:#58a6ff; cursor:pointer;">
-                  <button onclick="adjustMoeGraphZoom(0.1)"
-                          title="Zoom in"
-                          style="width:22px; height:22px; line-height:20px; text-align:center; padding:0; background:transparent; border:1px solid #466; border-radius:4px; color:#9ab; cursor:pointer; font-size:14px;">+</button>
-                  <span style="min-width:42px; text-align:right; color:#8fb6e9; font-size:11px; font-weight:600;">${graphZoomPct}%</span>
-                </div>
                 <span id="moe-pipeline-status-indicator"
                       style="padding: 7px 4px; min-height: 32px; display: inline-flex; align-items: center; font-size: 21px; font-weight: 700; white-space: nowrap; letter-spacing: 0.04em; line-height: 1; align-self: center;">
                   ${pipelineStatusDisplay}

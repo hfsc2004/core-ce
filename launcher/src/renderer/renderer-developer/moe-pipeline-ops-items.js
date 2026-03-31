@@ -149,13 +149,78 @@ function isMoeGraphModeEnabled() {
 function clampMoeGraphZoom(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 0.7;
-  return Math.max(0.45, Math.min(1.5, parsed));
+  return Math.max(0.45, Math.min(3.0, parsed));
+}
+
+function applyMoeGraphZoomUi() {
+  const zoom = clampMoeGraphZoom(window.modelOrderingState?.moeGraphZoom);
+  const pct = Math.round(zoom * 100);
+  const canvas = document.getElementById('moe-graph-canvas');
+  if (canvas instanceof HTMLElement) {
+    canvas.style.transform = `scale(${zoom})`;
+    canvas.style.transformOrigin = 'top left';
+  }
+  const inputs = document.querySelectorAll('.moe-graph-zoom-control input[type="range"]');
+  inputs.forEach((input) => {
+    if (input instanceof HTMLInputElement) {
+      input.value = String(Math.max(45, Math.min(300, pct)));
+    }
+  });
+  const labels = document.querySelectorAll('.moe-graph-zoom-control span');
+  labels.forEach((el) => {
+    if (el instanceof HTMLElement) {
+      el.textContent = `${pct}%`;
+    }
+  });
+  if (typeof window.refreshMoeGraphEdges === 'function') {
+    try { window.refreshMoeGraphEdges(); } catch (_) { /* no-op */ }
+  }
+}
+
+function scheduleMoeGraphEdgeRefresh(frames = 2) {
+  const hops = Math.max(1, Number(frames) || 1);
+  const tick = (remaining) => {
+    if (remaining <= 0) {
+      if (typeof window.refreshMoeGraphEdges === 'function') {
+        try { window.refreshMoeGraphEdges(); } catch (_) { /* no-op */ }
+      }
+      return;
+    }
+    requestAnimationFrame(() => tick(remaining - 1));
+  };
+  tick(hops);
+}
+
+function scheduleMoeGraphEdgeRefreshWithDelay(ms = 120) {
+  const delay = Math.max(0, Number(ms) || 0);
+  setTimeout(() => {
+    if (typeof window.refreshMoeGraphEdges === 'function') {
+      try { window.refreshMoeGraphEdges(); } catch (_) { /* no-op */ }
+    }
+  }, delay);
+}
+
+function getFirstMoeGraphCardWidthPx() {
+  const card = document.querySelector('#moe-graph-canvas .moe-item[data-moe-id]');
+  if (!(card instanceof HTMLElement)) return 0;
+  const rect = card.getBoundingClientRect();
+  return Number(rect.width || 0);
 }
 
 function setMoeGraphZoom(value, rerender = true) {
   if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return;
   window.modelOrderingState.moeGraphZoom = clampMoeGraphZoom(value);
-  if (rerender) renderModelOrdering();
+  if (!rerender) {
+    applyMoeGraphZoomUi();
+    return;
+  }
+  const list = document.getElementById('moe-pipeline-list');
+  const fullscreenActive = list instanceof HTMLElement && document.fullscreenElement === list;
+  if (fullscreenActive) {
+    applyMoeGraphZoomUi();
+    return;
+  }
+  renderModelOrdering();
 }
 
 function adjustMoeGraphZoom(delta) {
@@ -164,10 +229,108 @@ function adjustMoeGraphZoom(delta) {
   setMoeGraphZoom(next, true);
 }
 
+function updateMoeGraphFullscreenUi(active) {
+  const button = document.querySelector('.moe-graph-fullscreen-btn');
+  if (!(button instanceof HTMLElement)) return;
+  const isActive = active === true;
+  button.setAttribute('title', isActive ? 'Restore graph size' : 'Expand graph fullscreen');
+  button.setAttribute('aria-label', isActive ? 'Restore graph size' : 'Expand graph fullscreen');
+  button.innerHTML = isActive
+    ? '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 1H1v4"/><path d="M1 1l4 4"/><path d="M9 13h4V9"/><path d="M13 13l-4-4"/></svg>'
+    : '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 1H1v4"/><path d="M1 1l4 4"/><path d="M9 1h4v4"/><path d="M13 1L9 5"/><path d="M1 9v4h4"/><path d="M1 13l4-4"/><path d="M13 9v4H9"/><path d="M13 13L9 9"/></svg>';
+}
+
+function recenterMoeGraphClusterToViewport(options = {}) {
+  const list = document.getElementById('moe-pipeline-list');
+  const canvas = document.getElementById('moe-graph-canvas');
+  if (!(list instanceof HTMLElement) || !(canvas instanceof HTMLElement)) return;
+  if (options && options.resetScroll === true) {
+    list.scrollLeft = 0;
+    list.scrollTop = 0;
+  }
+  const cards = Array.from(canvas.querySelectorAll('.moe-item[data-moe-id]'));
+  if (cards.length === 0) return;
+
+  const listRect = list.getBoundingClientRect();
+  if (!Number.isFinite(listRect.width) || !Number.isFinite(listRect.height) || listRect.width <= 0 || listRect.height <= 0) return;
+  const viewportCenterX = listRect.left + (listRect.width / 2);
+  const viewportCenterY = listRect.top + (listRect.height / 2);
+
+  let minLeft = Number.POSITIVE_INFINITY;
+  let minTop = Number.POSITIVE_INFINITY;
+  let maxRight = Number.NEGATIVE_INFINITY;
+  let maxBottom = Number.NEGATIVE_INFINITY;
+
+  cards.forEach((card) => {
+    if (!(card instanceof HTMLElement)) return;
+    const rect = card.getBoundingClientRect();
+    minLeft = Math.min(minLeft, rect.left);
+    minTop = Math.min(minTop, rect.top);
+    maxRight = Math.max(maxRight, rect.right);
+    maxBottom = Math.max(maxBottom, rect.bottom);
+  });
+
+  if (!Number.isFinite(minLeft) || !Number.isFinite(minTop) || !Number.isFinite(maxRight) || !Number.isFinite(maxBottom)) return;
+  const clusterCenterX = (minLeft + maxRight) / 2;
+  const clusterCenterY = (minTop + maxBottom) / 2;
+  const deltaX = clusterCenterX - viewportCenterX;
+  const deltaY = clusterCenterY - viewportCenterY;
+  if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+
+  list.scrollLeft = Math.max(0, Math.round(Number(list.scrollLeft || 0) + deltaX));
+  list.scrollTop = Math.max(0, Math.round(Number(list.scrollTop || 0) + deltaY));
+}
+
 function toggleMoeGraphMode() {
   if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return;
-  window.modelOrderingState.moeGraphMode = !isMoeGraphModeEnabled();
+  const next = !isMoeGraphModeEnabled();
+  window.modelOrderingState.moeGraphMode = next;
+  if (!next) {
+    window.modelOrderingState.moeGraphFullscreen = false;
+    if (document.fullscreenElement) {
+      Promise.resolve(document.exitFullscreen?.()).catch(() => {});
+    }
+  }
   renderModelOrdering();
+}
+
+function toggleMoeGraphFullscreen() {
+  if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return;
+  if (window.modelOrderingState?.moeGraphMode !== true) return;
+  const list = document.getElementById('moe-pipeline-list');
+  if (!(list instanceof HTMLElement)) return;
+  if (typeof list.requestFullscreen !== 'function' || typeof document.exitFullscreen !== 'function') return;
+  const isFullscreen = document.fullscreenElement === list;
+  const targetState = !isFullscreen;
+  const done = () => {
+    window.modelOrderingState.moeGraphFullscreen = targetState;
+    updateMoeGraphFullscreenUi(targetState);
+    if (typeof window.refreshMoeGraphEdges === 'function') {
+      try { window.refreshMoeGraphEdges(); } catch (_) { /* no-op */ }
+    }
+  };
+  if (targetState) {
+    const rect = list.getBoundingClientRect();
+    window.__moeGraphPreFullscreen = {
+      zoom: clampMoeGraphZoom(window.modelOrderingState?.moeGraphZoom),
+      width: Number(rect.width || 0),
+      height: Number(rect.height || 0),
+      cardWidthPx: getFirstMoeGraphCardWidthPx()
+    };
+    Promise.resolve(list.requestFullscreen())
+      .then(done)
+      .catch(() => {
+        window.modelOrderingState.moeGraphFullscreen = false;
+        updateMoeGraphFullscreenUi(false);
+      });
+    return;
+  }
+  Promise.resolve(document.exitFullscreen())
+    .then(done)
+    .catch(() => {
+      window.modelOrderingState.moeGraphFullscreen = document.fullscreenElement === list;
+      updateMoeGraphFullscreenUi(window.modelOrderingState.moeGraphFullscreen === true);
+    });
 }
 
 function beginMoeCanvasDrag(event, itemId) {
@@ -223,7 +386,15 @@ function beginMoeCanvasDrag(event, itemId) {
     window.removeEventListener('mousemove', move, true);
     window.removeEventListener('mouseup', up, true);
     if (window.__moeCanvasDidDrag) {
-      renderModelOrdering();
+      const list = document.getElementById('moe-pipeline-list');
+      const fullscreenActive = list instanceof HTMLElement && document.fullscreenElement === list;
+      if (fullscreenActive) {
+        if (typeof window.refreshMoeGraphEdges === 'function') {
+          try { window.refreshMoeGraphEdges(); } catch (_) { /* no-op */ }
+        }
+      } else {
+        renderModelOrdering();
+      }
       setTimeout(() => { window.__moeCanvasDidDrag = false; }, 0);
     }
   };
@@ -381,6 +552,69 @@ window.pickCliAgentProjectPath = pickCliAgentProjectPath;
 window.toggleMoeGraphMode = toggleMoeGraphMode;
 window.setMoeGraphZoom = setMoeGraphZoom;
 window.adjustMoeGraphZoom = adjustMoeGraphZoom;
+window.toggleMoeGraphFullscreen = toggleMoeGraphFullscreen;
 window.beginMoeCanvasDrag = beginMoeCanvasDrag;
 window.handleMoeGraphPanMouseDown = handleMoeGraphPanMouseDown;
 window.handleMoeGraphPanAuxClick = handleMoeGraphPanAuxClick;
+
+if (!window.__moeGraphFullscreenChangeBound) {
+  document.addEventListener('fullscreenchange', () => {
+    if (!window.modelOrderingState || typeof window.modelOrderingState !== 'object') return;
+    const list = document.getElementById('moe-pipeline-list');
+    const active = list instanceof HTMLElement && document.fullscreenElement === list;
+    window.modelOrderingState.moeGraphFullscreen = active;
+    updateMoeGraphFullscreenUi(active);
+    if (active) {
+      const pre = window.__moeGraphPreFullscreen && typeof window.__moeGraphPreFullscreen === 'object'
+        ? window.__moeGraphPreFullscreen
+        : null;
+      const baseZoom = pre && Number.isFinite(pre.zoom)
+        ? clampMoeGraphZoom(pre.zoom)
+        : clampMoeGraphZoom(window.modelOrderingState?.moeGraphZoom);
+      window.modelOrderingState.moeGraphZoom = baseZoom;
+      applyMoeGraphZoomUi();
+      // Calibrate to preserve apparent card size exactly (pixel-accurate).
+      const targetCardWidth = Number(pre?.cardWidthPx || 0);
+      if (targetCardWidth > 0) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const currentCardWidth = getFirstMoeGraphCardWidthPx();
+            if (currentCardWidth > 0) {
+              const factor = targetCardWidth / currentCardWidth;
+              if (Number.isFinite(factor) && factor > 0 && Math.abs(factor - 1) > 0.01) {
+                window.modelOrderingState.moeGraphZoom = clampMoeGraphZoom(baseZoom * factor);
+                applyMoeGraphZoomUi();
+              }
+            }
+            recenterMoeGraphClusterToViewport();
+          });
+        });
+      }
+    } else if (window.__moeGraphPreFullscreen && typeof window.__moeGraphPreFullscreen === 'object') {
+      const priorZoom = clampMoeGraphZoom(window.__moeGraphPreFullscreen.zoom);
+      window.modelOrderingState.moeGraphZoom = priorZoom;
+      applyMoeGraphZoomUi();
+      window.__moeGraphPreFullscreen = null;
+    }
+    // Preserve card layout positions exactly across fullscreen transitions,
+    // but center the viewport camera on the existing layout.
+    recenterMoeGraphClusterToViewport();
+    scheduleMoeGraphEdgeRefresh(active ? 3 : 2);
+    if (active) {
+      scheduleMoeGraphEdgeRefreshWithDelay(40);
+      setTimeout(() => recenterMoeGraphClusterToViewport(), 40);
+      scheduleMoeGraphEdgeRefreshWithDelay(120);
+      setTimeout(() => recenterMoeGraphClusterToViewport(), 120);
+      scheduleMoeGraphEdgeRefreshWithDelay(260);
+      setTimeout(() => recenterMoeGraphClusterToViewport(), 260);
+    } else {
+      scheduleMoeGraphEdgeRefreshWithDelay(40);
+      setTimeout(() => recenterMoeGraphClusterToViewport(), 40);
+      scheduleMoeGraphEdgeRefreshWithDelay(80);
+      setTimeout(() => recenterMoeGraphClusterToViewport(), 80);
+      scheduleMoeGraphEdgeRefreshWithDelay(180);
+      setTimeout(() => recenterMoeGraphClusterToViewport(), 180);
+    }
+  });
+  window.__moeGraphFullscreenChangeBound = true;
+}
