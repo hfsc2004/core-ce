@@ -581,7 +581,7 @@ function normalizeRoutePoints(points, minSegment = 18) {
   return simplified;
 }
 
-function smoothPathFromPoints(points, radius = 22) {
+function smoothPathFromPoints(points, radius = 34) {
   if (!Array.isArray(points) || points.length < 2) return '';
   const clean = normalizeRoutePoints(points, 16);
   if (clean.length === 2) return buildEdgePath(clean[0], clean[1]);
@@ -631,9 +631,9 @@ function buildRoutedEdgePath(from, to, options = {}) {
   const bounds = options?.routeBounds && typeof options.routeBounds === 'object'
     ? options.routeBounds
     : {};
-  const minX = Number.isFinite(Number(bounds.minX)) ? Number(bounds.minX) : 16;
+  const minX = Number.isFinite(Number(bounds.minX)) ? Number(bounds.minX) : 0;
   const maxX = Number.isFinite(Number(bounds.maxX)) ? Number(bounds.maxX) : 4000;
-  const minY = Number.isFinite(Number(bounds.minY)) ? Number(bounds.minY) : 16;
+  const minY = Number.isFinite(Number(bounds.minY)) ? Number(bounds.minY) : 0;
   const maxY = Number.isFinite(Number(bounds.maxY)) ? Number(bounds.maxY) : 4000;
   const lanePads = [34, 72, 120, 180, 250, 330];
   const candidates = [];
@@ -663,7 +663,7 @@ function buildRoutedEdgePath(from, to, options = {}) {
     }
     if (hits === 0 && len <= bestLen) break;
   }
-  return smoothPathFromPoints(best, 22);
+  return smoothPathFromPoints(best, 36);
 }
 
 function pushGraphEdge(lines, from, to, options = {}) {
@@ -799,9 +799,9 @@ function drawGatewayToAgentEdge(lines, gatewayEl, agentEl, position, options = {
     const bounds = options?.routeBounds && typeof options.routeBounds === 'object'
       ? options.routeBounds
       : {};
-    const minY = Number.isFinite(Number(bounds.minY)) ? Number(bounds.minY) : 16;
+    const minY = Number.isFinite(Number(bounds.minY)) ? Number(bounds.minY) : 0;
     const maxY = Number.isFinite(Number(bounds.maxY)) ? Number(bounds.maxY) : 4000;
-    const minX = Number.isFinite(Number(bounds.minX)) ? Number(bounds.minX) : 16;
+    const minX = Number.isFinite(Number(bounds.minX)) ? Number(bounds.minX) : 0;
     const baseViaY = routeAbove
       ? Math.min(sourceAnchor.y, gatewayAnchor.y) - 42
       : Math.max(sourceBottom, gatewayBottom) + 42;
@@ -837,7 +837,7 @@ function drawGatewayToAgentEdge(lines, gatewayEl, agentEl, position, options = {
       }
       if (hits === 0) break;
     }
-    const d = smoothPathFromPoints(bestPoints || [sourceAnchor, gatewayAnchor], 20);
+    const d = smoothPathFromPoints(bestPoints || [sourceAnchor, gatewayAnchor], 34);
     pushGraphPath(lines, d, {
       color: '#58a6ff',
       markerStart: false,
@@ -985,7 +985,7 @@ function refreshMoeGraphEdges() {
 
   const canvasW = Math.max(canvas.scrollWidth, canvas.clientWidth, 1200);
   const canvasH = Math.max(canvas.scrollHeight, canvas.clientHeight, 760);
-  const edgeMargin = 72;
+  const edgeMargin = 0;
   let adjustedCards = false;
   for (const [id, el] of cardMap.entries()) {
     const item = items.find((entry) => String(entry?.id || '').trim() === id);
@@ -994,8 +994,8 @@ function refreshMoeGraphEdges() {
     const height = Number(el.offsetHeight || 0);
     const currentX = Number(item?.canvasPos?.x ?? el.offsetLeft ?? 0);
     const currentY = Number(item?.canvasPos?.y ?? el.offsetTop ?? 0);
-    const clampedX = Math.max(edgeMargin, Math.min(Math.max(edgeMargin, canvasW - width - edgeMargin), Math.round(currentX)));
-    const clampedY = Math.max(edgeMargin, Math.min(Math.max(edgeMargin, canvasH - height - edgeMargin), Math.round(currentY)));
+    const clampedX = Math.max(0, Math.min(Math.max(0, canvasW - width), Math.round(currentX)));
+    const clampedY = Math.max(0, Math.min(Math.max(0, canvasH - height), Math.round(currentY)));
     if (clampedX !== currentX || clampedY !== currentY) {
       item.canvasPos = { x: clampedX, y: clampedY };
       el.style.left = `${clampedX}px`;
@@ -1014,10 +1014,10 @@ function refreshMoeGraphEdges() {
     bottom: Number(el.offsetTop || 0) + Number(el.offsetHeight || 0)
   }));
   const routeBounds = {
-    minX: edgeMargin * 0.5,
-    maxX: canvasW - edgeMargin * 0.5,
-    minY: edgeMargin * 0.5,
-    maxY: canvasH - edgeMargin * 0.5
+    minX: 0,
+    maxX: canvasW,
+    minY: 0,
+    maxY: canvasH
   };
   svg.setAttribute('viewBox', `0 0 ${canvasW} ${canvasH}`);
   svg.setAttribute('width', String(canvasW));

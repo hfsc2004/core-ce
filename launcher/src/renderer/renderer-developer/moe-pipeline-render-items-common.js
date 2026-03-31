@@ -73,12 +73,12 @@ function getMoeItemCanvasStyle(item, index) {
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     const col = Number(index) % 4;
     const row = Math.floor(Number(index) / 4);
-    x = 24 + (col * 420);
-    y = 18 + (row * 220);
+    x = 8 + (col * 420);
+    y = 8 + (row * 220);
     item.canvasPos = { x, y };
   }
-  x = Math.max(8, Math.round(x));
-  y = Math.max(8, Math.round(y));
+  x = Math.max(0, Math.round(x));
+  y = Math.max(0, Math.round(y));
   item.canvasPos = { x, y };
   return `position:absolute; left:${x}px; top:${y}px; width:260px; max-width:260px;`;
 }

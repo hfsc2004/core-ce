@@ -132,6 +132,12 @@ function handleMoeItemClick(event, itemId) {
     window.__moeCanvasDidDrag = false;
     return;
   }
+  if (isMoeGraphModeEnabled() && (event?.ctrlKey === true || event?.metaKey === true)) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    toggleMoeGraphSelectionId(itemId);
+    return;
+  }
   const target = event?.target;
   if (target?.closest?.('.drag-handle')) {
     return;
@@ -159,6 +165,18 @@ function setMoeGraphSelection(ids) {
     .filter(Boolean)));
   window.modelOrderingState.moeGraphSelectedIds = unique;
   syncMoeGraphSelectionUi();
+}
+
+function toggleMoeGraphSelectionId(itemId) {
+  const id = String(itemId || '').trim();
+  if (!id) return;
+  const selected = getMoeGraphSelectionSet();
+  if (selected.has(id)) {
+    selected.delete(id);
+  } else {
+    selected.add(id);
+  }
+  setMoeGraphSelection(Array.from(selected));
 }
 
 function syncMoeGraphSelectionUi() {
@@ -287,8 +305,18 @@ function recenterMoeGraphClusterToViewport(options = {}) {
 
   const listRect = list.getBoundingClientRect();
   if (!Number.isFinite(listRect.width) || !Number.isFinite(listRect.height) || listRect.width <= 0 || listRect.height <= 0) return;
-  const viewportCenterX = listRect.left + (listRect.width / 2);
-  const viewportCenterY = listRect.top + (listRect.height / 2);
+  const requestedPad = Number(options?.paddingPx);
+  const pad = Number.isFinite(requestedPad) ? Math.max(0, requestedPad) : 0;
+  const maxPadX = Math.max(0, (listRect.width / 2) - 1);
+  const maxPadY = Math.max(0, (listRect.height / 2) - 1);
+  const padX = Math.min(pad, maxPadX);
+  const padY = Math.min(pad, maxPadY);
+  const insetLeft = listRect.left + padX;
+  const insetRight = listRect.right - padX;
+  const insetTop = listRect.top + padY;
+  const insetBottom = listRect.bottom - padY;
+  const insetWidth = Math.max(1, insetRight - insetLeft);
+  const insetHeight = Math.max(1, insetBottom - insetTop);
 
   let minLeft = Number.POSITIVE_INFINITY;
   let minTop = Number.POSITIVE_INFINITY;
@@ -305,12 +333,28 @@ function recenterMoeGraphClusterToViewport(options = {}) {
   });
 
   if (!Number.isFinite(minLeft) || !Number.isFinite(minTop) || !Number.isFinite(maxRight) || !Number.isFinite(maxBottom)) return;
+  const clusterWidth = Math.max(1, maxRight - minLeft);
+  const clusterHeight = Math.max(1, maxBottom - minTop);
   const clusterCenterX = (minLeft + maxRight) / 2;
   const clusterCenterY = (minTop + maxBottom) / 2;
-  const deltaX = clusterCenterX - viewportCenterX;
-  const deltaY = clusterCenterY - viewportCenterY;
-  if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+  const insetCenterX = insetLeft + (insetWidth / 2);
+  const insetCenterY = insetTop + (insetHeight / 2);
 
+  let targetCenterX = insetCenterX;
+  let targetCenterY = insetCenterY;
+
+  // If the cluster is larger than the inset viewport on an axis, just center on that axis.
+  if (clusterWidth > insetWidth) {
+    targetCenterX = listRect.left + (listRect.width / 2);
+  }
+  if (clusterHeight > insetHeight) {
+    targetCenterY = listRect.top + (listRect.height / 2);
+  }
+
+  // Camera-only centering (no card mutation). Keeps layout coordinates intact.
+  const deltaX = clusterCenterX - targetCenterX;
+  const deltaY = clusterCenterY - targetCenterY;
+  if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
   list.scrollLeft = Math.max(0, Math.round(Number(list.scrollLeft || 0) + deltaX));
   list.scrollTop = Math.max(0, Math.round(Number(list.scrollTop || 0) + deltaY));
 }
@@ -370,6 +414,7 @@ function toggleMoeGraphFullscreen() {
 function beginMoeCanvasDrag(event, itemId) {
   if (!isMoeGraphModeEnabled()) return;
   if (!event || event.button !== 0) return;
+  if (event.ctrlKey === true || event.metaKey === true) return;
   const target = event.target;
   if (target?.closest?.('input, textarea, select, button, label, [contenteditable]:not([contenteditable="false"])')) return;
 
@@ -419,11 +464,11 @@ function beginMoeCanvasDrag(event, itemId) {
     const basePos = dragItem.canvasPos && typeof dragItem.canvasPos === 'object'
       ? dragItem.canvasPos
       : {
-          x: Number((card instanceof HTMLElement ? card.style.left : '').replace('px', '')) || Number((card instanceof HTMLElement ? card.offsetLeft : 0)) || 8,
-          y: Number((card instanceof HTMLElement ? card.style.top : '').replace('px', '')) || Number((card instanceof HTMLElement ? card.offsetTop : 0)) || 8
+          x: Number((card instanceof HTMLElement ? card.style.left : '').replace('px', '')) || Number((card instanceof HTMLElement ? card.offsetLeft : 0)) || 0,
+          y: Number((card instanceof HTMLElement ? card.style.top : '').replace('px', '')) || Number((card instanceof HTMLElement ? card.offsetTop : 0)) || 0
         };
-    const ox = Number(basePos.x) || 8;
-    const oy = Number(basePos.y) || 8;
+    const ox = Number(basePos.x) || 0;
+    const oy = Number(basePos.y) || 0;
     dragItem.canvasPos = { x: ox, y: oy };
     originById.set(String(id), { x: ox, y: oy });
   });
@@ -442,8 +487,8 @@ function beginMoeCanvasDrag(event, itemId) {
       const dragItem = itemLookup.get(String(id || ''));
       const origin = originById.get(String(id || ''));
       if (!dragItem || !origin) return;
-      const nextX = Math.max(8, Math.round(origin.x + dx));
-      const nextY = Math.max(8, Math.round(origin.y + dy));
+      const nextX = Math.max(0, Math.round(origin.x + dx));
+      const nextY = Math.max(0, Math.round(origin.y + dy));
       dragItem.canvasPos = { x: nextX, y: nextY };
       const dragEl = document.querySelector(`#moe-graph-canvas .moe-item[data-moe-id="${escapeCssIdent(String(id))}"]`);
       if (dragEl instanceof HTMLElement) {
@@ -498,31 +543,39 @@ function beginMoeGraphMarqueeSelection(event) {
     setMoeGraphSelection([]);
   }
 
-  const listRect = list.getBoundingClientRect();
   const startClientX = Number(event.clientX || 0);
   const startClientY = Number(event.clientY || 0);
-  const startLeft = startClientX - listRect.left;
-  const startTop = startClientY - listRect.top;
+  const listRect = list.getBoundingClientRect();
+  const fullscreenActive = document.fullscreenElement === list;
 
   const box = document.createElement('div');
   box.className = 'moe-graph-selection-box';
-  box.style.left = `${Math.round(startLeft)}px`;
-  box.style.top = `${Math.round(startTop)}px`;
+  box.style.position = fullscreenActive ? 'absolute' : 'fixed';
+  box.style.zIndex = '2147483000';
+  box.style.pointerEvents = 'none';
+  box.style.border = '1px dashed rgba(127,181,255,0.98)';
+  box.style.background = 'rgba(127,181,255,0.18)';
+  box.style.boxShadow = '0 0 0 1px rgba(127,181,255,0.30), inset 0 0 0 1px rgba(127,181,255,0.25)';
+  box.style.borderRadius = '4px';
+  const startBoxX = fullscreenActive ? (startClientX - listRect.left + Number(list.scrollLeft || 0)) : startClientX;
+  const startBoxY = fullscreenActive ? (startClientY - listRect.top + Number(list.scrollTop || 0)) : startClientY;
+  box.style.left = `${Math.round(startBoxX)}px`;
+  box.style.top = `${Math.round(startBoxY)}px`;
   box.style.width = '0px';
   box.style.height = '0px';
-  list.appendChild(box);
+  (fullscreenActive ? list : document.body).appendChild(box);
 
   let moved = false;
 
   const move = (moveEvent) => {
     const cx = Number(moveEvent.clientX || 0);
     const cy = Number(moveEvent.clientY || 0);
-    const currentLeft = cx - listRect.left;
-    const currentTop = cy - listRect.top;
-    const minX = Math.min(startLeft, currentLeft);
-    const minY = Math.min(startTop, currentTop);
-    const width = Math.abs(currentLeft - startLeft);
-    const height = Math.abs(currentTop - startTop);
+    const boxCurrentX = fullscreenActive ? (cx - listRect.left + Number(list.scrollLeft || 0)) : cx;
+    const boxCurrentY = fullscreenActive ? (cy - listRect.top + Number(list.scrollTop || 0)) : cy;
+    const minX = Math.min(startBoxX, boxCurrentX);
+    const minY = Math.min(startBoxY, boxCurrentY);
+    const width = Math.abs(boxCurrentX - startBoxX);
+    const height = Math.abs(boxCurrentY - startBoxY);
     box.style.left = `${Math.round(minX)}px`;
     box.style.top = `${Math.round(minY)}px`;
     box.style.width = `${Math.round(width)}px`;
@@ -757,7 +810,6 @@ if (!window.__moeGraphFullscreenChangeBound) {
                 applyMoeGraphZoomUi();
               }
             }
-            recenterMoeGraphClusterToViewport();
           });
         });
       }
@@ -767,24 +819,16 @@ if (!window.__moeGraphFullscreenChangeBound) {
       applyMoeGraphZoomUi();
       window.__moeGraphPreFullscreen = null;
     }
-    // Preserve card layout positions exactly across fullscreen transitions,
-    // but center the viewport camera on the existing layout.
-    recenterMoeGraphClusterToViewport();
+    // Preserve card layout positions and viewport placement across fullscreen transitions.
     scheduleMoeGraphEdgeRefresh(active ? 3 : 2);
     if (active) {
       scheduleMoeGraphEdgeRefreshWithDelay(40);
-      setTimeout(() => recenterMoeGraphClusterToViewport(), 40);
       scheduleMoeGraphEdgeRefreshWithDelay(120);
-      setTimeout(() => recenterMoeGraphClusterToViewport(), 120);
       scheduleMoeGraphEdgeRefreshWithDelay(260);
-      setTimeout(() => recenterMoeGraphClusterToViewport(), 260);
     } else {
       scheduleMoeGraphEdgeRefreshWithDelay(40);
-      setTimeout(() => recenterMoeGraphClusterToViewport(), 40);
       scheduleMoeGraphEdgeRefreshWithDelay(80);
-      setTimeout(() => recenterMoeGraphClusterToViewport(), 80);
       scheduleMoeGraphEdgeRefreshWithDelay(180);
-      setTimeout(() => recenterMoeGraphClusterToViewport(), 180);
     }
   });
   window.__moeGraphFullscreenChangeBound = true;

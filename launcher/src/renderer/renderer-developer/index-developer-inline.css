@@ -44,6 +44,7 @@ select option {
 
 .psf-relay-synth-list.graph-mode {
   min-height: 760px;
+  padding: 0 !important;
   background:
     radial-gradient(circle at 0 0, rgba(127,181,255,0.08) 0 2px, transparent 2px) 0 0 / 26px 26px,
     linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.16) 100%);
@@ -63,7 +64,7 @@ select option {
   max-height: 100vh;
   border: none !important;
   border-radius: 0 !important;
-  padding: 10px !important;
+  padding: 0 !important;
   background:
     radial-gradient(circle at 0 0, rgba(127,181,255,0.08) 0 2px, transparent 2px) 0 0 / 26px 26px,
     linear-gradient(180deg, rgba(17,29,41,0.98) 0%, rgba(11,18,24,0.98) 100%) !important;
@@ -75,15 +76,17 @@ select option {
 
 .moe-graph-controls-overlay {
   position: sticky;
-  top: 8px;
-  left: 0;
-  right: 0;
+  top: 18px;
+  left: 8px;
+  right: 18px;
+  height: 0;
   z-index: 60;
   display: flex;
   align-items: center;
   justify-content: space-between;
   pointer-events: none;
-  margin: 0 8px 8px;
+  margin: 0;
+  overflow: visible;
 }
 
 .moe-graph-zoom-control,
@@ -133,6 +136,7 @@ select option {
 .moe-graph-fullscreen-btn {
   width: 30px;
   height: 30px;
+  margin-right: 10px;
   border-radius: 8px;
   border: 1px solid rgba(88,166,255,0.34);
   background: rgba(11,18,30,0.82);
@@ -182,12 +186,12 @@ select option {
 }
 
 .moe-graph-selection-box {
-  position: absolute;
+  position: fixed;
   border: 1px dashed rgba(127,181,255,0.95);
   background: rgba(127,181,255,0.14);
   border-radius: 4px;
   pointer-events: none;
-  z-index: 80;
+  z-index: 4000;
 }
 
 .psf-relay-synth-list.graph-mode .moe-item > div:first-child {
