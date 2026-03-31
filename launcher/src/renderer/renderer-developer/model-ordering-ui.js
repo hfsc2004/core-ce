@@ -128,6 +128,8 @@ if (!window.createChannel) {
       direction: direction,
       fromAgentId: '',
       toAgentId: '',
+      fromNodeIds: [],
+      toNodeIds: [],
       groupId: '',
       label: '',
       when: 'always',
@@ -218,6 +220,7 @@ if (!window.createBindings) {
       id: `bindings-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'bindings',
       name,
+      assignedGatewayIds: [],
       entries: [
         { key: 'gpio.red', value: '2' },
         { key: 'gpio.blue', value: '3' },

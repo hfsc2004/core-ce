@@ -349,23 +349,42 @@ function renderMoePipeline() {
   `;
 }
 
-function getGraphSourceAgentId(channel, items, channelIndex) {
-  const explicit = String(channel?.fromAgentId || '').trim();
-  if (explicit) return explicit;
-  for (let i = channelIndex - 1; i >= 0; i -= 1) {
-    const item = items[i];
-    if (item?.type === 'agent' && item?.enabled !== false) return String(item.id || '').trim();
-  }
-  return '';
+function getEnabledGraphNodeIds(items) {
+  return (Array.isArray(items) ? items : [])
+    .filter((item) => (item?.type === 'agent' || item?.type === 'gateway') && item?.enabled !== false)
+    .map((item) => String(item.id || '').trim())
+    .filter(Boolean);
 }
 
-function getGraphTargetAgentIds(channel, items, sourceAgentId, channelIndex) {
+function getGraphSourceNodeIds(channel, items, channelIndex) {
+  const enabledNodeIds = new Set(getEnabledGraphNodeIds(items));
+  const explicit = (Array.isArray(channel?.fromNodeIds) ? channel.fromNodeIds : [])
+    .map((id) => String(id || '').trim())
+    .filter((id) => id && enabledNodeIds.has(id));
+  if (explicit.length > 0) return Array.from(new Set(explicit));
+  const legacy = String(channel?.fromAgentId || '').trim();
+  if (legacy && enabledNodeIds.has(legacy)) return [legacy];
+  for (let i = channelIndex - 1; i >= 0; i -= 1) {
+    const item = items[i];
+    if (item?.type === 'agent' && item?.enabled !== false) return [String(item.id || '').trim()];
+  }
+  return [];
+}
+
+function getGraphTargetNodeIds(channel, items, sourceNodeIds, channelIndex) {
   const mode = String(channel?.mode || 'direct').trim().toLowerCase();
+  const sourceSet = new Set(Array.isArray(sourceNodeIds) ? sourceNodeIds.map((id) => String(id || '').trim()) : []);
   const enabledAgents = items.filter((item) => item?.type === 'agent' && item?.enabled !== false);
+  const enabledNodes = items.filter((item) => (item?.type === 'agent' || item?.type === 'gateway') && item?.enabled !== false);
+  const enabledNodeIds = new Set(enabledNodes.map((item) => String(item.id || '').trim()).filter(Boolean));
+  const explicitTargets = (Array.isArray(channel?.toNodeIds) ? channel.toNodeIds : [])
+    .map((id) => String(id || '').trim())
+    .filter((id) => id && enabledNodeIds.has(id) && !sourceSet.has(id));
+  if (explicitTargets.length > 0) return Array.from(new Set(explicitTargets));
   if (mode === 'broadcast') {
     return enabledAgents
       .map((agent) => String(agent.id || '').trim())
-      .filter((id) => id && id !== sourceAgentId);
+      .filter((id) => id && !sourceSet.has(id));
   }
   if (mode === 'group') {
     const groupId = String(channel?.groupId || '').trim();
@@ -373,15 +392,15 @@ function getGraphTargetAgentIds(channel, items, sourceAgentId, channelIndex) {
     return enabledAgents
       .filter((agent) => Array.isArray(agent.groups) && agent.groups.map((g) => String(g || '').trim()).includes(groupId))
       .map((agent) => String(agent.id || '').trim())
-      .filter((id) => id && id !== sourceAgentId);
+      .filter((id) => id && !sourceSet.has(id));
   }
   const explicit = String(channel?.toAgentId || '').trim();
-  if (explicit) return [explicit];
+  if (explicit && enabledNodes.some((item) => String(item.id || '').trim() === explicit)) return [explicit];
   for (let i = channelIndex + 1; i < items.length; i += 1) {
     const item = items[i];
     if (item?.type === 'agent' && item?.enabled !== false) {
       const id = String(item.id || '').trim();
-      if (id && id !== sourceAgentId) return [id];
+      if (id && !sourceSet.has(id)) return [id];
       break;
     }
   }
@@ -488,23 +507,40 @@ function refreshMoeGraphEdges() {
   const defs = svg.querySelector('defs');
   const lines = [];
 
-  // Channel links (direction-aware: uni vs bi).
+  // Channel links: explicit card-to-card flow (source -> channel -> target).
   for (const row of channels) {
     const channel = row.item;
-    const sourceId = getGraphSourceAgentId(channel, items, row.index);
-    const targets = getGraphTargetAgentIds(channel, items, sourceId, row.index);
-    if (!sourceId || !targets.length) continue;
-    const sourceEl = cardMap.get(sourceId);
-    if (!sourceEl) continue;
+    const channelId = String(channel?.id || '').trim();
+    const sourceIds = getGraphSourceNodeIds(channel, items, row.index);
+    const targets = getGraphTargetNodeIds(channel, items, sourceIds, row.index);
+    if (!channelId || !sourceIds.length || !targets.length) continue;
+    const channelEl = cardMap.get(channelId);
+    if (!channelEl) continue;
+    const dir = String(channel?.direction || 'bidirectional').trim().toLowerCase();
+
+    for (const sourceId of sourceIds) {
+      const sourceEl = cardMap.get(sourceId);
+      if (!sourceEl) continue;
+
+      // Segment A: source card <-> channel card.
+      const sourceToChannelForward = Number(sourceEl.offsetLeft || 0) <= Number(channelEl.offsetLeft || 0);
+      const sourceAnchor = getGraphAnchor(sourceEl, sourceToChannelForward ? 'right' : 'left');
+      const channelInAnchor = getGraphAnchor(channelEl, sourceToChannelForward ? 'left' : 'right');
+      pushGraphEdge(lines, sourceAnchor, channelInAnchor, {
+        color: '#86b8ff',
+        markerStart: dir === 'bidirectional',
+        markerEnd: true
+      });
+    }
 
     for (const targetId of targets) {
       const targetEl = cardMap.get(targetId);
       if (!targetEl) continue;
-      const sourceForward = Number(sourceEl.offsetLeft || 0) <= Number(targetEl.offsetLeft || 0);
-      const from = getGraphAnchor(sourceEl, sourceForward ? 'right' : 'left');
-      const to = getGraphAnchor(targetEl, sourceForward ? 'left' : 'right');
-      const dir = String(channel?.direction || 'bidirectional').trim().toLowerCase();
-      pushGraphEdge(lines, from, to, {
+      // Segment B: channel card <-> target card.
+      const channelToTargetForward = Number(channelEl.offsetLeft || 0) <= Number(targetEl.offsetLeft || 0);
+      const channelOutAnchor = getGraphAnchor(channelEl, channelToTargetForward ? 'right' : 'left');
+      const targetAnchor = getGraphAnchor(targetEl, channelToTargetForward ? 'left' : 'right');
+      pushGraphEdge(lines, channelOutAnchor, targetAnchor, {
         color: '#86b8ff',
         markerStart: dir === 'bidirectional',
         markerEnd: true
@@ -585,24 +621,31 @@ function refreshMoeGraphEdges() {
     });
   }
 
-  // Runtime bindings feed agents (one-way).
+  // Runtime bindings feed gateways (one-way).
   const bindingsRows = items
     .map((item, index) => ({ item, index }))
     .filter((row) => row.item?.type === 'bindings' && row.item?.enabled !== false);
-  const enabledAgentIds = items
-    .filter((item) => item?.type === 'agent' && item?.enabled !== false)
+  const enabledGatewayIds = items
+    .filter((item) => item?.type === 'gateway' && item?.enabled !== false)
     .map((item) => String(item.id || '').trim())
     .filter(Boolean);
   for (const row of bindingsRows) {
     const bindingsId = String(row.item.id || '').trim();
     const bindingsEl = cardMap.get(bindingsId);
     if (!bindingsEl) continue;
-    for (const agentId of enabledAgentIds) {
-      const agentEl = cardMap.get(agentId);
-      if (!agentEl) continue;
-      const sourceForward = Number(bindingsEl.offsetLeft || 0) <= Number(agentEl.offsetLeft || 0);
+    const assignedIds = Array.isArray(row.item?.assignedGatewayIds)
+      ? row.item.assignedGatewayIds.map((id) => String(id || '').trim()).filter(Boolean)
+      : (Array.isArray(row.item?.assignedAgentIds)
+        ? row.item.assignedAgentIds.map((id) => String(id || '').trim()).filter(Boolean)
+        : []);
+    const explicitTargets = assignedIds.filter((id) => enabledGatewayIds.includes(id));
+    const targetIds = explicitTargets.length > 0 ? explicitTargets : enabledGatewayIds;
+    for (const gatewayId of targetIds) {
+      const gatewayEl = cardMap.get(gatewayId);
+      if (!gatewayEl) continue;
+      const sourceForward = Number(bindingsEl.offsetLeft || 0) <= Number(gatewayEl.offsetLeft || 0);
       const from = getGraphAnchor(bindingsEl, sourceForward ? 'right' : 'left');
-      const to = getGraphAnchor(agentEl, sourceForward ? 'left' : 'right');
+      const to = getGraphAnchor(gatewayEl, sourceForward ? 'left' : 'right');
       pushGraphEdge(lines, from, to, {
         color: '#d2991e',
         dash: '3 4',

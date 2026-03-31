@@ -21,10 +21,23 @@ function renderChannelRow(channel, index) {
     : '';
   const fromAgentId = String(channel.fromAgentId || '');
   const toAgentId = String(channel.toAgentId || '');
+  const fromNodeIds = Array.isArray(channel.fromNodeIds)
+    ? channel.fromNodeIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
+  const toNodeIds = Array.isArray(channel.toNodeIds)
+    ? channel.toNodeIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
   const groupId = String(channel.groupId || '');
   const agentItems = Array.isArray(window.modelOrderingState?.moeItems)
     ? window.modelOrderingState.moeItems.filter((item) => item?.type === 'agent')
     : [];
+  const gatewayItems = Array.isArray(window.modelOrderingState?.moeItems)
+    ? window.modelOrderingState.moeItems.filter((item) => item?.type === 'gateway')
+    : [];
+  const eligibleNodeItems = [
+    ...agentItems.map((item) => ({ ...item, _nodeType: 'agent' })),
+    ...gatewayItems.map((item) => ({ ...item, _nodeType: 'gateway' }))
+  ];
   const safeHtml = (text) => {
     if (typeof window.escapeHtml === 'function') return window.escapeHtml(String(text ?? ''));
     return String(text ?? '')
@@ -34,20 +47,34 @@ function renderChannelRow(channel, index) {
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
   };
-  const fromOptions = [
-    `<option value="" ${!fromAgentId ? 'selected' : ''}>Auto (previous agent)</option>`,
-    ...agentItems.map((agent) => {
-      const selected = fromAgentId === String(agent.id) ? 'selected' : '';
-      return `<option value="${safeHtml(agent.id)}" ${selected}>${safeHtml(agent.name || agent.id)}</option>`;
-    })
-  ].join('');
-  const toOptions = [
-    `<option value="" ${!toAgentId ? 'selected' : ''}>Auto (routing target)</option>`,
-    ...agentItems.map((agent) => {
-      const selected = toAgentId === String(agent.id) ? 'selected' : '';
-      return `<option value="${safeHtml(agent.id)}" ${selected}>${safeHtml(agent.name || agent.id)}</option>`;
-    })
-  ].join('');
+  const fromMembers = eligibleNodeItems.length > 0
+    ? eligibleNodeItems.map((node) => {
+      const nodeId = String(node.id || '').trim();
+      if (!nodeId) return '';
+      const checked = fromNodeIds.includes(nodeId) || (!fromNodeIds.length && fromAgentId === nodeId);
+      const typeLabel = node._nodeType === 'gateway' ? 'Gateway' : 'Agent';
+      return `
+        <label onclick="event.stopPropagation()" style="display:inline-flex; align-items:center; gap:6px; color:#b8c7d9; font-size:11px; border:1px solid rgba(88,166,255,0.35); border-radius:999px; padding:3px 8px; background:rgba(88,166,255,0.08);">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleChannelFromMember('${channel.id}', '${safeHtml(nodeId)}', this.checked)">
+          <span>${safeHtml(node.name || nodeId)} <span style="color:#7f8ea3;">[${typeLabel}]</span></span>
+        </label>
+      `;
+    }).join('')
+    : '';
+  const toMembers = eligibleNodeItems.length > 0
+    ? eligibleNodeItems.map((node) => {
+      const nodeId = String(node.id || '').trim();
+      if (!nodeId) return '';
+      const checked = toNodeIds.includes(nodeId) || (!toNodeIds.length && toAgentId === nodeId);
+      const typeLabel = node._nodeType === 'gateway' ? 'Gateway' : 'Agent';
+      return `
+        <label onclick="event.stopPropagation()" style="display:inline-flex; align-items:center; gap:6px; color:#b8c7d9; font-size:11px; border:1px solid rgba(88,166,255,0.35); border-radius:999px; padding:3px 8px; background:rgba(88,166,255,0.08);">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleChannelToMember('${channel.id}', '${safeHtml(nodeId)}', this.checked)">
+          <span>${safeHtml(node.name || nodeId)} <span style="color:#7f8ea3;">[${typeLabel}]</span></span>
+        </label>
+      `;
+    }).join('')
+    : '';
   const groupMembers = (groupId && agentItems.length > 0)
     ? agentItems
       .map((agent) => {
@@ -96,11 +123,10 @@ function renderChannelRow(channel, index) {
       </div>
       ${isExpanded ? `
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,165,0,0.2);">
-        <label style="color:#888; font-size:11px;">From</label>
-        <select onchange="updateChannelFromAgent('${channel.id}', this.value)" onclick="event.stopPropagation()"
-                style="min-width:170px; padding:3px 8px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
-          ${fromOptions}
-        </select>
+        <span style="color:#888; font-size:11px;">From Members</span>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; min-width:220px; max-width:100%;">
+          ${fromMembers || `<span style="color:#777; font-size:11px;">No eligible agent or gateway cards.</span>`}
+        </div>
         <label style="color:#888; font-size:11px;">Mode</label>
         <select onchange="updateChannelMode('${channel.id}', this.value)" onclick="event.stopPropagation()"
                 style="min-width:120px; padding:3px 8px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
@@ -108,13 +134,10 @@ function renderChannelRow(channel, index) {
           <option value="broadcast" ${mode === 'broadcast' ? 'selected' : ''}>Broadcast</option>
           <option value="group" ${mode === 'group' ? 'selected' : ''}>Group</option>
         </select>
-        ${mode === 'direct' ? `
-          <label style="color:#888; font-size:11px;">To</label>
-          <select onchange="updateChannelToAgent('${channel.id}', this.value)" onclick="event.stopPropagation()"
-                  style="min-width:170px; padding:3px 8px; background: rgba(255,165,0,0.2); border: 1px solid #ffa500; border-radius: 4px; color: #ffa500; cursor: pointer;">
-            ${toOptions}
-          </select>
-        ` : ''}
+        <span style="color:#888; font-size:11px;">To Members</span>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; min-width:220px; max-width:100%;">
+          ${toMembers || `<span style="color:#777; font-size:11px;">No eligible agent or gateway cards.</span>`}
+        </div>
         ${mode === 'group' ? `
           <label style="color:#888; font-size:11px;">Group</label>
           <input type="text" value="${safeHtml(groupId)}" placeholder="e.g. policy-council" onclick="event.stopPropagation()"

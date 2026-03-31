@@ -108,6 +108,24 @@ function validateItem(item, index) {
       if (item.toAgentId != null && typeof item.toAgentId !== 'string') {
         errors.push(`${prefix}: toAgentId must be string`);
       }
+      if (item.fromNodeIds != null) {
+        if (!Array.isArray(item.fromNodeIds)) {
+          errors.push(`${prefix}: fromNodeIds must be array`);
+        } else {
+          item.fromNodeIds.forEach((id, idx) => {
+            if (typeof id !== 'string') errors.push(`${prefix}: fromNodeIds[${idx}] must be string`);
+          });
+        }
+      }
+      if (item.toNodeIds != null) {
+        if (!Array.isArray(item.toNodeIds)) {
+          errors.push(`${prefix}: toNodeIds must be array`);
+        } else {
+          item.toNodeIds.forEach((id, idx) => {
+            if (typeof id !== 'string') errors.push(`${prefix}: toNodeIds[${idx}] must be string`);
+          });
+        }
+      }
       if (item.matchRule != null && typeof item.matchRule !== 'string') {
         errors.push(`${prefix}: matchRule must be string`);
       }
@@ -190,6 +208,18 @@ function validateItem(item, index) {
     case 'bindings':
       if (!item.name) {
         errors.push(`${prefix}: bindings missing name`);
+      }
+      if (item.assignedGatewayIds != null) {
+        if (!Array.isArray(item.assignedGatewayIds)) {
+          errors.push(`${prefix}: assignedGatewayIds must be an array`);
+        } else {
+          item.assignedGatewayIds.forEach((id, idx) => {
+            if (typeof id !== 'string') errors.push(`${prefix}: assignedGatewayIds[${idx}] must be string`);
+          });
+        }
+      }
+      if (item.assignedAgentIds != null && !Array.isArray(item.assignedAgentIds)) {
+        errors.push(`${prefix}: assignedAgentIds must be an array when present`);
       }
       if (item.entries != null && !Array.isArray(item.entries)) {
         errors.push(`${prefix}: bindings entries must be an array`);

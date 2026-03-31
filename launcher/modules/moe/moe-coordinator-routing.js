@@ -8,6 +8,8 @@ const DEFAULT_CHANNEL_POLICY = Object.freeze({
   when: 'always',
   fromAgentId: '',
   toAgentId: '',
+  fromNodeIds: [],
+  toNodeIds: [],
   matchRule: '',
   retryCount: 0,
   timeoutMs: 120000,
@@ -225,6 +227,12 @@ function normalizeChannelPolicy(raw, requestTimeout) {
     label: raw?.label || '',
     fromAgentId: String(raw?.fromAgentId || '').trim(),
     toAgentId: String(raw?.toAgentId || '').trim(),
+    fromNodeIds: (Array.isArray(raw?.fromNodeIds) ? raw.fromNodeIds : [])
+      .map((id) => String(id || '').trim())
+      .filter(Boolean),
+    toNodeIds: (Array.isArray(raw?.toNodeIds) ? raw.toNodeIds : [])
+      .map((id) => String(id || '').trim())
+      .filter(Boolean),
     groupId: String(raw?.groupId || '').trim(),
     when,
     flowCondition: when, // legacy alias
@@ -251,8 +259,8 @@ function getChannelPoliciesForAgentEdges(agentCount, status, requestTimeout, ord
 
   channels.forEach((raw, idx) => {
     const normalized = normalizeChannelPolicy(raw, requestTimeout);
-    const fromId = normalized.fromAgentId;
-    const toId = normalized.toAgentId;
+    const fromId = normalized.fromAgentId || normalized.fromNodeIds.find((id) => orderedAgentIds.includes(id)) || '';
+    const toId = normalized.toAgentId || normalized.toNodeIds.find((id) => orderedAgentIds.includes(id)) || '';
     if (fromId && toId) {
       if (!orderedAgentIds.includes(fromId) || !orderedAgentIds.includes(toId)) return;
       const list = outgoingByFromAgentId.get(fromId) || [];

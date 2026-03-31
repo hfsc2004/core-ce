@@ -82,10 +82,10 @@ function listAvailableSerialPorts() {
 function getInputGateway(deploymentManager) {
   if (!deploymentManager?.isActive?.()) return null;
   const status = deploymentManager.getStatus?.();
-  const bindings = collectEnabledBindings(status?.bindings);
   const gateways = Object.entries(status?.gateways || {});
   for (const [id, gateway] of gateways) {
     if ((gateway?.position || '').toLowerCase() !== 'input') continue;
+    const bindings = collectEnabledBindingsForGateway(status?.bindings, id);
     return { id, ...gateway, bindings };
   }
   return null;
@@ -94,11 +94,11 @@ function getInputGateway(deploymentManager) {
 function getAnyEnabledIrgGateway(deploymentManager) {
   if (!deploymentManager?.isActive?.()) return null;
   const status = deploymentManager.getStatus?.();
-  const bindings = collectEnabledBindings(status?.bindings);
   const gateways = Object.entries(status?.gateways || {});
   for (const [id, gateway] of gateways) {
     if (!gateway || gateway.enabled === false) continue;
     if (gateway?.irg?.enabled === false) continue;
+    const bindings = collectEnabledBindingsForGateway(status?.bindings, id);
     return { id, ...gateway, bindings };
   }
   return null;
@@ -121,6 +121,21 @@ function collectEnabledBindings(blocks) {
     }
   }
   return out;
+}
+
+function collectEnabledBindingsForGateway(blocks, gatewayId) {
+  const id = String(gatewayId || '').trim();
+  const list = Array.isArray(blocks) ? blocks : [];
+  if (!id) return collectEnabledBindings(list);
+  const filtered = list.filter((block) => {
+    if (!block || block.enabled === false) return false;
+    const assignedGatewayIds = Array.isArray(block.assignedGatewayIds)
+      ? block.assignedGatewayIds.map((value) => String(value || '').trim()).filter(Boolean)
+      : [];
+    if (assignedGatewayIds.length === 0) return true;
+    return assignedGatewayIds.includes(id);
+  });
+  return collectEnabledBindings(filtered);
 }
 
 function normalizeIrgEntryMode(value) {

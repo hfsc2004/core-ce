@@ -31,6 +31,8 @@ function ensureItemDefaults(item) {
       direction: 'bidirectional',
       fromAgentId: '',
       toAgentId: '',
+      fromNodeIds: [],
+      toNodeIds: [],
       groupId: '',
       when: 'always',
       matchRule: '',
@@ -89,6 +91,7 @@ function ensureItemDefaults(item) {
     bindings: {
       enabled: true,
       name: 'Runtime Bindings',
+      assignedGatewayIds: [],
       entries: []
     },
     endpoint_registry: {
@@ -198,6 +201,7 @@ function createStarterPipeline() {
         id: `bindings-${Date.now()}-vars`,
         type: 'bindings',
         name: 'Runtime Bindings',
+        assignedGatewayIds: [],
         entries: [
           { key: 'gpio.red', value: '2' },
           { key: 'gpio.blue', value: '3' },
@@ -212,6 +216,8 @@ function createStarterPipeline() {
         direction: 'bidirectional',
         fromAgentId: '',
         toAgentId: '',
+        fromNodeIds: [],
+        toNodeIds: [],
         groupId: '',
         when: 'always',
         matchRule: '',

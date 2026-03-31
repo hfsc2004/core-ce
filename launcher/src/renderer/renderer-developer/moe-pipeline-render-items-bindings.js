@@ -11,6 +11,9 @@ function renderBindingsRow(bindings, index) {
   const expandIcon = isExpanded ? '▼' : '▶';
   const theme = getMoeTheme();
   const entries = Array.isArray(bindings.entries) ? bindings.entries : [];
+  const assignedGatewayCount = Array.isArray(bindings?.assignedGatewayIds)
+    ? bindings.assignedGatewayIds.map((id) => String(id || '').trim()).filter(Boolean).length
+    : 0;
   const canvasStyle = typeof window.getMoeItemCanvasStyle === 'function'
     ? window.getMoeItemCanvasStyle(bindings, index)
     : '';
@@ -42,6 +45,9 @@ function renderBindingsRow(bindings, index) {
               ${renameHoverIn ? `onmouseover="${renameHoverIn}"` : ''}
               ${renameHoverOut ? `onmouseout="${renameHoverOut}"` : ''}>${escapeBinding(bindings.name || '')}</span>
         <div style="flex:1; color:#999; font-size:12px;">${entries.length} binding${entries.length !== 1 ? 's' : ''}</div>
+        <span style="background: rgba(255,255,255,0.10); color: #cbd5e1; padding: 3px 10px; border-radius: 10px; font-size: 11px;">
+          Gateways ${assignedGatewayCount}
+        </span>
         <label onclick="event.stopPropagation()" style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
           <input type="checkbox" ${bindings.enabled ? 'checked' : ''} onchange="toggleMoeItemEnabled('${bindings.id}', this.checked)">
           <span style="color: #888; font-size: 11px;">Enabled</span>
@@ -56,8 +62,36 @@ function renderBindingsRow(bindings, index) {
 
 function renderBindingsDetails(bindings) {
   const entries = Array.isArray(bindings.entries) ? bindings.entries : [];
+  const gatewayItems = (Array.isArray(window.modelOrderingState?.moeItems) ? window.modelOrderingState.moeItems : [])
+    .filter((item) => item?.type === 'gateway' && item?.enabled !== false)
+    .map((item) => ({
+      id: String(item.id || '').trim(),
+      label: String(item.name || item.id || '').trim() || String(item.id || '').trim()
+    }))
+    .filter((item) => item.id);
+  const assignedGatewayIds = Array.isArray(bindings?.assignedGatewayIds)
+    ? bindings.assignedGatewayIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
+  const assignedGatewaySet = new Set(assignedGatewayIds);
+  const assignmentHtml = gatewayItems.length > 0
+    ? gatewayItems.map((gateway) => `
+      <label onclick="event.stopPropagation()" style="display:inline-flex; align-items:center; gap:6px; color:#d5e8ff; font-size:11px; border:1px solid rgba(88,166,255,0.35); border-radius:999px; padding:3px 8px; background:rgba(88,166,255,0.08);">
+        <input type="checkbox" ${assignedGatewaySet.has(gateway.id) ? 'checked' : ''} onchange="toggleBindingsAssignedGateway('${bindings.id}', '${gateway.id}', this.checked)">
+        <span>${escapeBinding(gateway.label)}</span>
+      </label>
+    `).join('')
+    : '<span style="color:#777; font-size:11px;">No enabled gateways available.</span>';
   return `
     <div onclick="event.stopPropagation()" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+      <div style="margin-bottom: 10px;">
+        <label style="color: #888; font-size: 12px; display: block; margin-bottom: 8px;">Gateway Assignment (optional)</label>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; background: rgba(88,166,255,0.06); border:1px solid rgba(88,166,255,0.25); border-radius:6px; padding:10px;">
+          ${assignmentHtml}
+        </div>
+        <div style="color:#666; font-size:11px; margin-top:6px;">
+          If empty, bindings flow to all enabled gateways in graph view.
+        </div>
+      </div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <label style="color: #888; font-size: 12px;">Variable Bindings (key/value)</label>
         <button onclick="addBindingEntry('${bindings.id}')" style="padding:4px 10px; background:rgba(255,255,255,0.12); border:1px solid #bbb; border-radius:4px; color:#ddd; cursor:pointer; font-size:11px;">+ Add</button>

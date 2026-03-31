@@ -97,6 +97,71 @@ function normalizeAgentGroups(agent) {
     .filter(Boolean);
 }
 
+function getChannelEligibleNodeIds() {
+  const items = Array.isArray(window.modelOrderingState?.moeItems) ? window.modelOrderingState.moeItems : [];
+  return items
+    .filter((item) => (item?.type === 'agent' || item?.type === 'gateway') && item?.enabled !== false)
+    .map((item) => String(item.id || '').trim())
+    .filter(Boolean);
+}
+
+function normalizeNodeIdList(values, eligibleIds) {
+  const set = new Set(Array.isArray(eligibleIds) ? eligibleIds : []);
+  return (Array.isArray(values) ? values : [])
+    .map((value) => String(value || '').trim())
+    .filter((id) => id && set.has(id));
+}
+
+function syncLegacyChannelEndpoints(channel) {
+  const items = Array.isArray(window.modelOrderingState?.moeItems) ? window.modelOrderingState.moeItems : [];
+  const agentSet = new Set(
+    items
+      .filter((item) => item?.type === 'agent')
+      .map((item) => String(item.id || '').trim())
+      .filter(Boolean)
+  );
+  const fromIds = normalizeNodeIdList(channel?.fromNodeIds, getChannelEligibleNodeIds());
+  const toIds = normalizeNodeIdList(channel?.toNodeIds, getChannelEligibleNodeIds());
+  const fromAgent = fromIds.find((id) => agentSet.has(id)) || '';
+  const toAgent = toIds.find((id) => agentSet.has(id)) || '';
+  channel.fromAgentId = fromAgent;
+  channel.toAgentId = toAgent;
+}
+
+function toggleChannelFromMember(channelId, nodeId, enabled) {
+  const channel = window.modelOrderingState.moeItems.find((i) => i.id === channelId && i.type === 'channel');
+  if (!channel) return;
+  const id = String(nodeId || '').trim();
+  if (!id) return;
+  const eligibleIds = getChannelEligibleNodeIds();
+  if (!eligibleIds.includes(id)) return;
+  const current = normalizeNodeIdList(channel.fromNodeIds, eligibleIds);
+  const set = new Set(current);
+  if (enabled === true) set.add(id);
+  else set.delete(id);
+  channel.fromNodeIds = Array.from(set);
+  syncLegacyChannelEndpoints(channel);
+  console.log('[MoE] Updated channel from members:', channelId, channel.fromNodeIds);
+  renderModelOrdering();
+}
+
+function toggleChannelToMember(channelId, nodeId, enabled) {
+  const channel = window.modelOrderingState.moeItems.find((i) => i.id === channelId && i.type === 'channel');
+  if (!channel) return;
+  const id = String(nodeId || '').trim();
+  if (!id) return;
+  const eligibleIds = getChannelEligibleNodeIds();
+  if (!eligibleIds.includes(id)) return;
+  const current = normalizeNodeIdList(channel.toNodeIds, eligibleIds);
+  const set = new Set(current);
+  if (enabled === true) set.add(id);
+  else set.delete(id);
+  channel.toNodeIds = Array.from(set);
+  syncLegacyChannelEndpoints(channel);
+  console.log('[MoE] Updated channel to members:', channelId, channel.toNodeIds);
+  renderModelOrdering();
+}
+
 function toggleChannelGroupMember(channelId, agentId, enabled) {
   const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
   if (!channel) return;
@@ -119,7 +184,10 @@ function updateChannelFromAgent(channelId, fromAgentId) {
   const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
   if (channel) {
     channel.fromAgentId = String(fromAgentId || '').trim();
+    channel.fromNodeIds = channel.fromAgentId ? [channel.fromAgentId] : [];
+    syncLegacyChannelEndpoints(channel);
     console.log('[MoE] Updated channel fromAgentId:', channelId, channel.fromAgentId || '(auto)');
+    renderModelOrdering();
   }
 }
 
@@ -127,7 +195,10 @@ function updateChannelToAgent(channelId, toAgentId) {
   const channel = window.modelOrderingState.moeItems.find(i => i.id === channelId && i.type === 'channel');
   if (channel) {
     channel.toAgentId = String(toAgentId || '').trim();
+    channel.toNodeIds = channel.toAgentId ? [channel.toAgentId] : [];
+    syncLegacyChannelEndpoints(channel);
     console.log('[MoE] Updated channel toAgentId:', channelId, channel.toAgentId || '(auto)');
+    renderModelOrdering();
   }
 }
 
@@ -234,6 +305,28 @@ function updateGatewaySourceConfig(gatewayId, sourceType, key, value) {
   }
 }
 
+function toggleBindingsAssignedGateway(bindingsId, gatewayId, enabled) {
+  const bindings = window.modelOrderingState.moeItems.find(i => i.id === bindingsId && i.type === 'bindings');
+  if (!bindings) return;
+  if (!Array.isArray(bindings.assignedGatewayIds)) bindings.assignedGatewayIds = [];
+  const id = String(gatewayId || '').trim();
+  if (!id) return;
+  const current = bindings.assignedGatewayIds
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+  const set = new Set(current);
+  if (enabled === true) set.add(id);
+  else set.delete(id);
+  bindings.assignedGatewayIds = Array.from(set);
+  console.log('[MoE] Updated bindings assigned gateways:', bindingsId, bindings.assignedGatewayIds);
+  renderModelOrdering();
+}
+
+function toggleBindingsAssignedAgent(bindingsId, agentId, enabled) {
+  // Legacy alias retained for older inline handlers.
+  toggleBindingsAssignedGateway(bindingsId, agentId, enabled);
+}
+
 
 window.updateAgentSystemPrompt = updateAgentSystemPrompt;
 window.applyCliAgentPromptPreset = applyCliAgentPromptPreset;
@@ -241,6 +334,8 @@ window.updateAgentRoutingRules = updateAgentRoutingRules;
 window.updateChannelDirection = updateChannelDirection;
 window.updateChannelMode = updateChannelMode;
 window.updateChannelGroupId = updateChannelGroupId;
+window.toggleChannelFromMember = toggleChannelFromMember;
+window.toggleChannelToMember = toggleChannelToMember;
 window.toggleChannelGroupMember = toggleChannelGroupMember;
 window.updateChannelFromAgent = updateChannelFromAgent;
 window.updateChannelToAgent = updateChannelToAgent;
@@ -254,3 +349,5 @@ window.updateGatewayPosition = updateGatewayPosition;
 window.toggleGatewayAssignedAgent = toggleGatewayAssignedAgent;
 window.toggleGatewaySource = toggleGatewaySource;
 window.updateGatewaySourceConfig = updateGatewaySourceConfig;
+window.toggleBindingsAssignedGateway = toggleBindingsAssignedGateway;
+window.toggleBindingsAssignedAgent = toggleBindingsAssignedAgent;

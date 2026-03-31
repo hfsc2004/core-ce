@@ -488,12 +488,20 @@ function deployGateway(gateway) {
 function deployChannel(channel) {
   const when = String(channel.when || channel.flowCondition || 'always').trim().toLowerCase();
   const mode = String(channel.mode || 'direct').trim().toLowerCase();
+  const fromNodeIds = Array.isArray(channel.fromNodeIds)
+    ? channel.fromNodeIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
+  const toNodeIds = Array.isArray(channel.toNodeIds)
+    ? channel.toNodeIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
   activeDeployment.channels.push({
     id: channel.id,
     mode: ['direct', 'broadcast', 'group'].includes(mode) ? mode : 'direct',
     direction: channel.direction,
     fromAgentId: String(channel.fromAgentId || '').trim(),
     toAgentId: String(channel.toAgentId || '').trim(),
+    fromNodeIds,
+    toNodeIds,
     groupId: String(channel.groupId || '').trim(),
     label: channel.label || '',
     when,
@@ -508,10 +516,16 @@ function deployChannel(channel) {
 
 function deployBindings(bindings) {
   const entries = Array.isArray(bindings?.entries) ? bindings.entries : [];
+  const assignedGatewayIds = Array.isArray(bindings?.assignedGatewayIds)
+    ? bindings.assignedGatewayIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : (Array.isArray(bindings?.assignedAgentIds)
+      ? bindings.assignedAgentIds.map((id) => String(id || '').trim()).filter(Boolean)
+      : []);
   activeDeployment.bindings.push({
     id: bindings.id,
     name: bindings.name || 'Runtime Bindings',
     enabled: bindings.enabled !== false,
+    assignedGatewayIds,
     entries: entries
       .map((entry) => ({
         key: String(entry?.key || '').trim(),

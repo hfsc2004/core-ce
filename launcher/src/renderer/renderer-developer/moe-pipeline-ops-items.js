@@ -19,8 +19,6 @@ function addMoeAgent() {
     window.ensureAgentRlmAttachmentSession(agent);
   }
   window.modelOrderingState.moeItems.push(agent);
-  ensureExpandedMoeItemsState();
-  ensureMoeItemExpanded(agent.id);
   console.log('[MoE] Added agent:', agent.id);
   renderModelOrdering();
 }
@@ -35,8 +33,6 @@ function addMoeChannel() {
 function addMoeGateway() {
   const gateway = window.createGateway('User Gateway');
   window.modelOrderingState.moeItems.push(gateway);
-  ensureExpandedMoeItemsState();
-  ensureMoeItemExpanded(gateway.id);
   console.log('[MoE] Added gateway:', gateway.id);
   renderModelOrdering();
 }
@@ -44,8 +40,6 @@ function addMoeGateway() {
 function addMoeBindings() {
   const bindings = window.createBindings('Runtime Bindings');
   window.modelOrderingState.moeItems.push(bindings);
-  ensureExpandedMoeItemsState();
-  ensureMoeItemExpanded(bindings.id);
   console.log('[MoE] Added bindings:', bindings.id);
   renderModelOrdering();
 }
@@ -54,15 +48,11 @@ function addMoeEndpointRegistry() {
   const items = window.modelOrderingState.moeItems || [];
   const existing = items.find((item) => item.type === 'endpoint_registry');
   if (existing) {
-    ensureExpandedMoeItemsState();
-    ensureMoeItemExpanded(existing.id);
     renderModelOrdering();
     return;
   }
   const registry = window.createEndpointRegistryItem();
   items.push(registry);
-  ensureExpandedMoeItemsState();
-  ensureMoeItemExpanded(registry.id);
   console.log('[MoE] Added endpoint registry item:', registry.id);
   renderModelOrdering();
 }
@@ -74,8 +64,6 @@ function addMoeCliAgent() {
   if (!creator) return;
   const cliAgent = creator('CLI Agent');
   window.modelOrderingState.moeItems.push(cliAgent);
-  ensureExpandedMoeItemsState();
-  ensureMoeItemExpanded(cliAgent.id);
   console.log('[MoE] Added CLI Agent:', cliAgent.id);
   renderModelOrdering();
 }
