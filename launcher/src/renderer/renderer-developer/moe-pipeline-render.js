@@ -171,7 +171,7 @@ function renderMoePipeline() {
   // Empty pipeline but models exist
   if (moeItems.length === 0) {
     return `
-      <div style="position:relative; min-height: 360px; border:1px dashed rgba(88,166,255,0.18); border-radius:8px; overflow:hidden; background:#0c1520; display:flex; align-items:center; justify-content:center; padding:40px 24px;">
+    <div class="psf-relay-synth-empty" style="position:relative; min-height: 360px; border:1px dashed rgba(88,166,255,0.18); border-radius:8px; overflow:hidden; background:#0c1520; display:flex; align-items:center; justify-content:center; padding:40px 24px;">
         <svg viewBox="0 0 800 340" fill="none" preserveAspectRatio="xMidYMid slice"
              style="position:absolute; inset:0; width:100%; height:100%; opacity:0.18;">
           <line x1="0" y1="80" x2="800" y2="80" stroke="#58a6ff" stroke-width="0.5" stroke-dasharray="6 4"/>
@@ -269,9 +269,9 @@ function renderMoePipeline() {
   }
   
   return `
-    <div id="moe-pipeline-frame"
+    <div id="moe-pipeline-frame" class="psf-relay-synth-frame"
          style="border:1px solid ${frameBorderColor}; box-shadow:${frameShadow}; border-radius:10px; padding:10px 12px 12px; transition:border-color 220ms ease, box-shadow 220ms ease; display:flex; flex-direction:column; max-height:min(72vh, 860px);">
-      <div style="display: flex; flex-direction: column; gap: 4px; overflow-y:auto; padding-right:6px; min-height:260px; flex:1 1 auto;"
+      <div class="psf-relay-synth-list" style="display: flex; flex-direction: column; gap: 4px; overflow-y:auto; padding-right:6px; min-height:260px; flex:1 1 auto;"
            id="moe-pipeline-list"
            ondragover="handleMoeDragOver(event)"
            ondrop="handleMoeDrop(event)">
@@ -279,7 +279,7 @@ function renderMoePipeline() {
       </div>
 
       <!-- Pipeline Legend -->
-      <div style="margin-top: 12px; padding: 6px 2px 2px; border-radius: 8px;">
+      <div class="psf-relay-synth-legend" style="margin-top: 12px; padding: 6px 2px 2px; border-radius: 8px;">
       <div style="display: flex; gap: 14px; flex-wrap: wrap;">
         <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:#484f58;">
           <div style="width:10px; height:10px; border-radius:2px; background:rgba(63,185,80,0.25); border:1px solid #3fb950;"></div>
@@ -308,7 +308,7 @@ function renderMoePipeline() {
       </div>
       </div>
 
-      <div id="moe-deploy-status-panel" style="margin-top: 12px; padding: 9px 14px; background: #111c2a; border: 1px solid rgba(139,148,158,0.12); border-radius: 6px;">
+      <div id="moe-deploy-status-panel" class="psf-relay-synth-status" style="margin-top: 12px; padding: 9px 14px; background: #111c2a; border: 1px solid rgba(139,148,158,0.12); border-radius: 6px;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;">
         <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#8b949e; font-weight:500;">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#484f58" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="1" width="11" height="11" rx="2"></rect><line x1="4" y1="5" x2="9" y2="5"></line><line x1="4" y1="8" x2="7" y2="8"></line></svg>
