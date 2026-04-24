@@ -15,4 +15,6 @@
 /sqliteLog.txt
 /webui-debug.log
 /.claude/
+/.codex/
+/Screenshot at *.png
 /.gitignore.bak
