@@ -15,6 +15,10 @@
 /sqliteLog.txt
 /webui-debug.log
 /.claude/
+/.claude-code/
+/.gemini/
+/.google/
+/.gcloud/
 /.codex
 /.codex/
 /Screenshot at *.png
