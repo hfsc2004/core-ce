@@ -29,5 +29,7 @@
 .hf_token
 huggingface.token
 hf_token.txt
+# Private local planning notes
+/TODO.private.md
 /Screenshot at *.png
 /.gitignore.bak
