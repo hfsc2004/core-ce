@@ -12,6 +12,7 @@ function createSettingsHandlers() {
     'get-settings': (ctx) => ctx.settingsManager.getSettings(ctx.appDir),
     'save-settings': (ctx, event, settings) => ctx.settingsManager.saveSettings(ctx.appDir, settings),
     'get-hf-token': (ctx) => ctx.settingsManager.getHFToken(ctx.appDir),
+    'set-hf-token': (ctx, event, token) => ctx.settingsManager.setHuggingFaceToken(ctx.appDir, token),
     'get-theme': (ctx) => ctx.settingsManager.getTheme(ctx.appDir),
     'save-theme': (ctx, event, theme) => {
       const result = ctx.settingsManager.setTheme(ctx.appDir, theme);

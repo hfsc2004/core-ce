@@ -302,6 +302,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Settings APIs
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  getHFToken: () => ipcRenderer.invoke('get-hf-token'),
+  setHFToken: (token) => ipcRenderer.invoke('set-hf-token', token),
   modsPickDirectory: () => ipcRenderer.invoke('mods:pick-directory'),
   modsPickKeyFile: () => ipcRenderer.invoke('mods:pick-key-file'),
   modsListInstalled: () => ipcRenderer.invoke('mods:list-installed'),

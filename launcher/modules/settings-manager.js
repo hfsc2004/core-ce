@@ -9,6 +9,8 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger');
+const HF_ENV_KEYS = ['HUGGINGFACE_TOKEN', 'HF_TOKEN', 'HF_HUB_TOKEN', 'HUGGINGFACE_HUB_TOKEN'];
+const PRIMARY_HF_ENV_KEY = 'HUGGINGFACE_TOKEN';
 
 /**
  * Default theme configuration
@@ -111,61 +113,118 @@ function getSettingsPath(projectRoot) {
   return path.join(projectRoot, '..', 'models', 'psf-settings.json');
 }
 
-/**
- * Load settings from disk
- * @param {string} projectRoot - Project root directory
- * @returns {Object} Settings object
- */
-function loadSettings(projectRoot) {
+function getEnvPath(projectRoot) {
+  return path.join(projectRoot, '..', '.env');
+}
+
+function parseEnvContent(content) {
+  const map = {};
+  const lines = String(content || '').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const idx = line.indexOf('=');
+    if (idx <= 0) continue;
+    const key = line.slice(0, idx).trim();
+    if (!key) continue;
+    let value = line.slice(idx + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
+      (value.startsWith('\'') && value.endsWith('\'') && value.length >= 2)
+    ) {
+      value = value.slice(1, -1);
+    }
+    map[key] = value;
+  }
+  return map;
+}
+
+function encodeEnvValue(value) {
+  const raw = String(value || '');
+  if (!raw) return '';
+  if (/^[A-Za-z0-9._~:/@+-]+$/.test(raw)) return raw;
+  return `"${raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+function normalizeSettings(settings) {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(settings || {}),
+    api_keys: {
+      ...DEFAULT_SETTINGS.api_keys,
+      ...((settings && settings.api_keys) || {}),
+      openai_compatible: {
+        ...DEFAULT_SETTINGS.api_keys.openai_compatible,
+        ...(((settings && settings.api_keys) || {}).openai_compatible || {})
+      },
+      vllm: {
+        ...DEFAULT_SETTINGS.api_keys.vllm,
+        ...(((settings && settings.api_keys) || {}).vllm || {})
+      },
+      exllamav2: {
+        ...DEFAULT_SETTINGS.api_keys.exllamav2,
+        ...(((settings && settings.api_keys) || {}).exllamav2 || {})
+      }
+    },
+    theme: { ...DEFAULT_SETTINGS.theme, ...((settings && settings.theme) || {}) },
+    voice_to_text: {
+      ...DEFAULT_SETTINGS.voice_to_text,
+      ...((settings && settings.voice_to_text) || {}),
+      hf: {
+        ...DEFAULT_SETTINGS.voice_to_text.hf,
+        ...(((settings && settings.voice_to_text) || {}).hf || {})
+      },
+      localTransformers: {
+        ...DEFAULT_SETTINGS.voice_to_text.localTransformers,
+        ...(((settings && settings.voice_to_text) || {}).localTransformers || {})
+      },
+      catalogRefs: {
+        ...DEFAULT_SETTINGS.voice_to_text.catalogRefs,
+        ...(((settings && settings.voice_to_text) || {}).catalogRefs || {})
+      }
+    }
+  };
+}
+
+function loadSettingsFromDisk(projectRoot) {
   const settingsPath = getSettingsPath(projectRoot);
   try {
     if (fs.existsSync(settingsPath)) {
       const data = fs.readFileSync(settingsPath, 'utf8');
       const settings = JSON.parse(data);
       logger.debug('[Settings] Loaded settings from:', settingsPath);
-      return {
-        ...DEFAULT_SETTINGS,
-        ...settings,
-        api_keys: {
-          ...DEFAULT_SETTINGS.api_keys,
-          ...(settings.api_keys || {}),
-          openai_compatible: {
-            ...DEFAULT_SETTINGS.api_keys.openai_compatible,
-            ...((settings.api_keys && settings.api_keys.openai_compatible) || {})
-          },
-          vllm: {
-            ...DEFAULT_SETTINGS.api_keys.vllm,
-            ...((settings.api_keys && settings.api_keys.vllm) || {})
-          },
-          exllamav2: {
-            ...DEFAULT_SETTINGS.api_keys.exllamav2,
-            ...((settings.api_keys && settings.api_keys.exllamav2) || {})
-          }
-        },
-        theme: { ...DEFAULT_SETTINGS.theme, ...((settings && settings.theme) || {}) },
-        voice_to_text: {
-          ...DEFAULT_SETTINGS.voice_to_text,
-          ...((settings && settings.voice_to_text) || {}),
-          hf: {
-            ...DEFAULT_SETTINGS.voice_to_text.hf,
-            ...(((settings && settings.voice_to_text) || {}).hf || {})
-          },
-          localTransformers: {
-            ...DEFAULT_SETTINGS.voice_to_text.localTransformers,
-            ...(((settings && settings.voice_to_text) || {}).localTransformers || {})
-          },
-          catalogRefs: {
-            ...DEFAULT_SETTINGS.voice_to_text.catalogRefs,
-            ...(((settings && settings.voice_to_text) || {}).catalogRefs || {})
-          }
-        }
-      };
+      return normalizeSettings(settings);
     }
   } catch (err) {
     logger.error('[Settings] Error loading settings:', err.message);
   }
   logger.debug('[Settings] Using default settings');
-  return { ...DEFAULT_SETTINGS };
+  return normalizeSettings({});
+}
+
+function stripLegacyHuggingFaceTokenFromSettingsFile(projectRoot) {
+  const settingsPath = getSettingsPath(projectRoot);
+  try {
+    if (!fs.existsSync(settingsPath)) return;
+    const raw = fs.readFileSync(settingsPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!Object.prototype.hasOwnProperty.call(parsed, 'huggingface_token')) return;
+    delete parsed.huggingface_token;
+    fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf8');
+  } catch (err) {
+    logger.warn('[Settings] Failed to remove legacy huggingface_token from settings file:', err.message);
+  }
+}
+
+/**
+ * Load settings from disk
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object} Settings object
+ */
+function loadSettings(projectRoot) {
+  const settings = loadSettingsFromDisk(projectRoot);
+  const token = getHuggingFaceToken(projectRoot, settings) || '';
+  return { ...settings, huggingface_token: token };
 }
 
 /**
@@ -178,6 +237,19 @@ function saveSettings(projectRoot, settings) {
   const settingsPath = getSettingsPath(projectRoot);
   
   try {
+    const next = { ...(settings || {}) };
+    if (Object.prototype.hasOwnProperty.call(next, 'huggingface_token')) {
+      const requestedToken = String(next.huggingface_token || '').trim();
+      const currentToken = String(getHuggingFaceToken(projectRoot) || '').trim();
+      if (requestedToken !== currentToken) {
+        const tokenResult = setHuggingFaceToken(projectRoot, requestedToken);
+        if (!tokenResult?.success) {
+          return tokenResult;
+        }
+      }
+    }
+    delete next.huggingface_token;
+
     // Ensure models directory exists
     const modelsDir = path.dirname(settingsPath);
     if (!fs.existsSync(modelsDir)) {
@@ -185,13 +257,13 @@ function saveSettings(projectRoot, settings) {
     }
     
     // Update timestamps
-    settings.updated_at = new Date().toISOString();
-    if (!settings.created_at) {
-      settings.created_at = settings.updated_at;
+    next.updated_at = new Date().toISOString();
+    if (!next.created_at) {
+      next.created_at = next.updated_at;
     }
     
     // Write file
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+    fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2), 'utf8');
     logger.info('[Settings] Saved settings to:', settingsPath);
     
     return { success: true };
@@ -206,13 +278,43 @@ function saveSettings(projectRoot, settings) {
  * @param {string} projectRoot - Project root directory
  * @returns {string|null} Token or null if not set
  */
-function getHuggingFaceToken(projectRoot) {
-  const settings = loadSettings(projectRoot);
-  const token = settings.huggingface_token || null;
-  if (token) {
-    logger.debug('[Settings] HuggingFace token found (length:', token.length, ')');
+function getHuggingFaceToken(projectRoot, cachedSettings = null) {
+  for (const key of HF_ENV_KEYS) {
+    const fromProcess = String(process.env[key] || '').trim();
+    if (fromProcess) {
+      if (key !== PRIMARY_HF_ENV_KEY) {
+        process.env[PRIMARY_HF_ENV_KEY] = fromProcess;
+      }
+      return fromProcess;
+    }
   }
-  return token;
+
+  try {
+    const envPath = getEnvPath(projectRoot);
+    if (fs.existsSync(envPath)) {
+      const envMap = parseEnvContent(fs.readFileSync(envPath, 'utf8'));
+      for (const key of HF_ENV_KEYS) {
+        const fromFile = String(envMap[key] || '').trim();
+        if (fromFile) {
+          process.env[PRIMARY_HF_ENV_KEY] = fromFile;
+          return fromFile;
+        }
+      }
+    }
+  } catch (err) {
+    logger.warn('[Settings] Failed reading .env for HuggingFace token:', err.message);
+  }
+
+  const sourceSettings = cachedSettings || loadSettingsFromDisk(projectRoot);
+  const legacyToken = String(sourceSettings.huggingface_token || '').trim();
+  if (legacyToken) {
+    // One-time migration from settings JSON to hidden .env
+    setHuggingFaceToken(projectRoot, legacyToken);
+    const migrated = String(process.env[PRIMARY_HF_ENV_KEY] || '').trim();
+    if (migrated) return migrated;
+  }
+
+  return null;
 }
 
 /**
@@ -222,9 +324,71 @@ function getHuggingFaceToken(projectRoot) {
  * @returns {Object} Result { success: boolean, error?: string }
  */
 function setHuggingFaceToken(projectRoot, token) {
-  const settings = loadSettings(projectRoot);
-  settings.huggingface_token = token || '';
-  return saveSettings(projectRoot, settings);
+  const normalizedToken = String(token || '').trim();
+  const envPath = getEnvPath(projectRoot);
+
+  try {
+    if (!normalizedToken && !fs.existsSync(envPath)) {
+      delete process.env[PRIMARY_HF_ENV_KEY];
+      for (const key of HF_ENV_KEYS) {
+        if (key !== PRIMARY_HF_ENV_KEY) delete process.env[key];
+      }
+      stripLegacyHuggingFaceTokenFromSettingsFile(projectRoot);
+      return { success: true };
+    }
+
+    const lines = fs.existsSync(envPath)
+      ? fs.readFileSync(envPath, 'utf8').split(/\r?\n/)
+      : [];
+    const nextLines = [];
+    let wrotePrimary = false;
+
+    for (const line of lines) {
+      const idx = line.indexOf('=');
+      const trimmed = line.trim();
+      if (idx <= 0 || trimmed.startsWith('#')) {
+        nextLines.push(line);
+        continue;
+      }
+
+      const key = line.slice(0, idx).trim();
+      if (!HF_ENV_KEYS.includes(key)) {
+        nextLines.push(line);
+        continue;
+      }
+
+      if (key === PRIMARY_HF_ENV_KEY && normalizedToken && !wrotePrimary) {
+        nextLines.push(`${PRIMARY_HF_ENV_KEY}=${encodeEnvValue(normalizedToken)}`);
+        wrotePrimary = true;
+      }
+      // Drop all other HF token aliases from file to avoid duplicate sources.
+    }
+
+    if (normalizedToken && !wrotePrimary) {
+      if (nextLines.length > 0 && nextLines[nextLines.length - 1].trim() !== '') {
+        nextLines.push('');
+      }
+      nextLines.push(`${PRIMARY_HF_ENV_KEY}=${encodeEnvValue(normalizedToken)}`);
+    }
+
+    const content = `${nextLines.join('\n').replace(/\n*$/, '')}\n`;
+    fs.writeFileSync(envPath, content, 'utf8');
+
+    if (normalizedToken) {
+      process.env[PRIMARY_HF_ENV_KEY] = normalizedToken;
+    } else {
+      delete process.env[PRIMARY_HF_ENV_KEY];
+    }
+    for (const key of HF_ENV_KEYS) {
+      if (key !== PRIMARY_HF_ENV_KEY) delete process.env[key];
+    }
+    stripLegacyHuggingFaceTokenFromSettingsFile(projectRoot);
+
+    return { success: true };
+  } catch (err) {
+    logger.error('[Settings] Error writing HuggingFace token to .env:', err.message);
+    return { success: false, error: err.message };
+  }
 }
 
 /**
