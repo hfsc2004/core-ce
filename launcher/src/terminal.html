@@ -92,7 +92,7 @@
     <div style="margin-bottom: 12px;">
       <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">Provider</label>
       <select id="cfg-provider" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
-        <option value="ollama" selected>Ollama</option>
+        <option value="ollama" selected>Local (managed)</option>
         <option value="llama.cpp">llama.cpp</option>
         <option value="vllm">vLLM</option>
         <option value="openai-compatible">OpenAI-Compatible</option>
@@ -235,7 +235,7 @@
   <div class="status-bar">
     <div class="status-indicator">
       <div class="status-dot"></div>
-      <span id="status-text">Connected to Ollama</span>
+      <span id="status-text">Connected to local model server</span>
     </div>
     <div id="gpu-indicator" class="gpu-badge">
       <span id="gpu-icon">⏳</span> <span id="gpu-text">Detecting...</span>

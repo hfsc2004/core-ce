@@ -586,7 +586,7 @@
           );
           setThinkingStatusText('Streaming');
           if (!result || result.success === false) {
-            addErrorMessage(result && result.message ? result.message : 'Failed to start stream from Ollama');
+            addErrorMessage(result && result.message ? result.message : 'Failed to start stream from local model server');
             setActiveStream(null);
             setWaitingState(false);
           }
@@ -596,7 +596,7 @@
             return;
           }
           console.error('[Terminal] Stream send error:', error);
-          addErrorMessage(`Error: ${error.message || 'Failed to start streaming from Ollama'}`);
+          addErrorMessage(`Error: ${error.message || 'Failed to start streaming from local model server'}`);
           setActiveStream(null);
           setWaitingState(false);
         } finally {
@@ -621,11 +621,11 @@
           addMessage('assistant', finalAssistantMessage);
           appendConversationPair(message, finalAssistantMessage, { skipRelay: localOnly });
         } else {
-          addErrorMessage('Failed to get response from Ollama');
+          addErrorMessage('Failed to get response from local model server');
         }
       } catch (error) {
         console.error('[Terminal] Send message error:', error);
-        addErrorMessage(`Error: ${error.message || 'Failed to communicate with Ollama'}`);
+        addErrorMessage(`Error: ${error.message || 'Failed to communicate with local model server'}`);
       } finally {
         setWaitingState(false);
         focusInput();

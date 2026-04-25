@@ -59,20 +59,20 @@ function logGpuMode(gpuInfo, forceCpu) {
   }
 
   if (gpuInfo && gpuInfo.accelerationType === 'nvidia') {
-    console.log(`[${LOG_PREFIX}] Detected GPU: ${gpuInfo.name} (letting Ollama auto-discover)`);
+    console.log(`[${LOG_PREFIX}] Detected GPU: ${gpuInfo.name} (letting model runtime auto-discover)`);
   }
 }
 
 async function waitUntilReadyOrFail(ollamaProcess, port, releasePortOnFailure) {
-  console.log(`[${LOG_PREFIX}] Waiting for Ollama server to be ready...`);
+  console.log(`[${LOG_PREFIX}] Waiting for model server to be ready...`);
   const result = await processTools.waitForOllamaReady(port, 30);
 
   if (result.ready) {
-    console.log(`[${LOG_PREFIX}] Ollama server ready on port ${port} (took ${result.seconds}s)`);
+    console.log(`[${LOG_PREFIX}] Model server ready on port ${port} (took ${result.seconds}s)`);
     return;
   }
 
-  console.error(`[${LOG_PREFIX}] Ollama server did not become ready in time`);
+  console.error(`[${LOG_PREFIX}] Model server did not become ready in time`);
   try {
     process.kill(-ollamaProcess.pid, 'SIGTERM');
   } catch (_err) {
@@ -84,12 +84,12 @@ async function waitUntilReadyOrFail(ollamaProcess, port, releasePortOnFailure) {
   }
 
   sessionStore.deletePortSession(port);
-  throw new Error('Ollama server startup timeout');
+  throw new Error('Model server startup timeout');
 }
 
 function attachExitCleanup(processRef, port) {
   processRef.on('exit', (code, signal) => {
-    console.log(`[${LOG_PREFIX}] Ollama process exited (code: ${code}, signal: ${signal})`);
+    console.log(`[${LOG_PREFIX}] Model server process exited (code: ${code}, signal: ${signal})`);
     sessionStore.deletePortSession(port);
   });
 }
@@ -110,7 +110,7 @@ async function killStalePSFOllama(appPath) {
  * Start Ollama server on a pre-allocated port (called by session-manager).
  */
 async function startOllamaServerOnPort(appPath, gpuInfo, port) {
-  console.log(`[${LOG_PREFIX}] Starting Ollama server on pre-allocated port ${port}...`);
+  console.log(`[${LOG_PREFIX}] Starting model server on pre-allocated port ${port}...`);
 
   if (!port) {
     throw new Error('Port is required - must be pre-allocated by session-manager');
@@ -121,7 +121,7 @@ async function startOllamaServerOnPort(appPath, gpuInfo, port) {
 
   const env = processTools.createOllamaEnv(appPath, port, false);
   logGpuMode(gpuInfo, false);
-  logger.info('Starting Ollama server (via session-manager)', { port });
+  logger.info('Starting model server (via session-manager)', { port });
 
   const ollamaProcess = processTools.spawnOllamaProcess(ollamaPath, env);
   sessionStore.setPortSession(port, {
@@ -135,7 +135,7 @@ async function startOllamaServerOnPort(appPath, gpuInfo, port) {
   attachExitCleanup(ollamaProcess, port);
   await waitUntilReadyOrFail(ollamaProcess, port, false);
 
-  console.log(`[${LOG_PREFIX}] ✅ Ollama ready: PID ${ollamaProcess.pid} on port ${port}`);
+  console.log(`[${LOG_PREFIX}] ✅ Model server ready: PID ${ollamaProcess.pid} on port ${port}`);
   return { pid: ollamaProcess.pid, port, process: ollamaProcess };
 }
 
@@ -149,7 +149,7 @@ function bindSessionToPort(port, sessionId) {
  */
 async function startOllamaServer(appPath, gpuInfo, serviceType = 'terminal', forceCpu = false) {
   const normalizedType = resolveServiceType(serviceType);
-  console.log(`[${LOG_PREFIX}] Starting NEW Ollama server instance (serviceType: ${normalizedType})...`);
+  console.log(`[${LOG_PREFIX}] Starting NEW model server instance (serviceType: ${normalizedType})...`);
 
   const ollamaPath = pathManager.getOllamaBinaryPath(appPath, 'linux-x64');
   logger.info('Ollama binary path', { path: ollamaPath });
@@ -162,7 +162,7 @@ async function startOllamaServer(appPath, gpuInfo, serviceType = 'terminal', for
 
   const env = processTools.createOllamaEnv(appPath, port, forceCpu);
   logGpuMode(gpuInfo, forceCpu);
-  logger.info('Starting Ollama server', { port, serviceType: normalizedType });
+  logger.info('Starting model server', { port, serviceType: normalizedType });
 
   const ollamaProcess = processTools.spawnOllamaProcess(ollamaPath, env);
   const sessionId = sessionManager.registerSession({
@@ -187,7 +187,7 @@ async function startOllamaServer(appPath, gpuInfo, serviceType = 'terminal', for
   attachExitCleanup(ollamaProcess, port);
   await waitUntilReadyOrFail(ollamaProcess, port, true);
 
-  console.log(`[${LOG_PREFIX}] Ollama: PID ${ollamaProcess.pid} on port ${port}`);
+  console.log(`[${LOG_PREFIX}] Model server: PID ${ollamaProcess.pid} on port ${port}`);
   return port;
 }
 
@@ -195,7 +195,7 @@ async function startOllamaServer(appPath, gpuInfo, serviceType = 'terminal', for
  * Stop a specific Ollama server by port.
  */
 async function stopOllamaServer(port) {
-  console.log(`[${LOG_PREFIX}] Stopping Ollama server on port ${port}...`);
+  console.log(`[${LOG_PREFIX}] Stopping model server on port ${port}...`);
 
   for (const [key, session] of sessionStore.entries()) {
     if (session.port === port) {
@@ -215,7 +215,7 @@ async function stopOllamaServer(port) {
 async function closeTerminalSession(windowId) {
   const session = sessionStore.getWindowSession(windowId);
   if (!session) {
-    console.log(`[${LOG_PREFIX}] No Ollama session found for window ${windowId} (checking BMOC-owned sessions)`);
+    console.log(`[${LOG_PREFIX}] No model server session found for window ${windowId} (checking BMOC-owned sessions)`);
   }
 
   if (session) {
@@ -226,7 +226,7 @@ async function closeTerminalSession(windowId) {
     const pid = session.process.pid;
     try {
       process.kill(-pid, 'SIGTERM');
-      console.log(`[${LOG_PREFIX}] Killed Ollama process group ${pid}`);
+      console.log(`[${LOG_PREFIX}] Killed model server process group ${pid}`);
     } catch (_err) {
       try {
         session.process.kill('SIGTERM');
@@ -267,13 +267,13 @@ async function closeTerminalSession(windowId) {
 async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlPath, gpuInfo, modelVramMB = 0, ollamaPort = null, modelConfig = null, terminalSessionId = null, terminalRuntime = null) {
   const { BrowserWindow, screen } = require('electron');
 
-  console.log(`[${LOG_PREFIX}] Opening Ollama Terminal...`);
+  console.log(`[${LOG_PREFIX}] Opening terminal...`);
   console.log(`[${LOG_PREFIX}] Model: ${modelName}, Port: ${ollamaPort}`);
 
   if (!ollamaPort) {
-    console.log(`[${LOG_PREFIX}] No port provided - starting Ollama via session-manager...`);
+    console.log(`[${LOG_PREFIX}] No port provided - starting model server via session-manager...`);
     ollamaPort = await startOllamaServer(appPath, gpuInfo, 'terminal');
-    console.log(`[${LOG_PREFIX}] Ollama started on port ${ollamaPort}`);
+    console.log(`[${LOG_PREFIX}] Model server started on port ${ollamaPort}`);
   }
 
   const sessionInfo = sessionStore.getPortSession(ollamaPort);
@@ -306,7 +306,7 @@ async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlP
     sessionId: terminalSessionId || null
   });
 
-  console.log(`[${LOG_PREFIX}] Terminal window ${windowId} -> Ollama port ${ollamaPort}`);
+  console.log(`[${LOG_PREFIX}] Terminal window ${windowId} -> model server port ${ollamaPort}`);
   console.log(`[${LOG_PREFIX}] Active terminal sessions: ${sessionStore.size()}`);
 
   let url = `file://${terminalHtmlPath}?model=${encodeURIComponent(modelName)}&port=${ollamaPort}&gpuType=${gpuInfo?.accelerationType || 'cpu'}&windowId=${windowId}`;
@@ -358,7 +358,7 @@ async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlP
  * Stop all instances for this platform manager.
  */
 async function stopAllInstances() {
-  console.log(`[${LOG_PREFIX}] Stopping all Ollama instances...`);
+  console.log(`[${LOG_PREFIX}] Stopping all model server instances...`);
 
   const activeKeys = sessionStore.keys();
   console.log(`[${LOG_PREFIX}] Closing ${activeKeys.length} active session(s)`);
@@ -373,7 +373,7 @@ async function stopAllInstances() {
   }
 
   await processTools.killRemainingByPattern('binaries/ollama/linux-x64', LOG_PREFIX);
-  console.log(`[${LOG_PREFIX}] All Ollama instances stopped`);
+  console.log(`[${LOG_PREFIX}] All model server instances stopped`);
 }
 
 function getActiveSessionCount() {

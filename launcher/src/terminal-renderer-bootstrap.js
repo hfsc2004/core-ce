@@ -296,9 +296,9 @@
 
       if (provider === 'ollama') {
         if (ctx.getCurrentModel()) {
-          ctx.addSystemMessage('Connected to Ollama with model: ' + ctx.getCurrentModel());
+          ctx.addSystemMessage('Connected to local model server with model: ' + ctx.getCurrentModel());
         } else {
-          ctx.addSystemMessage('Connected to Ollama - select a model from the dropdown above');
+          ctx.addSystemMessage('Connected to local model server - select a model from the dropdown above');
         }
         ctx.addSystemMessage('Using port: ' + ctx.getTerminalPort());
       } else {

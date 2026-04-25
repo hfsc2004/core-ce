@@ -391,7 +391,7 @@
           stopBtn.style.display = 'none';
           stopBtn.disabled = true;
         }
-        if (statusText) statusText.textContent = 'Connected to Ollama';
+        if (statusText) statusText.textContent = 'Connected to local model server';
         if (inlineThinking) {
           inlineThinking.classList.remove('active');
           inlineThinking.setAttribute('aria-hidden', 'true');

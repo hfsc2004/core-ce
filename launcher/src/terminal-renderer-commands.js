@@ -359,7 +359,7 @@
       addSystemMessage('Available commands:');
       addSystemMessage('  /help - Show this help message');
       addSystemMessage('  /clear - Clear conversation history');
-      addSystemMessage('  /models - List available Ollama models');
+      addSystemMessage('  /models - List available local models');
       addSystemMessage('  /system <prompt> - Set system prompt');
       addSystemMessage('  /temp <0.0-2.0> - Set temperature (default 0.7)');
       addSystemMessage('  /local <message> - Send to this terminal only (no mesh relay)');
@@ -370,7 +370,7 @@
       addSystemMessage('  /switch <model> - Switch to different model');
       addSystemMessage('  /save <n> - Save conversation');
       addSystemMessage('  /load <n> - Load conversation');
-      addSystemMessage('  /port - Show current Ollama port');
+      addSystemMessage('  /port - Show current local model server port');
       addSystemMessage('  /attach <file-path> - Attach local file to this terminal session');
       addSystemMessage('  /attachments - List attached files');
       addSystemMessage('  /detach <attachment-id> - Remove one attachment');
@@ -590,7 +590,7 @@
           await loadConversation(args);
           break;
         case '/port':
-          addSystemMessage(`Connected to Ollama on port ${getTerminalPort()}`);
+          addSystemMessage(`Connected to local model server on port ${getTerminalPort()}`);
           break;
         case '/attach':
           await attachFile(args);
