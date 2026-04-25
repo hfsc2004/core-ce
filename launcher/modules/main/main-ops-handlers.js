@@ -40,6 +40,12 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     });
   }
 
+  function normalizeTerminalProvider(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'llamacpp') return 'llama.cpp';
+    return raw === 'llama.cpp' ? 'llama.cpp' : 'ollama';
+  }
+
   async function isOllamaResponsive(port) {
     const candidatePort = Number(port || 0);
     if (candidatePort <= 0) return false;
@@ -522,33 +528,56 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     }
   });
 
-  ipcMain.handle('open-ollama-terminal', async (event, modelName, modelVramMB = 0, ollamaPort = null, collection = null, modelId = null) => {
+  ipcMain.handle('open-ollama-terminal', async (event, modelName, modelVramMB = 0, ollamaPort = null, collection = null, modelId = null, launchOptions = null) => {
     try {
+      const options = (launchOptions && typeof launchOptions === 'object' && !Array.isArray(launchOptions))
+        ? launchOptions
+        : {};
+      const preferredProvider = normalizeTerminalProvider(
+        options.provider || settingsManager.getInferenceBackend?.(appDir) || 'ollama'
+      );
       let startResult = null;
       let terminalPort = Number(ollamaPort || 0);
-      if (terminalPort <= 0) {
-        // For dedicated Terminal windows, always create a fresh BMOC terminal session/port
-        // so each window is isolated and can be linked distinctly.
-        startResult = await sessionManager.startOllamaForService('terminal', appDir, getGpuInfo());
+      const ownerWindow = event && event.sender ? BrowserWindow.fromWebContents(event.sender) : null;
+      const ownerWindowId = Number(ownerWindow?.id || 0) || null;
+
+      if (preferredProvider === 'llama.cpp') {
+        await closeWindowOwnedTerminalSessions(ownerWindowId, 'ollama');
+        startResult = await ensureTerminalLlamaCppSession({
+          ...options,
+          modelName: String(options.modelName || modelName || '').trim(),
+          modelPath: String(options.modelPath || options.llamaCppModelPath || '').trim(),
+          llamaCppModelPath: String(options.llamaCppModelPath || options.modelPath || '').trim()
+        }, event);
         if (!startResult?.success) {
-          return { success: false, message: startResult?.message || 'Failed to start BMOC terminal session.' };
+          return { success: false, message: startResult?.message || 'Failed to start BMOC llama.cpp terminal session.' };
         }
-        terminalPort = Number(startResult.ollamaPort || startResult.port || 0);
+        terminalPort = Number(startResult.port || startResult.ollamaPort || 0);
       } else {
-        // Strict BMOC gate: explicit ports are only allowed if BMOC already owns them.
-        const sessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
-        const matchedSession = Array.isArray(sessions)
-          ? sessions.find((session) => Number(session?.ollamaPort || 0) === terminalPort)
-          : null;
-        if (!matchedSession?.sessionId) {
-          return { success: false, message: `BMOC rejected non-owned terminal port ${terminalPort}.` };
+        if (terminalPort <= 0) {
+          // For dedicated Terminal windows, always create a fresh BMOC terminal session/port
+          // so each window is isolated and can be linked distinctly.
+          startResult = await sessionManager.startOllamaForService('terminal', appDir, getGpuInfo());
+          if (!startResult?.success) {
+            return { success: false, message: startResult?.message || 'Failed to start BMOC terminal session.' };
+          }
+          terminalPort = Number(startResult.ollamaPort || startResult.port || 0);
+        } else {
+          // Strict BMOC gate: explicit ports are only allowed if BMOC already owns them.
+          const sessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
+          const matchedSession = Array.isArray(sessions)
+            ? sessions.find((session) => Number(session?.ollamaPort || 0) === terminalPort)
+            : null;
+          if (!matchedSession?.sessionId) {
+            return { success: false, message: `BMOC rejected non-owned terminal port ${terminalPort}.` };
+          }
+          startResult = {
+            success: true,
+            ollamaPort: terminalPort,
+            sessionId: matchedSession.sessionId,
+            reused: true
+          };
         }
-        startResult = {
-          success: true,
-          ollamaPort: terminalPort,
-          sessionId: matchedSession.sessionId,
-          reused: true
-        };
       }
       if (!startResult?.sessionId && terminalPort > 0) {
         const sessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
@@ -574,7 +603,15 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         modelVramMB,
         terminalPort,
         modelConfig,
-        startResult?.sessionId || null
+        startResult?.sessionId || null,
+        {
+          provider: preferredProvider,
+          baseUrl: preferredProvider === 'llama.cpp'
+            ? `http://127.0.0.1:${terminalPort}`
+            : String(options.baseUrl || '').trim(),
+          providerModel: String(options.providerModel || options.modelName || modelName || '').trim(),
+          llamaCppModelPath: String(startResult?.modelPath || options.llamaCppModelPath || options.modelPath || '').trim()
+        }
       );
       const openedWindowId = Number(openResult?.windowId || 0);
       const openedSessionId = String(startResult?.sessionId || '').trim();
@@ -584,15 +621,15 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         sessionManager.updateSession?.(openedSessionId, {
           metadata: {
             ...existingMeta,
-            backend: 'ollama',
+            backend: preferredProvider,
             ownerWindowId: openedWindowId,
             serviceType: 'terminal',
             startedVia: existingMeta.startedVia || 'open-ollama-terminal'
           }
         });
-        trackTerminalSession(openedWindowId, openedSessionId, 'ollama', terminalPort);
+        trackTerminalSession(openedWindowId, openedSessionId, preferredProvider, terminalPort);
       }
-      return openResult;
+      return { ...openResult, provider: preferredProvider };
     } catch (err) {
       return { success: false, message: err.message };
     }

@@ -264,7 +264,7 @@ async function closeTerminalSession(windowId) {
 /**
  * Open Ollama terminal connected to an existing server.
  */
-async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlPath, gpuInfo, modelVramMB = 0, ollamaPort = null, modelConfig = null, terminalSessionId = null) {
+async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlPath, gpuInfo, modelVramMB = 0, ollamaPort = null, modelConfig = null, terminalSessionId = null, terminalRuntime = null) {
   const { BrowserWindow, screen } = require('electron');
 
   console.log(`[${LOG_PREFIX}] Opening Ollama Terminal...`);
@@ -331,6 +331,17 @@ async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlP
       }
     }
     console.log(`[${LOG_PREFIX}] Including model config in terminal URL`);
+  }
+
+  const provider = String(terminalRuntime?.provider || '').trim();
+  const baseUrl = String(terminalRuntime?.baseUrl || '').trim();
+  const providerModel = String(terminalRuntime?.providerModel || '').trim();
+  const llamaCppModelPath = String(terminalRuntime?.llamaCppModelPath || '').trim();
+  if (provider) {
+    url += `&provider=${encodeURIComponent(provider)}`;
+    if (baseUrl) url += `&baseUrl=${encodeURIComponent(baseUrl)}`;
+    if (providerModel) url += `&providerModel=${encodeURIComponent(providerModel)}`;
+    if (llamaCppModelPath) url += `&llamaCppModelPath=${encodeURIComponent(llamaCppModelPath)}`;
   }
 
   terminalWindow.loadURL(url);

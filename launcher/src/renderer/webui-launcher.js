@@ -19,14 +19,36 @@ async function launchInterface(type) {
     console.log(`[launchInterface] Launching ${type}...`);
     
     if (type === 'terminal') {
-      // Launch PSF Terminal - need to start Ollama first, then show terminal dialog
-      const ollamaResult = await window.electronAPI.launchModelInOllama('', '', 'default', false);
-      
-      if (ollamaResult.success) {
-        // Show terminal instructions
-        await window.electronAPI.openOllamaTerminal('', 0, ollamaResult.port, '', '');
+      const launchOptions = (() => {
+        try {
+          const raw = localStorage.getItem('psf_terminal_provider_defaults');
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (!parsed || typeof parsed !== 'object') return null;
+          return {
+            provider: String(parsed.provider || '').trim(),
+            baseUrl: String(parsed.provider_base_url || '').trim(),
+            providerModel: String(parsed.provider_model_id || '').trim(),
+            llamaCppModelPath: String(parsed.llama_cpp_model_path || '').trim()
+          };
+        } catch (_) {
+          return null;
+        }
+      })();
+      const provider = String(launchOptions?.provider || '').trim().toLowerCase();
+
+      if (provider === 'llama.cpp') {
+        const terminalResult = await window.electronAPI.openOllamaTerminal('', 0, null, '', '', launchOptions);
+        if (!terminalResult?.success) {
+          alert(`Failed to start llama.cpp terminal session:\n${terminalResult?.message || 'Unknown error'}`);
+        }
       } else {
-        alert(`Failed to start Ollama:\n${ollamaResult.message}`);
+        // Launch PSF Terminal through existing Ollama path.
+        const ollamaResult = await window.electronAPI.launchModelInOllama('', '', 'default', false);
+        if (ollamaResult.success) {
+          await window.electronAPI.openOllamaTerminal('', 0, ollamaResult.port, '', '', launchOptions);
+        } else {
+          alert(`Failed to start Ollama:\n${ollamaResult.message}`);
+        }
       }
       
     } else if (type === 'openwebui') {

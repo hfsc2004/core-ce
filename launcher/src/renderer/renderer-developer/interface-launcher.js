@@ -342,8 +342,24 @@ async function populateTerminalModels() {
  */
 async function launchTerminal() {
   try {
+    const launchOptions = (() => {
+      try {
+        const raw = localStorage.getItem('psf_terminal_provider_defaults');
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (!parsed || typeof parsed !== 'object') return null;
+        return {
+          provider: String(parsed.provider || '').trim(),
+          baseUrl: String(parsed.provider_base_url || '').trim(),
+          providerModel: String(parsed.provider_model_id || '').trim(),
+          llamaCppModelPath: String(parsed.llama_cpp_model_path || '').trim()
+        };
+      } catch (_) {
+        return null;
+      }
+    })();
+
     // Launch with empty model - terminal will show model selector
-    const result = await window.electronAPI.openOllamaTerminal('', 0, null, null, null);
+    const result = await window.electronAPI.openOllamaTerminal('', 0, null, null, null, launchOptions);
     
     if (result && result.success) {
       console.log('Terminal launched successfully');

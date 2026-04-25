@@ -51,7 +51,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   launchOpenWebUI: () => ipcRenderer.invoke('launch-open-webui'),
   launchAnythingLLM: () => ipcRenderer.invoke('launch-anythingllm'),
   openURL: (url) => ipcRenderer.invoke('open-url', url),
-  openOllamaTerminal: (modelName, modelVramMB, ollamaPort, collection, modelId) => ipcRenderer.invoke('open-ollama-terminal', modelName, modelVramMB, ollamaPort, collection, modelId),
+  openOllamaTerminal: (modelName, modelVramMB, ollamaPort, collection, modelId, launchOptions = null) =>
+    ipcRenderer.invoke('open-ollama-terminal', modelName, modelVramMB, ollamaPort, collection, modelId, launchOptions),
   ensureTerminalLlamaCppSession: (payload = {}) => ipcRenderer.invoke('ensure-terminal-llamacpp-session', payload),
   terminalSwitchProvider: (payload = {}) => ipcRenderer.invoke('terminal-switch-provider', payload),
   terminalListLlamaCppModels: () => ipcRenderer.invoke('terminal-list-llamacpp-models'),
