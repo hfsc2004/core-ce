@@ -136,5 +136,17 @@ macOS:
 - `feat/*`: active feature work
 - merge feature -> `main` when verified, then start next feature branch
 
+## Hugging Face Token Storage
+- Preferred workflow: use the **Settings gear** (`API Keys` tab) to set/save your Hugging Face token
+- The app writes and reads the token from hidden `.env` as `HUGGINGFACE_TOKEN`
+- The token is not persisted in `models/psf-settings.json`
+- `.env` is git-ignored in this repository
+
+Reference `.env` format (advanced/manual use only):
+```bash
+# Local secrets only (git-ignored)
+HUGGINGFACE_TOKEN=hf_your_real_token_here
+```
+
 ## Security
 - Report vulnerabilities privately: see [`SECURITY.md`](./SECURITY.md)
