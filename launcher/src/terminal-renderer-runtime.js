@@ -136,7 +136,7 @@
         if (data && data.models && data.models.length > 0) {
           const model = data.models[0];
           if (model.size_vram === 0 && (cfg.gpuType === 'nvidia' || cfg.gpuType === 'amd')) {
-            console.warn('⚠️ Ollama is using CPU! size_vram = 0');
+            console.warn('⚠️ Local model runtime is using CPU! size_vram = 0');
             setGpuIndicator('⚠️', 'CPU Fallback');
           } else if (model.size_vram > 0) {
             // reset handled by normal gpu indicator update outside
