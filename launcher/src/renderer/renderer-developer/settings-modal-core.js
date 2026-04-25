@@ -16,6 +16,10 @@ async function showSettingsModal(initialTab = 'huggingface') {
     if (window.electronAPI && window.electronAPI.getSettings) {
       settings = await window.electronAPI.getSettings();
     }
+    if (window.electronAPI && typeof window.electronAPI.getHFToken === 'function') {
+      const hfToken = await window.electronAPI.getHFToken();
+      settings.huggingface_token = String(hfToken || '');
+    }
   } catch (err) {
     console.error('[Settings Modal] Error loading settings:', err);
   }

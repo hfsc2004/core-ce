@@ -70,7 +70,15 @@ async function saveHuggingFaceToken() {
 
   try {
     const current = await window.electronAPI.getSettings();
-    const settings = { ...(current || {}), huggingface_token: token, api_keys: apiKeys };
+    if (typeof window.electronAPI?.setHFToken === 'function') {
+      const tokenResult = await window.electronAPI.setHFToken(token);
+      if (!tokenResult?.success) {
+        statusDiv.className = 'settings-save-status error';
+        statusDiv.textContent = 'Error: ' + (tokenResult.error || 'Failed to save Hugging Face token');
+        return;
+      }
+    }
+    const settings = { ...(current || {}), api_keys: apiKeys };
     const result = await window.electronAPI.saveSettings(settings);
 
     if (result.success) {

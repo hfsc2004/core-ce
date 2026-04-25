@@ -21,5 +21,13 @@
 /.gcloud/
 /.codex
 /.codex/
+# Environment and token files
+.env
+.env.*
+*.env
+*.env.*
+.hf_token
+huggingface.token
+hf_token.txt
 /Screenshot at *.png
 /.gitignore.bak
