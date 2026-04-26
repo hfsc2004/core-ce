@@ -9,7 +9,7 @@ The Industrial Reflex Gateway (IRG) is where PSF Core goes further than anything
 
 Rounding out the platform: voice Speech-to-Text (STT) and Text-to-Speech (TTS) controls, coding and relay terminals, and access to the full Hugging Face model ecosystem, over 2.5 million models available for local deployment in just a few clicks. Open models install instantly with no API keys required. Gated and private models are fully supported too; bring your credentials and PSF Core handles the rest. No cloud dependency, no vendor lock-in. If it runs locally, PSF Core can run it.
 
-PSF Core ships in Community Edition and Enterprise Edition, built on the same open foundation with local inference via llama.cpp and quantized GGUFs. Data Center Edition is designed for hardened deployment with SELinux, Podman, NGINX, and pluggable inference backends such as vLLM, Triton/TensorRT-LLM, and TGI.
+PSF Core ships in Community Edition and Enterprise Edition, built on the same open foundation with local inference via llama.cpp and quantized GGUFs.
 
 ## PSF Relay - Hardware Orchestration
 
@@ -96,6 +96,11 @@ Canonical naming and licensing policy is maintained in [`EDITION_LICENSE_MATRIX.
 - `docs/reference/` - architecture, release, policy, and implementation docs
 - `install/` - one-time bootstrap scripts for OS-specific prerequisites
 - `robot/` - robot/relay firmware examples and pipeline profiles
+
+## Editions
+- Community Edition: open-source local-first runtime for builders, labs, and field experimentation.
+- Enterprise Edition: production support path for organizations scaling multi-team deployments and controlled workflows.
+- Data Center Edition: hardened deployment profile with SELinux, Podman, and NGINX, plus pluggable inference backends such as vLLM, Triton/TensorRT-LLM, and TGI.
 
 ## Quick Start (Core - Community Edition)
 1. Run the one-time OS bootstrap from the `install/` directory.
