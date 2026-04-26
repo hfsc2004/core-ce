@@ -3,7 +3,7 @@
   <img src="launcher/assets/PSF_Logo_SM.jpg" alt="PSF Core Logo" width="220">
 </div>
 
-PSF Core is a local-first AI orchestration platform built for teams that need more than a chatbot. At its foundation is a programmable Mixture of Experts (MoE) engine that routes intelligence dynamically, pairing deterministic execution with large language model reasoning, Retrieval-Augmented Generation (RAG) pipelines, and Recursive Language Model (RLM) workflows to handle everything from structured automation to open-ended inference.
+PSF Core closes the loop from natural-language intent to physical hardware execution. Where most orchestration tools stop at API calls, PSF Core drives PLCs, microcontrollers, and edge devices through a visual drag-and-drop pipeline that operators and integrators can run locally.
 
 The Industrial Reflex Gateway (IRG) is where PSF Core goes further than anything else in the category. IRG bridges natural language intent to real hardware control, deterministically, safely, and at speed. A secure mod and plugin architecture with signed configurations ensures nothing runs on your infrastructure that you have not explicitly authorized.
 
