@@ -4,7 +4,7 @@
  * @copyright 2026 Pseudo SF
  */
 // ============================================================================
-// PSF OFFLINE ARCHIVE COLLECTION
+// PSF CORE COMMUNITY EDITION
 // Renderer - License Modal
 // ============================================================================
 // Shared by both Standard and Community Editions

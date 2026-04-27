@@ -4,7 +4,7 @@
  * @copyright 2026 Pseudo SF
  */
 // ============================================================================
-// PSF OFFLINE ARCHIVE COLLECTION
+// PSF CORE COMMUNITY EDITION
 // Renderer - Delete Data
 // ============================================================================
 // Standard Edition feature for user data management

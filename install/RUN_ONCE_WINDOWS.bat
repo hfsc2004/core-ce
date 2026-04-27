@@ -2,7 +2,7 @@ REM @version 1.1.3 - March 5, 2026
 REM @copyright 2026 Pseudo SF
 @echo off
 echo ============================================================
-echo PSF Robotics Archive Collection - Core-CE
+echo PSF Core Community Edition - Core-CE
 echo First Run Setup
 echo ============================================================
 echo.
@@ -37,7 +37,7 @@ if exist node_modules (
     echo.
 )
 
-echo Starting PSF Archive Collection...
+echo Starting PSF Core...
 echo.
 npm start
 

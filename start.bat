@@ -1,12 +1,12 @@
 REM @version 1.1.3 - March 5, 2026
 REM @copyright 2026 Pseudo SF
 @echo off
-title PSF Robotics Archive Collection
+title PSF Core Community Edition
 cd /d "%~dp0"
 
 echo.
 echo ========================================
-echo  PSF Robotics Archive Collection
+echo  PSF Core Community Edition
 echo ========================================
 echo.
 echo Starting launcher...
