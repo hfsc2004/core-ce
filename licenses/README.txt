@@ -8,7 +8,6 @@ Current project-wide legal references are at repository root:
 - LICENSE / LICENSE.txt
 - NOTICE
 - ATTRIBUTIONS.md
-- ATTRIBUTION.txt
 - THIRD-PARTY-NOTICE.txt
 - MODEL-LICENSES.txt
 - LLAMA-LICENSE.txt
