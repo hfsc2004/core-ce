@@ -17,6 +17,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Hardened mod loading by validating entrypoint paths and preventing install-root escape.
 - Restricted external URL opening to approved schemes (`https`, `http`, `mailto`).
 - Tightened `.env` token file write behavior with restrictive permissions.
+- Pre-hardened future bucket feature IPC paths by deriving actor identity server-side and enforcing bucket authorization for list/create/delete/grant/revoke operations.
 
 ### Security
 - Added regression coverage for mod entrypoint security validation (absolute/traversal rejection).
+- Added regression coverage for bucket access control to enforce owner-only behavior when grants are absent.
