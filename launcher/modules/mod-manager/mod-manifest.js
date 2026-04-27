@@ -106,6 +106,15 @@ function validateManifest(manifestInput, options = {}) {
 
   if (!path.basename(manifest.entrypoint || '').length) {
     fail(result, 'entrypoint must be a file path');
+  } else {
+    const rawEntrypoint = String(manifest.entrypoint || '').trim();
+    const normalized = path.normalize(rawEntrypoint).replace(/\\/g, '/');
+    if (!rawEntrypoint || path.isAbsolute(rawEntrypoint)) {
+      fail(result, 'entrypoint must be a relative path inside the mod package');
+    }
+    if (normalized.startsWith('../') || normalized === '..' || normalized.includes('/../')) {
+      fail(result, 'entrypoint cannot traverse outside the mod package');
+    }
   }
 
   return { ...result, manifest: result.ok ? manifest : null };
@@ -136,4 +145,3 @@ module.exports = {
   validateManifest,
   loadAndValidateManifest
 };
-

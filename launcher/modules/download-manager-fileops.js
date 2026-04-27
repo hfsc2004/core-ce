@@ -7,17 +7,36 @@ const fs = require('fs');
 const path = require('path');
 const { parseSplitFilename } = require('./download-manager-split');
 
+function resolveModelsFilePath(projectRoot, relativePath) {
+  const root = path.resolve(String(projectRoot || ''));
+  const modelsRoot = path.resolve(path.join(root, 'models'));
+  const raw = String(relativePath || '').trim().replace(/\\/g, '/');
+  if (!raw) return { success: false, error: 'File path is required.' };
+  if (raw.includes('\0')) return { success: false, error: 'Invalid file path.' };
+
+  const candidate = path.resolve(root, raw);
+  const insideModels = candidate === modelsRoot || candidate.startsWith(`${modelsRoot}${path.sep}`);
+  if (!insideModels) {
+    return { success: false, error: 'Access denied for path outside models directory.' };
+  }
+  return { success: true, path: candidate };
+}
+
 async function checkFileExists(fromPath, relativePath) {
   try {
-    const projectRoot = path.join(fromPath, '..');
+    const projectRoot = path.resolve(fromPath, '..');
     const normalizedRelative = String(relativePath || '');
-    const fullPath = path.join(projectRoot, normalizedRelative);
+    const resolved = resolveModelsFilePath(projectRoot, normalizedRelative);
+    if (!resolved.success) return false;
+    const fullPath = resolved.path;
     if (fs.existsSync(fullPath)) return true;
 
     const parsed = parseSplitFilename(path.basename(normalizedRelative));
     if (!parsed) return false;
     const mergedRelative = path.join(path.dirname(normalizedRelative), parsed.baseName);
-    const mergedPath = path.join(projectRoot, mergedRelative);
+    const mergedResolved = resolveModelsFilePath(projectRoot, mergedRelative);
+    if (!mergedResolved.success) return false;
+    const mergedPath = mergedResolved.path;
     return fs.existsSync(mergedPath);
   } catch (err) {
     console.error('[Download Manager] Error checking file:', err);
@@ -173,15 +192,23 @@ async function cleanupOllamaArtifacts(projectRoot, modelName) {
 
 async function deleteModel(fromPath, relativePath, cleanupOllama = true) {
   try {
-    const projectRoot = path.join(fromPath, '..');
+    const projectRoot = path.resolve(fromPath, '..');
     const normalizedRelative = String(relativePath || '');
-    let fullPath = path.join(projectRoot, normalizedRelative);
+    const resolved = resolveModelsFilePath(projectRoot, normalizedRelative);
+    if (!resolved.success) {
+      return { success: false, message: resolved.error };
+    }
+    let fullPath = resolved.path;
 
     if (!fs.existsSync(fullPath)) {
       const parsed = parseSplitFilename(path.basename(normalizedRelative));
       if (parsed) {
         const mergedRelative = path.join(path.dirname(normalizedRelative), parsed.baseName);
-        const mergedPath = path.join(projectRoot, mergedRelative);
+        const mergedResolved = resolveModelsFilePath(projectRoot, mergedRelative);
+        if (!mergedResolved.success) {
+          return { success: false, message: mergedResolved.error };
+        }
+        const mergedPath = mergedResolved.path;
         if (fs.existsSync(mergedPath)) {
           fullPath = mergedPath;
         }
@@ -246,8 +273,12 @@ async function deleteModel(fromPath, relativePath, cleanupOllama = true) {
 
 async function getFileSize(fromPath, relativePath) {
   try {
-    const projectRoot = path.join(fromPath, '..');
-    const fullPath = path.join(projectRoot, relativePath);
+    const projectRoot = path.resolve(fromPath, '..');
+    const resolved = resolveModelsFilePath(projectRoot, relativePath);
+    if (!resolved.success) {
+      return { success: false, message: resolved.error };
+    }
+    const fullPath = resolved.path;
 
     if (!fs.existsSync(fullPath)) {
       return { success: false, message: 'File not found' };

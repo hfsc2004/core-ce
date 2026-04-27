@@ -372,7 +372,12 @@ function setHuggingFaceToken(projectRoot, token) {
     }
 
     const content = `${nextLines.join('\n').replace(/\n*$/, '')}\n`;
-    fs.writeFileSync(envPath, content, 'utf8');
+    fs.writeFileSync(envPath, content, { encoding: 'utf8', mode: 0o600 });
+    try {
+      fs.chmodSync(envPath, 0o600);
+    } catch (_) {
+      // Best-effort on platforms that do not fully support POSIX modes.
+    }
 
     if (normalizedToken) {
       process.env[PRIMARY_HF_ENV_KEY] = normalizedToken;
