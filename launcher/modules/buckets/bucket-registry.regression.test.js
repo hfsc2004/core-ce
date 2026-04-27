@@ -59,6 +59,30 @@ async function run() {
 
   const removed = await registry.deleteBucket('relay-shared-docs');
   assert.equal(removed.removed, true);
+
+  const privateBucket = await registry.upsertBucket({
+    id: 'private-owner-only',
+    label: 'Private Owner Only',
+    scope: 'relay-shared',
+    sessionId: 'moe-shared',
+    ownerPrincipal: 'owner-user',
+    grants: []
+  });
+  assert.equal(privateBucket.id, 'private-owner-only');
+
+  const ownerAllowed = await registry.resolveBucketTarget({
+    bucketId: 'private-owner-only',
+    principal: 'owner-user',
+    action: 'read'
+  });
+  assert.equal(ownerAllowed.success, true);
+
+  const nonOwnerDenied = await registry.resolveBucketTarget({
+    bucketId: 'private-owner-only',
+    principal: 'random-user',
+    action: 'read'
+  });
+  assert.equal(nonOwnerDenied.success, false);
 }
 
 run()

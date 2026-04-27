@@ -7,7 +7,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
-## [2026-04-26]
+## [v1.1.3 Core-CE] - 2026-04-26
 
 ### Added
 - Added this `CHANGELOG.md` to track patch and release updates in a standard format.

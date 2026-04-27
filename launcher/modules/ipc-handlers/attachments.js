@@ -5,41 +5,62 @@
  */
 const {
   buildTerminalAttachmentContext,
-  resolveTerminalAttachmentTarget,
-  normalizeAttachmentPrincipal
+  resolveTerminalAttachmentTarget
 } = require('./common');
 const bucketSecurity = require('../security-layer/security-buckets');
 
-function resolveActorContext(payload = {}) {
+function resolveActorContext(event = null, payload = {}) {
   const src = payload && typeof payload === 'object' ? payload : {};
+  const senderId = Number(event?.sender?.id || 0);
+  const senderPrincipal = Number.isFinite(senderId) && senderId > 0 ? `wc-${senderId}` : '';
   return {
-    userId: String(src.userId || src.user || src.actorId || 'default')
+    userId: String(senderPrincipal || src.userId || src.user || src.actorId || 'default')
   };
 }
 
 function createAttachmentHandlers() {
-  async function resolveAndAuthorize(ctx, payload, action, source) {
-    const target = await resolveTerminalAttachmentTarget(ctx, payload, action);
+  async function resolveAndAuthorize(ctx, event, payload, action, source) {
+    const actor = resolveActorContext(event, payload);
+    const authPayload = {
+      ...(payload && typeof payload === 'object' ? payload : {}),
+      principal: actor.userId
+    };
+    const target = await resolveTerminalAttachmentTarget(ctx, authPayload, action);
     if (!target.ok) {
       return { success: false, error: target.error, sessionId: '', bucketId: String(payload?.bucketId || '').trim() };
     }
     const auth = await bucketSecurity.authorizeBucketAction({
       action,
       sessionId: target.sessionId,
-      actor: resolveActorContext(payload),
+      actor,
       details: {
         source,
         resolvedBy: target.resolvedBy,
         bucketId: target.bucketId || null,
-        principal: target.principal || null
+        principal: actor.userId || null
       }
     });
-    return { success: true, target, auth };
+    return { success: true, target, auth, actor };
+  }
+
+  async function authorizeBucketManage(ctx, bucketId, actor, action = 'read') {
+    if (!ctx.bucketRegistry || typeof ctx.bucketRegistry.resolveBucketTarget !== 'function') {
+      return { success: false, error: 'Bucket registry unavailable' };
+    }
+    const resolved = await ctx.bucketRegistry.resolveBucketTarget({
+      bucketId,
+      principal: String(actor?.userId || ''),
+      action
+    });
+    if (!resolved?.success) {
+      return { success: false, error: 'Permission denied', bucket: resolved?.bucket || null };
+    }
+    return { success: true, bucket: resolved.bucket };
   }
 
   return {
     'terminal:attachments-list': async (ctx, event, options = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, options, 'list', 'terminal:attachments-list');
+      const prepared = await resolveAndAuthorize(ctx, event, options, 'list', 'terminal:attachments-list');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -56,7 +77,7 @@ function createAttachmentHandlers() {
     },
 
     'terminal:attachments-attach-file': async (ctx, event, payload = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, payload, 'attach', 'terminal:attachments-attach-file');
+      const prepared = await resolveAndAuthorize(ctx, event, payload, 'attach', 'terminal:attachments-attach-file');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -71,7 +92,7 @@ function createAttachmentHandlers() {
     },
 
     'terminal:attachments-attach-text': async (ctx, event, payload = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, payload, 'attach-text', 'terminal:attachments-attach-text');
+      const prepared = await resolveAndAuthorize(ctx, event, payload, 'attach-text', 'terminal:attachments-attach-text');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -86,7 +107,7 @@ function createAttachmentHandlers() {
     },
 
     'terminal:attachments-attach-bytes': async (ctx, event, payload = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, payload, 'attach-bytes', 'terminal:attachments-attach-bytes');
+      const prepared = await resolveAndAuthorize(ctx, event, payload, 'attach-bytes', 'terminal:attachments-attach-bytes');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -101,7 +122,7 @@ function createAttachmentHandlers() {
     },
 
     'terminal:attachments-remove': async (ctx, event, payload = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, payload, 'remove', 'terminal:attachments-remove');
+      const prepared = await resolveAndAuthorize(ctx, event, payload, 'remove', 'terminal:attachments-remove');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -115,7 +136,7 @@ function createAttachmentHandlers() {
     },
 
     'terminal:attachments-clear': async (ctx, event, options = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, options, 'clear', 'terminal:attachments-clear');
+      const prepared = await resolveAndAuthorize(ctx, event, options, 'clear', 'terminal:attachments-clear');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -125,7 +146,7 @@ function createAttachmentHandlers() {
     },
 
     'terminal:attachments-build-context': async (ctx, event, options = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, options, 'build-context', 'terminal:attachments-build-context');
+      const prepared = await resolveAndAuthorize(ctx, event, options, 'build-context', 'terminal:attachments-build-context');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -135,7 +156,7 @@ function createAttachmentHandlers() {
     },
 
     'terminal:attachments-read-text': async (ctx, event, payload = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, payload, 'read', 'terminal:attachments-read-text');
+      const prepared = await resolveAndAuthorize(ctx, event, payload, 'read', 'terminal:attachments-read-text');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -172,7 +193,7 @@ function createAttachmentHandlers() {
     },
 
     'terminal:attachments-read-bytes': async (ctx, event, payload = {}) => {
-      const prepared = await resolveAndAuthorize(ctx, payload, 'read-bytes', 'terminal:attachments-read-bytes');
+      const prepared = await resolveAndAuthorize(ctx, event, payload, 'read-bytes', 'terminal:attachments-read-bytes');
       if (!prepared.success) return prepared;
       const { target, auth } = prepared;
       const sessionId = target.sessionId;
@@ -206,7 +227,8 @@ function createAttachmentHandlers() {
       if (!ctx.bucketRegistry || typeof ctx.bucketRegistry.listBuckets !== 'function') {
         return { success: false, error: 'Bucket registry unavailable' };
       }
-      const principal = normalizeAttachmentPrincipal(options);
+      const actor = resolveActorContext(event, options);
+      const principal = String(actor.userId || '').trim();
       const buckets = await ctx.bucketRegistry.listBuckets({
         principal,
         scope: options.scope
@@ -218,7 +240,8 @@ function createAttachmentHandlers() {
       if (!ctx.bucketRegistry || typeof ctx.bucketRegistry.upsertBucket !== 'function') {
         return { success: false, error: 'Bucket registry unavailable' };
       }
-      const ownerPrincipal = normalizeAttachmentPrincipal(payload) || 'default';
+      const actor = resolveActorContext(event, payload);
+      const ownerPrincipal = String(actor.userId || '').trim() || 'default';
       const bucket = await ctx.bucketRegistry.upsertBucket({
         id: payload.bucketId || payload.id,
         label: payload.label,
@@ -238,6 +261,10 @@ function createAttachmentHandlers() {
       if (!ctx.bucketRegistry || typeof ctx.bucketRegistry.deleteBucket !== 'function') {
         return { success: false, error: 'Bucket registry unavailable' };
       }
+      const actor = resolveActorContext(event, payload);
+      const bucketId = payload.bucketId || payload.id;
+      const manage = await authorizeBucketManage(ctx, bucketId, actor, 'write');
+      if (!manage.success) return { success: false, error: manage.error, bucket: manage.bucket || null };
       const result = await ctx.bucketRegistry.deleteBucket(payload.bucketId || payload.id);
       return { success: true, ...result };
     },
@@ -246,8 +273,12 @@ function createAttachmentHandlers() {
       if (!ctx.bucketRegistry || typeof ctx.bucketRegistry.grantAccess !== 'function') {
         return { success: false, error: 'Bucket registry unavailable' };
       }
+      const actor = resolveActorContext(event, payload);
+      const bucketId = payload.bucketId || payload.id;
+      const manage = await authorizeBucketManage(ctx, bucketId, actor, 'write');
+      if (!manage.success) return { success: false, error: manage.error, bucket: manage.bucket || null };
       const bucket = await ctx.bucketRegistry.grantAccess({
-        bucketId: payload.bucketId || payload.id,
+        bucketId,
         principal: payload.principal || payload.userId || payload.actorId,
         access: payload.access
       });
@@ -258,8 +289,12 @@ function createAttachmentHandlers() {
       if (!ctx.bucketRegistry || typeof ctx.bucketRegistry.revokeAccess !== 'function') {
         return { success: false, error: 'Bucket registry unavailable' };
       }
+      const actor = resolveActorContext(event, payload);
+      const bucketId = payload.bucketId || payload.id;
+      const manage = await authorizeBucketManage(ctx, bucketId, actor, 'write');
+      if (!manage.success) return { success: false, error: manage.error, bucket: manage.bucket || null };
       const result = await ctx.bucketRegistry.revokeAccess({
-        bucketId: payload.bucketId || payload.id,
+        bucketId,
         principal: payload.principal || payload.userId || payload.actorId
       });
       return { success: true, ...result };

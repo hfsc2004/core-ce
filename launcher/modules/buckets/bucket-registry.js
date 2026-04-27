@@ -249,11 +249,11 @@ class BucketRegistry {
 
   _hasAccess(bucket, principal, action = 'read') {
     const normalizedPrincipal = normalizePrincipal(principal);
-    if (!normalizedPrincipal) return true; // stub-open until identity hardening is in place
+    if (!normalizedPrincipal) return false;
 
     if (normalizedPrincipal === bucket.ownerPrincipal) return true;
     const grants = Array.isArray(bucket.grants) ? bucket.grants : [];
-    if (grants.length === 0) return true; // stub-open default, future RBAC/MAC will tighten
+    if (grants.length === 0) return false;
 
     const needed = String(action || 'read').toLowerCase() === 'write' ? 'read-write' : 'read';
     const grant = grants.find((item) => item.principal === normalizedPrincipal || item.principal === '*');
