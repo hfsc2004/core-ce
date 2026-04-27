@@ -155,7 +155,7 @@ Future capabilities require `apiVersion` bump or compatibility declaration.
 ## Trust and Signing
 - Standard: unsigned allowed by policy (default off for production build).
 - Enterprise/Datacenter: signed mods required; optional publisher allowlist.
-- Government/DoD: signed mods required, pinned trust roots, offline verification.
+- Government/DoD: signed mods required, pinned trust roots, local verification.
 
 ## Failure Behavior (Fail-Closed)
 - Signature failure: refuse install/load.

@@ -114,7 +114,7 @@ When to use:
 ## Configuration Fields That Matter Most
 In each agent item:
 - `provider` (typically `llama.cpp` for local deterministic operation),
-- `modelId`, `filename`, `collectionKey`,
+- `modelId`, `filename`, `setKey`,
 - `systemPrompt` (contract),
 - `routingMode` (should be `static` for RR core),
 - `routingRules` (single explicit target),
