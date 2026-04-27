@@ -1,0 +1,24 @@
+Model License Family: MIT
+Generated on: 2026-04-26
+Source: models/catalog-master.json
+
+Declared raw values:
+- MIT
+- mit
+
+Upstream references:
+- https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/mit.md
+- https://opensource.org/licenses/MIT
+
+Models using this family:
+- coding-agents/phi-3-mini
+- general-chat/phi-3.5-mini
+- research-lab/microsoft-phi-4-mini-instruct-gguf
+- research-lab/multilingual-e5-large
+- starter-fast/glm-4-7-flash-gguf
+- voice-audio/chatterbox-turbo
+- voice-audio/vits-ljs
+- voice-audio/vits-vctk
+- voice-audio/whisper-small
+
+Note: Verify upstream terms before redistribution or commercial use.

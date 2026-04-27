@@ -1,0 +1,34 @@
+PSF Core Community Edition - Third-Party Notice
+Last updated: 2026-04-26
+
+This product bundles and/or integrates third-party components.
+Those components are provided under their respective licenses.
+
+Important:
+1. Ownership of third-party components is not transferred.
+2. Required notices and license terms must be preserved in redistribution.
+3. Any mixed files (upstream + local changes) must retain upstream notices.
+
+Common third-party categories in this project:
+- Runtime/platform dependencies (Electron, Node ecosystem packages)
+- Inference runtimes and helper binaries (including llama.cpp-related artifacts)
+- Optional integrated interfaces and tooling components
+- Third-party AI models and associated artifacts
+
+Explicitly credited projects include:
+- Open WebUI and contributors
+- AnythingLLM and contributors
+- Node.js and contributors
+- Electron and contributors
+- npm package authors across direct and transitive dependencies
+
+Canonical repository licensing and policy files:
+- LICENSE / LICENSE.txt
+- NOTICE
+- ATTRIBUTIONS.md
+- MODEL-LICENSES.txt
+- docs/reference/IP_OWNERSHIP_AND_ATTRIBUTION.md
+- docs/reference/ProvenanceMatrix.md
+- docs/reference/THIRD_PARTY_NPM_PACKAGES.md
+
+For complete terms, consult each upstream package/model license and notice file.

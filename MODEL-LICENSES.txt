@@ -1,0 +1,36 @@
+PSF Core Community Edition - Model License Terms
+Last updated: 2026-04-26
+
+AI model files are not licensed under the repository Apache-2.0 license by default.
+Each model is governed by its own upstream terms.
+
+Operator obligations:
+1. Verify the license for each model before download/use/distribution.
+2. Comply with all use restrictions (commercial, field-of-use, attribution, etc.).
+3. Preserve model license files and required notices when redistributing.
+4. Do not assume permissive rights where model terms are missing or unclear.
+5. Remove or quarantine models that cannot be validated to an acceptable license posture.
+
+Model source notes:
+- Public model hubs and mirrors may host models under different terms.
+- "Gated" model access may impose additional contractual obligations.
+- Fine-tuned derivatives may add new terms from the derivative author.
+
+Operational guidance:
+- Treat model licensing as per-artifact compliance.
+- Keep evidence of source, version, checksum, and applicable terms.
+- Update internal catalogs/records if upstream license terms change.
+
+Model license inventory in this repository:
+- docs/reference/MODEL_LICENSE_INVENTORY.md
+  - Contains a full per-model mapping extracted from models/catalog-master.json
+  - Includes model ID, collection, declared license, and license URL (when provided)
+- licenses/models/INDEX.md
+  - Contains one generated file per detected model-license family
+  - Includes raw declared values, upstream references, and affected models
+
+Release requirement:
+- Before each release, regenerate and verify docs/reference/MODEL_LICENSE_INVENTORY.md
+  matches the current model catalog contents.
+
+This file is policy guidance and does not replace legal advice.

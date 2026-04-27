@@ -1,0 +1,14 @@
+Model License Family: CC-BY-4.0
+Generated on: 2026-04-26
+Source: models/catalog-master.json
+
+Declared raw values:
+- cc-by-4.0
+
+Upstream references:
+- (none provided in catalog metadata)
+
+Models using this family:
+- voice-audio/canary-qwen-2-5b
+
+Note: Verify upstream terms before redistribution or commercial use.

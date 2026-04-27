@@ -1,0 +1,14 @@
+Model License Family: Yi-License
+Generated on: 2026-04-26
+Source: models/catalog-master.json
+
+Declared raw values:
+- Yi License
+
+Upstream references:
+- https://huggingface.co/01-ai/Yi-34B/blob/main/LICENSE
+
+Models using this family:
+- research-lab/yi-34b-q4
+
+Note: Verify upstream terms before redistribution or commercial use.

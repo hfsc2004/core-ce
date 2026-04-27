@@ -1,0 +1,16 @@
+Model License Family: Llama-3-Community
+Generated on: 2026-04-26
+Source: models/catalog-master.json
+
+Declared raw values:
+- Llama 3 Community License
+- llama3
+
+Upstream references:
+- https://github.com/meta-llama/llama-models/blob/main/models/llama3/LICENSE
+
+Models using this family:
+- research-lab/llama-3.3-70b-q4
+- research-lab/meta-llama-3-8b
+
+Note: Verify upstream terms before redistribution or commercial use.

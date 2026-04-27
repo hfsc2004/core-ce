@@ -1,0 +1,15 @@
+Model License Family: Gemma-Terms-of-Use
+Generated on: 2026-04-26
+Source: models/catalog-master.json
+
+Declared raw values:
+- Gemma Terms of Use
+
+Upstream references:
+- https://ai.google.dev/gemma/terms
+
+Models using this family:
+- general-chat/gemma-2-2b
+- general-chat/gemma-2-9b
+
+Note: Verify upstream terms before redistribution or commercial use.
