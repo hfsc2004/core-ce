@@ -94,7 +94,7 @@ async function launchOpenWebUI(options) {
     .footer { position: absolute; bottom: 15px; font-size: 11px; color: #444; }
   </style></head><body>
     <div class="logo">Pseudo Science Fiction</div>
-    <div class="subtitle">AI / LLM Archive Collection</div>
+    <div class="subtitle">AI / LLM Platform</div>
     <div class="spinner"></div>
     <div class="status" id="status">Starting Open WebUI...</div>
     <div class="substatus" id="substatus">This may take a moment on first launch</div>

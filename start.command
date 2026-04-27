@@ -2,7 +2,7 @@
 
 echo ""
 echo "========================================"
-echo " PSF Robotics Archive Collection"
+echo " PSF Core Community Edition"
 echo "========================================"
 echo ""
 echo "Starting launcher..."

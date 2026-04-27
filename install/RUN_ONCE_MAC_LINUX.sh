@@ -2,7 +2,7 @@
 # @version 1.1.3 - March 5, 2026
 # @copyright 2026 Pseudo SF
 echo "============================================================"
-echo "PSF Robotics Archive Collection - Core-CE"
+echo "PSF Core Community Edition - Core-CE"
 echo "First Run Setup"
 echo "============================================================"
 echo
@@ -36,6 +36,6 @@ else
     echo
 fi
 
-echo "Starting PSF Archive Collection..."
+echo "Starting PSF Core..."
 echo
 npm start

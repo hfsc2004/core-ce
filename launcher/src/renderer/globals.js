@@ -4,7 +4,7 @@
  * @copyright 2026 Pseudo SF
  */
 // ============================================================================
-// PSF OFFLINE ARCHIVE COLLECTION
+// PSF CORE COMMUNITY EDITION
 // Renderer - Global State
 // ============================================================================
 // Shared by both Standard and Community Editions

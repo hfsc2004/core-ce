@@ -1,5 +1,5 @@
 [autorun]
 open=START-HERE.bat
 icon=launcher\assets\icon.ico
-label=PSF Robotics AI / LLM Archive
-action=Launch PSF Robotics Archive Collection
+label=PSF Core AI / LLM Platform
+action=Launch PSF Core Community Edition
