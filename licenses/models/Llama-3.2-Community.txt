@@ -1,0 +1,16 @@
+Model License Family: Llama-3.2-Community
+Generated on: 2026-04-26
+Source: models/catalog-master.json
+
+Declared raw values:
+- Llama 3.2 Community License
+- llama3.2
+
+Upstream references:
+- https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE
+
+Models using this family:
+- coding-agents/llama-3.2-8b
+- starter-fast/llama-3-2-1b-gguf
+
+Note: Verify upstream terms before redistribution or commercial use.

@@ -21,6 +21,36 @@ const path = require('path');
 // License File Operations
 // ============================================================================
 
+function normalizeLicenseName(filename) {
+  return path.basename(String(filename || '').trim());
+}
+
+function resolveLicensePath(projectRoot, filename) {
+  const normalized = normalizeLicenseName(filename);
+  if (!normalized) return null;
+
+  const licensesDir = path.join(projectRoot, 'licenses');
+  const candidates = [];
+
+  // Primary locations
+  candidates.push(path.join(licensesDir, normalized));
+  candidates.push(path.join(projectRoot, normalized));
+
+  // Compatibility: allow callers that still pass *.txt when repo ships LICENSE/NOTICE.
+  if (/\.txt$/i.test(normalized)) {
+    const withoutTxt = normalized.replace(/\.txt$/i, '');
+    candidates.push(path.join(licensesDir, withoutTxt));
+    candidates.push(path.join(projectRoot, withoutTxt));
+  }
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 /**
  * Get list of all license files
  * 
@@ -31,16 +61,25 @@ async function getLicenseFiles(fromPath) {
   try {
     const projectRoot = path.join(fromPath, '..');
     const licensesDir = path.join(projectRoot, 'licenses');
-    
-    // Check if licenses directory exists
-    if (!fs.existsSync(licensesDir)) {
-      return { success: true, files: [], message: 'No licenses directory found' };
+
+    const discovered = new Set();
+
+    // Read all .txt files in licenses directory when present.
+    if (fs.existsSync(licensesDir)) {
+      fs.readdirSync(licensesDir)
+        .filter((f) => f.endsWith('.txt'))
+        .forEach((f) => discovered.add(f));
     }
-    
-    // Read all .txt files in licenses directory
-    const files = fs.readdirSync(licensesDir)
-      .filter(f => f.endsWith('.txt'))
-      .sort();
+
+    // Backward-compatible root-level license files.
+    ['LICENSE', 'NOTICE'].forEach((name) => {
+      const full = path.join(projectRoot, name);
+      if (fs.existsSync(full) && fs.statSync(full).isFile()) {
+        discovered.add(name);
+      }
+    });
+
+    const files = Array.from(discovered).sort();
     
     console.log(`[License Manager] Found ${files.length} license files`);
     
@@ -61,10 +100,10 @@ async function getLicenseFiles(fromPath) {
 async function getLicenseContent(fromPath, filename) {
   try {
     const projectRoot = path.join(fromPath, '..');
-    const licensePath = path.join(projectRoot, 'licenses', filename);
+    const licensePath = resolveLicensePath(projectRoot, filename);
     
     // Validate file exists
-    if (!fs.existsSync(licensePath)) {
+    if (!licensePath) {
       return { success: false, message: 'License file not found' };
     }
     
@@ -89,8 +128,7 @@ async function getLicenseContent(fromPath, filename) {
 async function licenseExists(fromPath, filename) {
   try {
     const projectRoot = path.join(fromPath, '..');
-    const licensePath = path.join(projectRoot, 'licenses', filename);
-    return fs.existsSync(licensePath);
+    return Boolean(resolveLicensePath(projectRoot, filename));
   } catch (err) {
     console.error('[License Manager] Error checking license existence:', err);
     return false;
@@ -107,9 +145,9 @@ async function licenseExists(fromPath, filename) {
 async function getLicenseInfo(fromPath, filename) {
   try {
     const projectRoot = path.join(fromPath, '..');
-    const licensePath = path.join(projectRoot, 'licenses', filename);
+    const licensePath = resolveLicensePath(projectRoot, filename);
     
-    if (!fs.existsSync(licensePath)) {
+    if (!licensePath) {
       return { success: false, message: 'License file not found' };
     }
     

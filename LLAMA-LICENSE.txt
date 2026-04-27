@@ -1,0 +1,16 @@
+PSF Core Community Edition - Llama License Notice
+Last updated: 2026-04-26
+
+Llama-family models are subject to Meta's applicable model terms.
+Use of any Llama model requires acceptance of those upstream terms.
+
+Important:
+1. Do not use or distribute Llama-family models unless you have accepted the
+   applicable Meta terms for those models.
+2. Comply with all usage restrictions, attribution terms, and policy obligations.
+3. Verify whether your use case, organization, and distribution model are permitted.
+
+This repository does not grant rights to Llama model weights beyond upstream licenses.
+Where Llama artifacts are used, their governing terms apply independently.
+
+For latest official terms, consult Meta's current Llama license/resources.

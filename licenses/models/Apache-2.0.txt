@@ -1,0 +1,62 @@
+Model License Family: Apache-2.0
+Generated on: 2026-04-26
+Source: models/catalog-master.json
+
+Declared raw values:
+- Apache 2.0
+- apache-2.0
+
+Upstream references:
+- https://huggingface.co/Qwen/QwQ-32B-GGUF/blob/main/LICENSE
+- https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/apache-2.0.md
+- https://www.apache.org/licenses/LICENSE-2.0
+
+Models using this family:
+- coding-agents/mistral-nemo-12b
+- coding-agents/qwen2-5-coder-1-5b-instruct-Thomas_Q6_K
+- coding-agents/qwen2-5-coder-1-5b-instruct-thomas_q4_k_m
+- coding-agents/qwen2-5-coder-7b-instruct
+- coding-agents/qwen2-5-coder-7b-instruct-bartowski_q5_k_m
+- coding-agents/qwen2-5-coder-7b-instruct-gguf
+- coding-agents/qwen2.5-14b
+- coding-agents/qwen2.5-7b
+- coding-agents/smollm2-1.7b
+- coding-agents/sqlcoder-7b
+- coding-agents/x-coder-rl-qwen3-8b-i1-gguf
+- general-chat/mixtral-8x7b-q4
+- general-chat/mixtral-8x7b-q5
+- general-chat/mixtral-8x7b-q6
+- general-chat/qwen2.5-3b
+- general-chat/qwen2.5-72b-q5
+- general-chat/tinyllama-1.1b
+- research-lab/QwQ-32B-GGUF
+- research-lab/ai21labs-ai21-jamba-reasoning-3b-gguf
+- research-lab/dolphin-mixtral-8x7b
+- research-lab/gpt-oss-20b-GGUF
+- research-lab/granite-4-0-1b-gguf
+- research-lab/ibm-granite / granite-docling-258M
+- research-lab/nous-hermes-2-mixtral-8x7b
+- research-lab/qwen-3-1-7b-deepseek-r1-0528-distillation
+- research-lab/qwen2.5-72b-q3
+- research-lab/qwen2.5-72b-q4
+- research-lab/qwen2.5-72b-q8
+- research-lab/solar-10.7b-q4
+- research-lab/yarn-mistral-7b-128k
+- starter-fast/mistral-7b-v0.3
+- starter-fast/qwen2.5-32b-q2
+- starter-fast/qwen3-1-7b-i1-gguf
+- starter-fast/smollm2-135m
+- starter-fast/smollm2-360m
+- starter-fast/tinyllama-1-1b-chat-v1-0-gguf
+- vision-multimodal/llava-1.6-mistral-7b
+- vision-multimodal/qwen3-5-0-8b-i1-gguf
+- vision-multimodal/qwen3-5-397b-a17b-gguf
+- vision-multimodal/qwen3-vl-4b-thinking-gguf
+- vision-multimodal/qwen3-vl-8b-instruct-i1-gguf
+- vision-multimodal/smolvlm-256m-instruct-gguf
+- voice-audio/csm-1b
+- voice-audio/dia-gguf
+- voice-audio/granite-speech-3-3-2b
+- voice-audio/granite-speech-3-3-8b
+
+Note: Verify upstream terms before redistribution or commercial use.
