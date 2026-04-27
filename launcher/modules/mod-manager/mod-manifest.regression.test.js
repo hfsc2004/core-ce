@@ -41,12 +41,29 @@ function testApiRangeCompatibility() {
   assert.ok(result.errors.some((error) => error.includes('incompatible with host API')));
 }
 
+function testEntrypointTraversalRejected() {
+  const manifest = buildValidManifest();
+  manifest.entrypoint = '../outside.js';
+  const result = validateManifest(manifest);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes('cannot traverse')));
+}
+
+function testEntrypointAbsoluteRejected() {
+  const manifest = buildValidManifest();
+  manifest.entrypoint = '/tmp/mod.js';
+  const result = validateManifest(manifest);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes('relative path')));
+}
+
 function run() {
   testValidManifest();
   testUnknownCapabilityRejected();
   testApiRangeCompatibility();
+  testEntrypointTraversalRejected();
+  testEntrypointAbsoluteRejected();
   process.stdout.write('mod-manifest regression tests passed\n');
 }
 
 run();
-

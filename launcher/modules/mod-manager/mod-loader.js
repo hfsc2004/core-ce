@@ -350,10 +350,25 @@ function createModLoader(options = {}) {
   }
 
   async function loadModule(manifest, installPath) {
-    const entryPath = path.resolve(installPath, manifest.entrypoint);
-    delete require.cache[entryPath];
+    const installRoot = path.resolve(String(installPath || ''));
+    const entryPath = path.resolve(installRoot, String(manifest?.entrypoint || ''));
+    const insideByPath = entryPath === installRoot || entryPath.startsWith(`${installRoot}${path.sep}`);
+    if (!insideByPath) {
+      throw new Error(`Invalid mod entrypoint outside install root: ${String(manifest?.entrypoint || '')}`);
+    }
+    const ext = path.extname(entryPath).toLowerCase();
+    if (!ext || !['.js', '.cjs', '.mjs'].includes(ext)) {
+      throw new Error(`Unsupported mod entrypoint extension: ${ext || '(none)'}`);
+    }
+    const realInstallRoot = await fsp.realpath(installRoot);
+    const realEntryPath = await fsp.realpath(entryPath);
+    const insideByRealPath = realEntryPath === realInstallRoot || realEntryPath.startsWith(`${realInstallRoot}${path.sep}`);
+    if (!insideByRealPath) {
+      throw new Error(`Invalid mod entrypoint resolves outside install root: ${String(manifest?.entrypoint || '')}`);
+    }
+    delete require.cache[realEntryPath];
     // eslint-disable-next-line global-require, import/no-dynamic-require
-    return require(entryPath);
+    return require(realEntryPath);
   }
 
   async function runHook(modModule, hookName, context, timeoutMs) {
