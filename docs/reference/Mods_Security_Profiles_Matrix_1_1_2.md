@@ -22,7 +22,7 @@ This document pairs with `Mods_API_Spec_1_1_2.md`.
 | Unsigned mod install | Optional (off by default) | Deny | Deny | Deny | Deny |
 | Signed mod required | Optional | Required | Required | Required | Required + pinned root |
 | Publisher allowlist | Optional | Recommended | Recommended | Required | Required (in-house only) |
-| Online trust lookup | Allowed | Allowed | Allowed | Optional | Deny (offline only) |
+| Online trust lookup | Allowed | Allowed | Allowed | Optional | Deny (local only) |
 | Dynamic code loading (`eval`, remote scripts) | Deny | Deny | Deny | Deny | Deny |
 | Shell execution from mod | Deny | Deny | Deny | Deny | Deny |
 | Raw filesystem access | Deny | Deny | Deny | Deny | Deny |

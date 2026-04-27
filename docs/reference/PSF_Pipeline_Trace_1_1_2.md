@@ -1,4 +1,4 @@
-# PSF Offline Archive Collection - Complete Pipeline Trace
+# PSF local package set - Complete Pipeline Trace
 ## Version 1.1.3 | March 5, 2026
 
 ---
@@ -22,7 +22,7 @@
 
 ## Overview
 
-The PSF Offline Archive Collection is a commercial Electron-based desktop application providing curated AI model collections with pre-configured environments. The application supports:
+The PSF local package set is a commercial Electron-based desktop application providing curated AI model sets with pre-configured environments. The application supports:
 
 - **Platforms**: Windows, macOS, Linux
 - **Architectures**: x64, ARM64
@@ -159,7 +159,7 @@ The PSF Offline Archive Collection is a commercial Electron-based desktop applic
 ### start.sh Flow (Linux Example)
 
 ```bash
-1. Display banner "PSF Robotics Archive Collection"
+1. Display banner "PSF physical systems package set"
 2. cd to script directory
 3. Look for AppImage in dist/ folder (production)
    ┌── If found: chmod +x && execute with --no-sandbox
@@ -285,10 +285,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Catalog Editor (7 methods)
   loadCatalog, saveCatalog, addModel, updateModel, searchModels, 
-  saveMasterCatalog, getCollections,
+  saveMasterCatalog, getSets,
   
   // Package Manager (5 methods)
-  addCollection, editCollection, deleteCollection, editModel, moveModel,
+  addSet, editSet, deleteSet, editModel, moveModel,
   
   // Import/Export (3 methods)
   selectImportFile, previewImportFile, importModelsFromFile,
@@ -335,7 +335,7 @@ const handlers = {
   
   // Catalog Management (~15 handlers)
   'get-sku-config', 'get-catalog', 'get-master-catalog', 'save-master-catalog',
-  'get-collections', 'add-collection', 'edit-collection', 'delete-collection',
+  'get-sets', 'add-set', 'edit-set', 'delete-set',
   'add-model', 'edit-model', 'delete-model-from-catalog', 'move-model',
   'preview-import-file', 'import-models-from-file',
   
@@ -395,7 +395,7 @@ Core - Community Edition HTML - loads 19 modular JavaScript files:
 | `model-config.js` | Model configuration utilities |
 | `ui-navigation.js` | Tab navigation, screen switching, model card rendering |
 | `catalog-editor.js` | Catalog editing UI initialization |
-| `package-manager.js` | Collection/model CRUD UI (60KB - largest renderer file) |
+| `package-manager.js` | set/model CRUD UI (60KB - largest renderer file) |
 | `version-manager-ui.js` | Version update UI |
 | `build-tools.js` | SKU catalog build UI |
 | `model-actions-enterprise.js` | Model operations (launch, delete, download) |
@@ -444,7 +444,7 @@ Loaded by `index.html` for consumer USB products:
 | `globals.js` | Global state (window.catalogData, window.skuConfig) |
 | `screen-navigation.js` | Screen switching, disclaimer acceptance |
 | `hardware-detect.js` | Hardware detection, model recommendations |
-| `model-browser.js` | Catalog display, collection toggles |
+| `model-browser.js` | Catalog display, set toggles |
 | `model-actions.js` | Model launching, deletion |
 | `webui-launcher.js` | Open WebUI launcher |
 | `license-modal.js` | License modal popups |
@@ -838,7 +838,7 @@ User clicks "Save Modelfile"
 │ saveModelfile()                │
 │                                │
 │ Saves to:                      │
-│ models/{collection}/configs/   │
+│ models/{set}/configs/   │
 │   {modelId}.Modelfile          │
 │   {modelId}.ollama-config.json │
 └────────────────────────────────┘
@@ -853,7 +853,7 @@ User clicks "Launch in Ollama"
 ┌─────────────────────────────┐
 │ model-actions-enterprise.js  │
 │ launchInOllama()            │
-│ Passes collection + modelId │
+│ Passes set + modelId │
 └──────────────┬──────────────┘
                │
                         ▼ IPC: open-ollama-terminal
@@ -898,7 +898,7 @@ User clicks "Launch in Ollama"
 
 ```
 models/
-└── {collection}/
+└── {set}/
     └── configs/
         ┌── {modelId}.Modelfile           # User's saved config
         └── {modelId}.ollama-config.json  # Cached registry data
@@ -911,7 +911,7 @@ The "Fetch from Ollama" button retrieves official model configuration:
 1. **Manifest fetch**: `https://registry.ollama.ai/v2/library/{model}/manifests/{tag}`
 2. **Blob fetch**: Follows HTTP 307 redirects to Cloudflare CDN
 3. **Parsing**: Extracts template, params (JSON format), system prompt, license
-4. **Caching**: Saves to `.ollama-config.json` for offline access
+4. **Caching**: Saves to `.ollama-config.json` for local access
 
 ---
 
@@ -972,7 +972,7 @@ ui-modal.js                   7K     Modals, global state
 model-config.js               15K    Model configuration
 ui-navigation.js              21K    Navigation, model cards
 catalog-editor.js             1K     Catalog editor init
-package-manager.js            60K    Collection/model CRUD
+package-manager.js            60K    set/model CRUD
 version-manager-ui.js         3.5K   Version UI
 build-tools.js                2K     Build tools UI
 model-actions-enterprise.js    5.5K   Model operations
@@ -1123,4 +1123,4 @@ PSF.png                       8.5K
 
 *Document generated: January 27, 2026*
 *Version: 1.1.3*
-*PSF Offline Archive Collection*
+*PSF local package set*

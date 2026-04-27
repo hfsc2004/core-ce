@@ -38,7 +38,7 @@ Use these labels consistently in UI, packaging, docs, and telemetry.
 - License: Commercial EULA (separate terms)
 - Purpose: support-bound packaging, hardening automation, operational controls, and enterprise support artifacts.
 
-3. Safety-Critical Robotics Control (private modules)
+3. Safety-Critical physical systems Control (private modules)
 - License: Proprietary (private)
 - Purpose: mobility control intelligence, safety envelopes, and restricted control paths.
 

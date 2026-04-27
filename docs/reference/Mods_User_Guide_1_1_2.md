@@ -1,7 +1,7 @@
 # Mods User Guide (1.1.3)
 
 ## Purpose
-This guide explains how end users can install and enable a mod in PSF Offline using the GUI.
+This guide explains how end users can install and enable a mod in PSF local using the GUI.
 
 Important policy: all editions require signed mods. Unsigned mods will be blocked.
 
@@ -9,7 +9,7 @@ Signature algorithm reference: Ed25519 (RFC 8032)
 https://datatracker.ietf.org/doc/html/rfc8032
 
 ## Before You Start
-1. Launch PSF Offline (Core - Community Edition).
+1. Launch PSF local (Core - Community Edition).
 2. Open `Settings`.
 3. Go to the `Mods` tab.
 
@@ -24,7 +24,7 @@ You will use these controls:
 ## Typical GUI Flow (Recommended)
 1. In `Settings -> Mods`, click `Browse...` and select your mod folder.
 Example mod folder in this repo:
-`/media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/mods/voice-pack`
+`/media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/mods/voice-pack`
 
 2. Click `Create Keypair`.
 This creates a signer keypair used to sign approved mods.
@@ -53,28 +53,28 @@ These locations are important and include hidden directories.
 
 ### In-repo mod source (example)
 - Mod manifest:
-`/media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/mods/voice-pack/manifest.json`
+`/media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/mods/voice-pack/manifest.json`
 - Mod signature:
-`/media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/mods/voice-pack/signature.json`
+`/media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/mods/voice-pack/signature.json`
 
 ### Hidden mod runtime/trust storage
 - Trusted signer keys:
-`/media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/.psf/mods/trust/trusted-keys.json`
+`/media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/.psf/mods/trust/trusted-keys.json`
 - Generated key files:
-`/media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/.psf/mods/trust/keys/`
+`/media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/.psf/mods/trust/keys/`
 - Installed mods:
-`/media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/.psf/mods/installed/`
+`/media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/.psf/mods/installed/`
 - Mod state:
-`/media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/.psf/mods/state/`
+`/media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/.psf/mods/state/`
 - Attestations:
-`/media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/.psf/mods/attestations/`
+`/media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/.psf/mods/attestations/`
 
 ### Hidden folder note
 `.psf` is hidden (starts with a dot).
 
 Linux/macOS terminal:
 ```bash
-ls -la /media/user/Third_4TB/PSF_Offline/PSF_Offline_1.1.3_WORK/.psf/mods/trust/keys
+ls -la /media/user/Third_4TB/PSF_Local/PSF_Local_1.1.3_WORK/.psf/mods/trust/keys
 ```
 
 ## Status Labels in Installed Mods

@@ -1,5 +1,5 @@
 /**
- * PSF Offline Archive Collection - File Structure
+ * PSF local package set - File Structure
  * Companion file: ProjectFiles_1_1_2.md for detailed descriptions
  * @version 1.1.3 - March 5, 2026
  */
@@ -2922,7 +2922,7 @@
       - launcher/modules/blob-mapper.js
       - launcher/modules/catalog-helper-search.js
       - launcher/modules/catalog-helper.js
-      - launcher/modules/catalog-manager-collections.js
+      - launcher/modules/catalog-manager-sets.js
       - launcher/modules/catalog-manager-import.js
       - launcher/modules/catalog-manager-io.js
       - launcher/modules/catalog-manager-models.js
@@ -2980,7 +2980,7 @@
           - launcher/src/renderer/renderer-enterprise/catalog-browser.js
           - launcher/src/renderer/renderer-enterprise/catalog-editor.js
           - launcher/src/renderer/renderer-enterprise/compile-project-binaries.js
-          - launcher/src/renderer/renderer-enterprise/compile-project-collections.js
+          - launcher/src/renderer/renderer-enterprise/compile-project-sets.js
           - launcher/src/renderer/renderer-enterprise/compile-project-configs.js
           - launcher/src/renderer/renderer-enterprise/compile-project-timer.js
           - launcher/src/renderer/renderer-enterprise/compile-project.js

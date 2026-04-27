@@ -106,7 +106,7 @@ Implement a secure mod platform with edition-aware policy enforcement, then ship
 
 ## Phase 9 - Security Hardening (Enterprise/Government)
 1. Add publisher allowlist and denylist management.
-2. Add offline verification mode for government/DoD.
+2. Add local verification mode for government/DoD.
 3. Enforce in-house-only signed mods for `government-dod-hardened`.
 4. Disable production hot-reload in managed profiles.
 5. Add periodic integrity scan of installed mod artifacts.
