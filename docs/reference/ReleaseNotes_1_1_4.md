@@ -26,17 +26,11 @@ This release focuses on PSF Terminal llama.cpp launch correctness, Qwen3.8 GGUF 
 - PSF Terminal llama.cpp requests now include conservative defaults for stop sequences, repeat penalty, output length, English anchoring, and default temperature.
 - llama.cpp provider naming is normalized across `llamacpp`, `llama-cpp`, and `llama.cpp`.
 
-5. RLM smoke-test hardening
-- RLM-assisted attachment requests now run before backend streaming, so llama.cpp terminals can use the deterministic RLM engine instead of bypassing RLM.
-- Added regression coverage for the main RLM engine and terminal chatflow llama.cpp routing.
-- Verified deterministic attachment summaries, shared attachment opt-in, no-attachment handling, and mocked model-backed code generation.
-
 ## Validation
 
 1. Syntax checks passed for changed JavaScript modules using `node --check`.
 2. Active catalog JSON files parse successfully.
 3. `git diff --check` / staged diff checks passed before commit.
-4. RLM, deterministic-tools, attachments, and bucket-security regression tests passed.
 
 ## Notes
 

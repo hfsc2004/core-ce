@@ -7,19 +7,30 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.5 Core-CE] - 2026-09-07
+
+### Added
+- Added direct RLM engine regression coverage for deterministic attachment summaries, shared attachment opt-in, no-attachment handling, and mocked model-backed code generation.
+- Added terminal chatflow regression coverage proving RLM-assisted llama.cpp attachment requests route to the RLM engine before provider streaming.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.5`.
+- Routed RLM-assisted attachment requests before backend streaming so llama.cpp terminals can use the deterministic RLM engine.
+
+### Fixed
+- Fixed RLM-assisted mode being bypassed whenever PSF Terminal was using a non-Ollama backend.
+
 ## [v1.1.4 Core-CE] - 2026-09-07
 
 ### Added
 - Added Qwen3.8 4B Distill GGUF catalog metadata for llama.cpp-based local inference without committing model binaries.
 - Added llama.cpp runtime logging under `.psf/logs/llama-cpp/` for launch arguments, stdout/stderr, and exit status.
-- Added direct RLM engine and terminal chatflow regression tests covering deterministic attachment summaries and llama.cpp RLM routing.
 
 ### Changed
 - Routed PSF Terminal llama.cpp launches through BMOC Session Manager instead of the Ollama wrapper path.
 - Changed direct PSF Terminal launch in llama.cpp mode to open model-selector-only, avoiding accidental preload of the first discovered GGUF.
 - Restored Qwen3.8 full GPU offload metadata (`gpu_layers: 34`) after selector-only launch removed the duplicate-server VRAM conflict.
 - Added llama.cpp chat defaults for PSF Terminal requests: bounded output, repeat penalty, stop sequences, English system anchoring, and lower default temperature.
-- Routed RLM-assisted attachment requests before backend streaming so llama.cpp terminals can use the deterministic RLM engine.
 
 ### Fixed
 - Fixed llama.cpp / `llamacpp` / `llama-cpp` provider name mismatches across launcher, terminal renderer, and model dropdown flows.
@@ -27,7 +38,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Fixed terminal model dropdown listing for llama.cpp models when the global inference backend is llama.cpp.
 - Fixed failed or timed-out `llama-server` startups leaving process groups around long enough to consume GPU memory on retry.
 - Made terminal launch failure alerts copy their full message to the clipboard before displaying.
-- Fixed RLM-assisted mode being bypassed whenever PSF Terminal was using a non-Ollama backend.
 
 ## [v1.1.3 Core-CE] - 2026-04-26
 
