@@ -14,6 +14,7 @@
     const getProviderApiKey = typeof deps?.getProviderApiKey === 'function' ? deps.getProviderApiKey : () => '';
     const getProviderModelId = typeof deps?.getProviderModelId === 'function' ? deps.getProviderModelId : () => '';
     const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
+    const getLlamaCppForceCpu = typeof deps?.getLlamaCppForceCpu === 'function' ? deps.getLlamaCppForceCpu : () => false;
     const getConfig = typeof deps?.getConfig === 'function' ? deps.getConfig : () => ({});
     const getTemperature = typeof deps?.getTemperature === 'function' ? deps.getTemperature : () => 0.7;
     const getTopP = typeof deps?.getTopP === 'function' ? deps.getTopP : () => null;
@@ -120,7 +121,8 @@
       const apiKey = String(getProviderApiKey() || '');
       const providerModel = String(getProviderModelId() || '').trim();
       const llamaCppModelPath = String(getLlamaCppModelPath() || '').trim();
-      return { provider, baseUrl, apiKey, providerModel, llamaCppModelPath };
+      const llamaCppForceCpu = getLlamaCppForceCpu() === true;
+      return { provider, baseUrl, apiKey, providerModel, llamaCppModelPath, llamaCppForceCpu };
     }
 
     async function verifyGPUUsage() {

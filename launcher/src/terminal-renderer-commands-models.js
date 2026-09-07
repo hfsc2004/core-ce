@@ -33,12 +33,18 @@
     }
 
     function getProviderModelStorageKey() {
-      const provider = String(getProvider() || 'ollama').trim().toLowerCase() || 'ollama';
+      const provider = normalizeProviderKey(getProvider());
       const port = Number(getTerminalPort());
       if (Number.isFinite(port) && port > 0) {
         return `${LAST_MODEL_PROVIDER_KEY}_${provider}_${port}`;
       }
       return `${LAST_MODEL_PROVIDER_KEY}_${provider}`;
+    }
+
+    function normalizeProviderKey(value) {
+      const raw = String(value || 'ollama').trim().toLowerCase();
+      if (raw === 'llamacpp' || raw === 'llama-cpp' || raw === 'llama.cpp') return 'llama.cpp';
+      return raw || 'ollama';
     }
 
     function persistSelectedModel(modelName) {
@@ -63,7 +69,7 @@
           next.uiState.psfTerminal = (next.uiState.psfTerminal && typeof next.uiState.psfTerminal === 'object')
             ? { ...next.uiState.psfTerminal }
             : {};
-          const provider = String(getProvider() || 'ollama').trim().toLowerCase() || 'ollama';
+          const provider = normalizeProviderKey(getProvider());
           next.uiState.psfTerminal.lastModelByProvider =
             (next.uiState.psfTerminal.lastModelByProvider && typeof next.uiState.psfTerminal.lastModelByProvider === 'object')
               ? { ...next.uiState.psfTerminal.lastModelByProvider }
@@ -86,7 +92,7 @@
 
     async function loadPersistedModel() {
       const api = getElectronAPI();
-      const provider = String(getProvider() || 'ollama').trim().toLowerCase() || 'ollama';
+      const provider = normalizeProviderKey(getProvider());
       if (api && typeof api.getSettings === 'function') {
         try {
           const settings = await api.getSettings();
@@ -137,7 +143,7 @@
 
     async function listModels() {
       try {
-        const provider = String(getProvider() || 'ollama').trim().toLowerCase();
+        const provider = normalizeProviderKey(getProvider());
         addSystemMessage('📋 Fetching available models...');
         const api = getElectronAPI();
         if (provider === 'llama.cpp') {
@@ -172,7 +178,7 @@
 
       try {
         const api = getElectronAPI();
-        const provider = String(getProvider() || 'ollama').trim().toLowerCase();
+        const provider = normalizeProviderKey(getProvider());
         if (provider === 'llama.cpp') {
           const result = await api.terminalListLlamaCppModels();
           if (result?.success && Array.isArray(result.models) && result.models.length > 0) {
@@ -268,7 +274,7 @@
     function handleModelChange(event) {
       const newModel = event?.target?.value;
       if (!newModel) return;
-      const provider = String(getProvider() || 'ollama').trim().toLowerCase();
+      const provider = normalizeProviderKey(getProvider());
       if (provider === 'llama.cpp') {
         const optionEl = event?.target?.selectedOptions?.[0];
         const newPath = String(optionEl?.dataset?.llamaPath || '').trim();

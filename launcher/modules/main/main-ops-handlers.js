@@ -42,8 +42,57 @@ function registerOpsHandlers(ipcMain, deps = {}) {
 
   function normalizeTerminalProvider(value) {
     const raw = String(value || '').trim().toLowerCase();
-    if (raw === 'llamacpp') return 'llama.cpp';
-    return raw === 'llama.cpp' ? 'llama.cpp' : 'ollama';
+    if (raw === 'llamacpp' || raw === 'llama-cpp' || raw === 'llama.cpp') return 'llama.cpp';
+    return 'ollama';
+  }
+
+  function catalogRuntimeConfigForModel(modelPath, modelName) {
+    const modelsDir = path.join(appDir, '..', 'models');
+    const wantedPath = String(modelPath || '').trim();
+    const wantedBase = path.basename(wantedPath || '').toLowerCase();
+    const wantedName = String(modelName || '').trim().toLowerCase();
+    let files = [];
+    try {
+      files = fs.readdirSync(modelsDir).filter((name) => /^catalog(?:-|\.json)/i.test(name) && /\.json$/i.test(name));
+    } catch (_) {
+      return {};
+    }
+    for (const fileName of files) {
+      let parsed = null;
+      try {
+        parsed = JSON.parse(fs.readFileSync(path.join(modelsDir, fileName), 'utf8'));
+      } catch (_) {
+        continue;
+      }
+      const entries = [];
+      if (Array.isArray(parsed?.models)) entries.push(...parsed.models);
+      const collections = parsed?.collections;
+      if (collections && typeof collections === 'object') {
+        Object.values(collections).forEach((collection) => {
+          if (Array.isArray(collection?.models)) entries.push(...collection.models);
+        });
+      }
+      for (const entry of entries) {
+        const names = [
+          entry?.id,
+          entry?.name,
+          entry?.filename,
+          path.basename(String(entry?.download_url || '')),
+          ...(Array.isArray(entry?.artifacts) ? entry.artifacts.map((artifact) => artifact?.filename) : [])
+        ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
+        if ((wantedBase && names.includes(wantedBase)) || (wantedName && names.includes(wantedName))) {
+          return {
+            forceCpu: entry?.force_cpu === true,
+            gpuLayers: Number.isFinite(Number(entry?.gpu_layers)) ? Number(entry.gpu_layers) : null
+          };
+        }
+      }
+    }
+    return {};
+  }
+
+  function catalogForceCpuForModel(modelPath, modelName) {
+    return catalogRuntimeConfigForModel(modelPath, modelName).forceCpu === true;
   }
 
   async function isOllamaResponsive(port) {
@@ -179,12 +228,16 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const gpuInfo = getGpuInfo() || null;
     const nvidiaDetected = String(gpuInfo?.accelerationType || '').toLowerCase() === 'nvidia';
     const requestedGpuLayersRaw = Number(payload?.gpuLayers);
-    const forceCpu = payload?.forceCpu === true;
+    const catalogRuntime = catalogRuntimeConfigForModel(modelPath, modelName);
+    const catalogGpuLayers = Number(catalogRuntime?.gpuLayers);
+    const forceCpu = payload?.forceCpu === true || catalogRuntime?.forceCpu === true;
     const effectiveGpuLayers = forceCpu
       ? 0
       : (Number.isFinite(requestedGpuLayersRaw) && requestedGpuLayersRaw > 0
         ? requestedGpuLayersRaw
-        : (nvidiaDetected ? 999 : null));
+        : (Number.isFinite(catalogGpuLayers) && catalogGpuLayers > 0
+          ? catalogGpuLayers
+          : (nvidiaDetected ? 999 : null)));
     const requireGpuSession = !forceCpu && nvidiaDetected && Number(effectiveGpuLayers) > 0;
     const existingSessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
     if (Array.isArray(existingSessions)) {
@@ -231,22 +284,28 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     }
 
     if (!modelPath) {
-      try {
-        const discovered = listTerminalLlamaCppModels();
-        const first = Array.isArray(discovered?.models) ? discovered.models[0] : null;
-        const autoPath = String(first?.pathAbs || '').trim();
-        const autoName = String(first?.name || '').trim();
-        if (autoPath) {
-          modelPath = autoPath;
-          if (!modelName && autoName) modelName = autoName;
+      const wantedName = String(modelName || '').trim().toLowerCase();
+      if (wantedName) {
+        try {
+          const discovered = listTerminalLlamaCppModels();
+          const models = Array.isArray(discovered?.models) ? discovered.models : [];
+          const matched = models.find((candidate) => {
+            const name = String(candidate?.name || '').trim().toLowerCase();
+            const filename = String(candidate?.filename || '').trim().toLowerCase();
+            return name === wantedName || filename === wantedName || filename.replace(/\.gguf$/i, '') === wantedName;
+          });
+          const matchedPath = String(matched?.pathAbs || '').trim();
+          if (matchedPath) modelPath = matchedPath;
+        } catch (_) {
+          // Fall through to explicit error below.
         }
-      } catch (_) {
-        // Fall through to explicit error below.
       }
       if (!modelPath) {
         return {
           success: false,
-          message: 'No GGUF model found in local catalog storage. Download at least one GGUF model first.'
+          message: modelName
+            ? `Could not resolve llama.cpp GGUF model "${modelName}". Select a model from the terminal dropdown.`
+            : 'Select a llama.cpp GGUF model before sending a message.'
         };
       }
     }
@@ -290,6 +349,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       reused: false,
       modelPath,
       modelName: modelName || null,
+      forceCpu,
       chatTemplate: String(startResult?.chatTemplate || chatTemplate || '').trim() || null,
       baseUrl: port > 0 ? `http://127.0.0.1:${port}` : ''
     };
@@ -543,16 +603,31 @@ function registerOpsHandlers(ipcMain, deps = {}) {
 
       if (preferredProvider === 'llama.cpp') {
         await closeWindowOwnedTerminalSessions(ownerWindowId, 'ollama');
-        startResult = await ensureTerminalLlamaCppSession({
-          ...options,
-          modelName: String(options.modelName || modelName || '').trim(),
-          modelPath: String(options.modelPath || options.llamaCppModelPath || '').trim(),
-          llamaCppModelPath: String(options.llamaCppModelPath || options.modelPath || '').trim()
-        }, event);
-        if (!startResult?.success) {
-          return { success: false, message: startResult?.message || 'Failed to start BMOC llama.cpp terminal session.' };
+        const explicitLlamaCppModelPath = String(options.modelPath || options.llamaCppModelPath || '').trim();
+        const explicitLlamaCppModelName = String(options.modelName || modelName || '').trim();
+        if (explicitLlamaCppModelPath || explicitLlamaCppModelName) {
+          startResult = await ensureTerminalLlamaCppSession({
+            ...options,
+            modelName: explicitLlamaCppModelName,
+            modelPath: explicitLlamaCppModelPath,
+            llamaCppModelPath: String(options.llamaCppModelPath || options.modelPath || '').trim()
+          }, event);
+          if (!startResult?.success) {
+            return { success: false, message: startResult?.message || 'Failed to start BMOC llama.cpp terminal session.' };
+          }
+          terminalPort = Number(startResult.port || startResult.ollamaPort || 0);
+        } else {
+          startResult = {
+            success: true,
+            sessionId: null,
+            reused: false,
+            selectorOnly: true,
+            modelPath: '',
+            modelName: '',
+            forceCpu: options.forceCpu === true
+          };
+          terminalPort = 0;
         }
-        terminalPort = Number(startResult.port || startResult.ollamaPort || 0);
       } else {
         if (terminalPort <= 0) {
           // For dedicated Terminal windows, always create a fresh BMOC terminal session/port
@@ -607,10 +682,14 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         {
           provider: preferredProvider,
           baseUrl: preferredProvider === 'llama.cpp'
-            ? `http://127.0.0.1:${terminalPort}`
+            ? (terminalPort > 0 ? `http://127.0.0.1:${terminalPort}` : '')
             : String(options.baseUrl || '').trim(),
           providerModel: String(options.providerModel || options.modelName || modelName || '').trim(),
-          llamaCppModelPath: String(startResult?.modelPath || options.llamaCppModelPath || options.modelPath || '').trim()
+          llamaCppModelPath: String(startResult?.modelPath || options.llamaCppModelPath || options.modelPath || '').trim(),
+          llamaCppForceCpu: options.forceCpu === true || startResult?.forceCpu === true || catalogForceCpuForModel(
+            startResult?.modelPath || options.llamaCppModelPath || options.modelPath || '',
+            options.modelName || modelName || ''
+          )
         }
       );
       const openedWindowId = Number(openResult?.windowId || 0);
@@ -636,6 +715,30 @@ function registerOpsHandlers(ipcMain, deps = {}) {
   });
 
   ipcMain.handle('launch-model-in-ollama', async (event, modelPath, projectorPath = null, modelId = null, forceCpu = false) => {
+    const preferredProvider = normalizeTerminalProvider(settingsManager.getInferenceBackend?.(appDir) || 'ollama');
+    if (preferredProvider === 'llama.cpp') {
+      const rawModelPath = String(modelPath || '').trim();
+      const resolvedModelPath = path.isAbsolute(rawModelPath)
+        ? rawModelPath
+        : path.resolve(path.join(appDir, '..'), rawModelPath);
+      if (!rawModelPath || !fs.existsSync(resolvedModelPath)) {
+        return {
+          success: false,
+          provider: 'llama.cpp',
+          message: `llama.cpp model file not found: ${rawModelPath || 'empty'}`
+        };
+      }
+      return {
+        success: true,
+        provider: 'llama.cpp',
+        modelName: path.basename(resolvedModelPath).replace(/\.gguf$/i, ''),
+        modelPath: rawModelPath,
+        llamaCppModelPath: rawModelPath,
+        projectorPath: projectorPath || null,
+        forceCpu: !!forceCpu
+      };
+    }
+
     const startResult = await ensureTerminalOllamaSession();
     if (!startResult?.success) {
       return { success: false, message: startResult?.message || 'Failed to start BMOC terminal session.' };

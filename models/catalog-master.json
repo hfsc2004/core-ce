@@ -1,6 +1,6 @@
 {
-  "version": "1.1.3",
-  "last_updated": "2026-03-24",
+  "version": "1.1.4",
+  "last_updated": "2026-09-07",
   "collections": {
     "starter-fast": {
       "name": "Starter Fast",
@@ -4517,6 +4517,51 @@
               "reliability": 0.15
             }
           }
+        },
+        {
+          "id": "qwen3-8-4b-distill-gguf",
+          "name": "Qwen3.8-4B-Distill-GGUF",
+          "model_family": null,
+          "organization": "empero-ai",
+          "version": null,
+          "description": "Qwen3.8 4B Distill GGUF quantized model build for local inference.",
+          "url": "https://huggingface.co/empero-ai/Qwen3.8-4B-Distill-GGUF",
+          "download_url": "https://huggingface.co/empero-ai/Qwen3.8-4B-Distill-GGUF/resolve/main/Qwen3.8-4B-Q8_0.gguf?download=true",
+          "filename": "Qwen3.8-4B-Q8_0.gguf",
+          "huggingface_repo": "empero-ai/Qwen3.8-4B-Distill-GGUF",
+          "size_mb": 4397,
+          "file_size_bytes": 4610579744,
+          "quantization": "Q8_0",
+          "context_length": 16384,
+          "parameters": "4B",
+          "architecture": "llama",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "supports_stt": false,
+          "supports_tts": false,
+          "min_ram_gb": 8,
+          "recommended_ram_gb": 8,
+          "gpu_layers": 34,
+          "force_cpu": false,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/empero-ai/Qwen3.8-4B-Distill-GGUF",
+          "hidden_size": 2560,
+          "num_layers": 32,
+          "num_kv_heads": 4,
+          "num_attention_heads": 16,
+          "sha256": "770b780d6754a4954d1caf395c9239eaeb394f15c7a7ea34039883377c93c9c3",
+          "checksums": {
+            "main": "770b780d6754a4954d1caf395c9239eaeb394f15c7a7ea34039883377c93c9c3",
+            "files": {
+              "Qwen3.8-4B-Q8_0.gguf": "770b780d6754a4954d1caf395c9239eaeb394f15c7a7ea34039883377c93c9c3"
+            }
+          },
+          "projector_url": null,
+          "projector_filename": null,
+          "projector_sha256": null
         }
       ]
     },
@@ -7536,6 +7581,50 @@
               "reliability": 0.15
             }
           }
+        },
+        {
+          "id": "llama-3-2-3b-instruct-gguf",
+          "name": "Llama-3.2-3B-Instruct-GGUF",
+          "model_family": null,
+          "organization": "bartowski",
+          "version": null,
+          "description": "The Llama 3.2 collection of multilingual large language models (LLMs) is a collection of pretrained and instruction tuned generative models in 1B and 3B sizes (text in/text out).",
+          "url": "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF",
+          "download_url": "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q8_0.gguf?download=true",
+          "filename": "Llama-3.2-3B-Instruct-Q8_0.gguf",
+          "huggingface_repo": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+          "size_mb": 3264,
+          "file_size_bytes": 3421899296,
+          "quantization": null,
+          "context_length": 131072,
+          "parameters": "3B",
+          "architecture": "llama",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "supports_stt": false,
+          "supports_tts": false,
+          "min_ram_gb": 8,
+          "recommended_ram_gb": 13,
+          "gpu_layers": 28,
+          "license": "llama3.2",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct",
+          "hidden_size": 3072,
+          "num_layers": 28,
+          "num_kv_heads": 8,
+          "num_attention_heads": 24,
+          "sha256": "b5607b5090a8280063fff2d706bb3408ca6542341b06aab39c3eca0a28575921",
+          "checksums": {
+            "main": "b5607b5090a8280063fff2d706bb3408ca6542341b06aab39c3eca0a28575921",
+            "files": {
+              "Llama-3.2-3B-Instruct-Q8_0.gguf": "b5607b5090a8280063fff2d706bb3408ca6542341b06aab39c3eca0a28575921"
+            }
+          },
+          "projector_url": null,
+          "projector_filename": null,
+          "projector_sha256": null
         }
       ]
     }

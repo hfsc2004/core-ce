@@ -11,6 +11,18 @@ let allModels = [];
 let recommendedModels = [];
 let originalShowScreen = null;
 
+async function copyThenAlert(message) {
+  const text = String(message || '');
+  try {
+    if (navigator?.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(text);
+    }
+  } catch (_) {
+    // Clipboard is best-effort; keep showing the existing alert either way.
+  }
+  alert(text);
+}
+
 // Load models when entering webui-select screen
 async function loadModelsForInterface() {
   console.log('🔄 Loading models for interface...');
@@ -312,19 +324,30 @@ async function populateTerminalModels() {
   if (!select) return;
   
   try {
-    const result = await window.electronAPI.getDownloadedModelsWithBlobs();
+    const settings = window.electronAPI?.getSettings ? await window.electronAPI.getSettings() : null;
+    const rawProvider = String(settings?.inference_backend || '').trim().toLowerCase();
+    const useLlamaCpp = rawProvider === 'llama-cpp' || rawProvider === 'llamacpp' || rawProvider === 'llama.cpp';
+    const result = useLlamaCpp && window.electronAPI?.terminalListLlamaCppModels
+      ? await window.electronAPI.terminalListLlamaCppModels()
+      : await window.electronAPI.getDownloadedModelsWithBlobs();
     
     if (result.success && result.models && result.models.length > 0) {
       select.innerHTML = '';
       
       for (const model of result.models) {
         const option = document.createElement('option');
-        option.value = model.ollamaName || model.name;
-        option.textContent = model.displayName || model.ollamaName || model.name;
+        option.value = useLlamaCpp ? (model.pathAbs || model.name) : (model.ollamaName || model.name);
+        option.textContent = useLlamaCpp
+          ? (model.pathRel || model.filename || model.name)
+          : (model.displayName || model.ollamaName || model.name);
+        if (useLlamaCpp && model.pathAbs) {
+          option.dataset.llamaPath = model.pathAbs;
+          option.dataset.modelName = model.name || '';
+        }
         select.appendChild(option);
       }
     } else {
-      select.innerHTML = '<option value="">No models installed</option>';
+      select.innerHTML = `<option value="">No ${useLlamaCpp ? 'GGUF' : ''} models installed</option>`;
     }
   } catch (err) {
     console.error('Failed to load models:', err);
@@ -342,16 +365,24 @@ async function populateTerminalModels() {
  */
 async function launchTerminal() {
   try {
-    const launchOptions = (() => {
+    const launchOptions = await (async () => {
       try {
         const raw = localStorage.getItem('psf_terminal_provider_defaults');
         const parsed = raw ? JSON.parse(raw) : null;
-        if (!parsed || typeof parsed !== 'object') return null;
+        const settings = window.electronAPI?.getSettings ? await window.electronAPI.getSettings() : null;
+        const provider = String(settings?.inference_backend || parsed?.provider || '').trim();
+        if (!provider && (!parsed || typeof parsed !== 'object')) return null;
+        const select = document.getElementById('terminal-model-select');
+        const selected = select?.selectedOptions?.[0] || null;
+        const selectedPath = String(selected?.dataset?.llamaPath || '').trim();
+        const selectedName = String(selected?.dataset?.modelName || '').trim();
         return {
-          provider: String(parsed.provider || '').trim(),
-          baseUrl: String(parsed.provider_base_url || '').trim(),
-          providerModel: String(parsed.provider_model_id || '').trim(),
-          llamaCppModelPath: String(parsed.llama_cpp_model_path || '').trim()
+          provider,
+          baseUrl: String(parsed?.provider_base_url || '').trim(),
+          providerModel: selectedName || String(parsed?.provider_model_id || '').trim(),
+          modelName: selectedName || '',
+          modelPath: selectedPath || '',
+          llamaCppModelPath: selectedPath || String(parsed?.llama_cpp_model_path || '').trim()
         };
       } catch (_) {
         return null;
@@ -364,11 +395,11 @@ async function launchTerminal() {
     if (result && result.success) {
       console.log('Terminal launched successfully');
     } else {
-      alert(`Failed to launch terminal:\n${result?.message || 'Unknown error'}`);
+      await copyThenAlert(`Failed to launch terminal:\n${result?.message || 'Unknown error'}`);
     }
   } catch (err) {
     console.error('Terminal launch failed:', err);
-    alert(`Error launching terminal:\n${err.message}`);
+    await copyThenAlert(`Error launching terminal:\n${err.message}`);
   }
 }
 

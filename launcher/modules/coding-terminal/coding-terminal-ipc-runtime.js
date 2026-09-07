@@ -87,6 +87,9 @@ function createIpcRuntimeHandlers({
     const normalized = normalizeCodingInferenceBackend(backendValue);
     codingTerminalCommon.updateConfig({ inferenceBackend: normalized });
     const appDir = getRuntimeContext()?.appDir || null;
+    if (appDir && inferenceManager && typeof inferenceManager.setBackend === 'function') {
+      inferenceManager.setBackend(appDir, normalized);
+    }
     if (normalized !== 'ollama') {
       await closeTerminalOllamaSession();
       await closeRouterOllamaSession();

@@ -19,6 +19,7 @@
       ctx.setProviderApiKey(terminalConfig.apiKey || '');
       ctx.setProviderModelId(terminalConfig.providerModel || '');
       ctx.setLlamaCppModelPath(terminalConfig.llamaCppModelPath || '');
+      if (typeof ctx.setLlamaCppForceCpu === 'function') ctx.setLlamaCppForceCpu(terminalConfig.llamaCppForceCpu === true || terminalConfig.forceCpu === true);
 
       if (terminalConfig.systemPrompt) {
         ctx.setSystemPrompt(terminalConfig.systemPrompt);
@@ -66,6 +67,7 @@
           getProviderApiKey: ctx.getProviderApiKey,
           getProviderModelId: ctx.getProviderModelId,
           getLlamaCppModelPath: ctx.getLlamaCppModelPath,
+          getLlamaCppForceCpu: ctx.getLlamaCppForceCpu,
           getConfig: ctx.getConfig,
           getTemperature: ctx.getTemperature,
           getTopP: ctx.getTopP,
@@ -123,6 +125,8 @@
         setProviderModelId: ctx.setProviderModelId,
         getLlamaCppModelPath: ctx.getLlamaCppModelPath,
         setLlamaCppModelPath: ctx.setLlamaCppModelPath,
+        getLlamaCppForceCpu: ctx.getLlamaCppForceCpu,
+        setLlamaCppForceCpu: ctx.setLlamaCppForceCpu,
         getSystemPrompt: ctx.getSystemPrompt,
         setSystemPrompt: ctx.setSystemPrompt,
         getProvider: ctx.getProvider,
@@ -135,6 +139,8 @@
         setProviderModelId: ctx.setProviderModelId,
         getLlamaCppModelPath: ctx.getLlamaCppModelPath,
         setLlamaCppModelPath: ctx.setLlamaCppModelPath,
+        getLlamaCppForceCpu: ctx.getLlamaCppForceCpu,
+        setLlamaCppForceCpu: ctx.setLlamaCppForceCpu,
         getRlmAssisted: ctx.getRlmAssisted,
         setRlmAssisted: ctx.setRlmAssisted,
         getRlmVerboseTrace: ctx.getRlmVerboseTrace,

@@ -32,20 +32,29 @@ function getPlatformTag() {
   return null;
 }
 
-function getLlamaServerPath(appDir) {
+function getLlamaServerPath(appDir, options = {}) {
   const platformTag = getPlatformTag();
   if (!platformTag) return null;
   const exe = os.platform() === 'win32' ? 'llama-server.exe' : 'llama-server';
   const root = path.join(appDir, '..', 'binaries', 'llama.cpp', platformTag);
-  const candidates = [
+  const cpuCandidates = [
+    path.join(root, 'build-cpu-local', 'bin', exe),
+    path.join(root, 'build-cpu', 'bin', exe)
+  ];
+  const gpuCandidates = [
+    path.join(root, 'build-cuda-local', 'bin', exe),
     path.join(root, 'build', 'bin', exe),
     path.join(root, 'bin', exe)
   ];
+  const preferCpu = options?.preferCpu === true || options?.forceCpu === true;
+  const candidates = preferCpu
+    ? [...cpuCandidates, ...gpuCandidates]
+    : [...gpuCandidates, ...cpuCandidates];
   return candidates.find((p) => fs.existsSync(p)) || null;
 }
 
-function checkAvailable(appDir) {
-  const serverPath = getLlamaServerPath(appDir);
+function checkAvailable(appDir, options = {}) {
+  const serverPath = getLlamaServerPath(appDir, options);
   return {
     success: !!serverPath,
     available: !!serverPath,
@@ -273,6 +282,38 @@ async function checkServerReady(port, timeoutMs = 600000) {
   return false;
 }
 
+function waitForChildExit(child, timeoutMs = 3000) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      child.off('exit', onExit);
+      resolve(false);
+    }, Math.max(100, Number(timeoutMs) || 3000));
+    function onExit() {
+      clearTimeout(timer);
+      resolve(true);
+    }
+    child.once('exit', onExit);
+  });
+}
+
+async function terminateChildProcessGroup(child, isExited = () => false) {
+  if (!child || !child.pid || isExited()) return;
+  try {
+    process.kill(-child.pid, 'SIGTERM');
+  } catch (_) {
+    try { child.kill('SIGTERM'); } catch {}
+  }
+  const exitedAfterTerm = await waitForChildExit(child, 3500);
+  if (exitedAfterTerm || isExited()) return;
+  try {
+    process.kill(-child.pid, 'SIGKILL');
+  } catch (_) {
+    try { child.kill('SIGKILL'); } catch {}
+  }
+  await waitForChildExit(child, 1500);
+}
+
 async function startLlamaServerOnPort(appDir, options = {}) {
   const {
     port,
@@ -294,7 +335,8 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     throw new Error('Port is required - must be pre-allocated by session-manager');
   }
 
-  const availability = checkAvailable(appDir);
+  const preferCpu = forceCpu || !(Number.isFinite(Number(gpuLayers)) && Number(gpuLayers) > 0);
+  const availability = checkAvailable(appDir, { forceCpu, preferCpu });
   if (!availability.available || !availability.serverPath) {
     throw new Error(availability.message);
   }
@@ -338,6 +380,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
 
   if (forceCpu) {
     args.push('--n-gpu-layers', '0');
+    args.push('--fit', 'off');
   } else if (gpuLayers !== null && Number.isFinite(Number(gpuLayers))) {
     args.push('--n-gpu-layers', String(Number(gpuLayers)));
   }
@@ -357,6 +400,30 @@ async function startLlamaServerOnPort(appDir, options = {}) {
   }
 
   const childEnv = { ...process.env };
+  const serverDir = path.dirname(availability.serverPath);
+  let runtimeLogPath = null;
+  let runtimeLogStream = null;
+  try {
+    const logDir = path.join(appDir, '..', '.psf', 'logs', 'llama-cpp');
+    fs.mkdirSync(logDir, { recursive: true });
+    runtimeLogPath = path.join(logDir, `llama-server-${port}-${Date.now()}.log`);
+    runtimeLogStream = fs.createWriteStream(runtimeLogPath, { flags: 'a' });
+    runtimeLogStream.write([
+      `[llama-cpp] server=${availability.serverPath}`,
+      `[llama-cpp] cwd=${serverDir}`,
+      `[llama-cpp] args=${args.join(' ')}`,
+      ''
+    ].join('\n'));
+  } catch (_) {
+    runtimeLogPath = null;
+    runtimeLogStream = null;
+  }
+  if (process.platform === 'linux') {
+    childEnv.LD_LIBRARY_PATH = [
+      serverDir,
+      childEnv.LD_LIBRARY_PATH || ''
+    ].filter(Boolean).join(path.delimiter);
+  }
   const visibleDevices = String(cudaVisibleDevices || '').trim();
   if (visibleDevices) {
     childEnv.CUDA_VISIBLE_DEVICES = visibleDevices;
@@ -364,8 +431,8 @@ async function startLlamaServerOnPort(appDir, options = {}) {
 
   const child = spawn(availability.serverPath, args, {
     detached: true,
-    stdio: ['ignore', 'ignore', 'pipe'],
-    cwd: path.dirname(availability.serverPath),
+    stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: serverDir,
     env: childEnv
   });
 
@@ -373,8 +440,13 @@ async function startLlamaServerOnPort(appDir, options = {}) {
   let exited = false;
   let exitCode = null;
   let exitSignal = null;
+  child.stdout.on('data', (chunk) => {
+    if (runtimeLogStream) runtimeLogStream.write(`[stdout] ${String(chunk || '')}`);
+  });
   child.stderr.on('data', (chunk) => {
-    startupError += String(chunk || '');
+    const text = String(chunk || '');
+    if (runtimeLogStream) runtimeLogStream.write(`[stderr] ${text}`);
+    startupError += text;
     if (startupError.length > 16000) {
       startupError = startupError.slice(-16000);
     }
@@ -383,6 +455,10 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     exited = true;
     exitCode = code;
     exitSignal = signal;
+    if (runtimeLogStream) {
+      runtimeLogStream.write(`\n[llama-cpp] exit code=${String(code)} signal=${String(signal)}\n`);
+      runtimeLogStream.end();
+    }
   });
 
   const ready = await Promise.race([
@@ -392,9 +468,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     })
   ]);
   if (!ready) {
-    try {
-      if (!exited && child.pid) process.kill(-child.pid, 'SIGTERM');
-    } catch {}
+    await terminateChildProcessGroup(child, () => exited);
     const exitInfo = exited
       ? ` (llama-server exited: code=${String(exitCode)}, signal=${String(exitSignal)})`
       : '';
@@ -408,6 +482,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     port,
     process: child,
     modelPath: resolvedModelPath,
+    logPath: runtimeLogPath,
     chatTemplate: templateResolved.value || null,
     chatTemplateSource: templateResolved.source || 'none'
   };

@@ -9,6 +9,64 @@ function createCommonChatApi(deps = {}) {
   const getPlatformModule = deps.getPlatformModule;
   const activeStreamRequests = new Map();
 
+  function emitStreamData(port, data) {
+    if (!data || typeof data !== 'object') return;
+    data.port = port;
+
+    const allWindows = getPlatformModule().getAllTerminalWindows
+      ? getPlatformModule().getAllTerminalWindows()
+      : [];
+
+    if (allWindows.length > 0) {
+      for (const win of allWindows) {
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('ollama-stream-data', data);
+        }
+      }
+      return;
+    }
+
+    const terminalWindow = getPlatformModule().getTerminalWindow();
+    if (terminalWindow && !terminalWindow.isDestroyed()) {
+      terminalWindow.webContents.send('ollama-stream-data', data);
+    }
+  }
+
+  function normalizeStreamingPayload(parsed) {
+    if (!parsed || typeof parsed !== 'object') return null;
+
+    const choice = Array.isArray(parsed.choices) ? parsed.choices[0] : null;
+    if (choice) {
+      const deltaContent = choice.delta && typeof choice.delta.content === 'string'
+        ? choice.delta.content
+        : '';
+      const messageContent = choice.message && typeof choice.message.content === 'string'
+        ? choice.message.content
+        : '';
+      const content = deltaContent || messageContent;
+      const done = Boolean(parsed.done || choice.finish_reason);
+      if (content || done) {
+        return {
+          model: parsed.model,
+          message: { role: 'assistant', content },
+          done
+        };
+      }
+      return null;
+    }
+
+    return parsed;
+  }
+
+  function parseStreamingLine(rawLine) {
+    let line = String(rawLine || '').trim();
+    if (!line || line.startsWith(':')) return null;
+    if (line.startsWith('data:')) line = line.slice(5).trim();
+    if (!line) return null;
+    if (line === '[DONE]') return { done: true };
+    return normalizeStreamingPayload(JSON.parse(line));
+  }
+
   async function checkOllamaRunning(port) {
     if (!port) return false;
 
@@ -124,28 +182,9 @@ function createCommonChatApi(deps = {}) {
           streamBuffer = lines.pop() || '';
 
           for (const rawLine of lines) {
-            const line = String(rawLine || '').trim();
-            if (!line) continue;
             try {
-              const data = JSON.parse(line);
-              data.port = port;
-
-              const allWindows = getPlatformModule().getAllTerminalWindows
-                ? getPlatformModule().getAllTerminalWindows()
-                : [];
-
-              if (allWindows.length > 0) {
-                for (const win of allWindows) {
-                  if (win && !win.isDestroyed()) {
-                    win.webContents.send('ollama-stream-data', data);
-                  }
-                }
-              } else {
-                const terminalWindow = getPlatformModule().getTerminalWindow();
-                if (terminalWindow && !terminalWindow.isDestroyed()) {
-                  terminalWindow.webContents.send('ollama-stream-data', data);
-                }
-              }
+              const data = parseStreamingLine(rawLine);
+              if (data) emitStreamData(port, data);
             } catch (err) {
               console.error('[Ollama Common] Failed to parse streaming chunk:', err);
             }
@@ -156,23 +195,8 @@ function createCommonChatApi(deps = {}) {
           const tail = String(streamBuffer || '').trim();
           if (tail) {
             try {
-              const data = JSON.parse(tail);
-              data.port = port;
-              const allWindows = getPlatformModule().getAllTerminalWindows
-                ? getPlatformModule().getAllTerminalWindows()
-                : [];
-              if (allWindows.length > 0) {
-                for (const win of allWindows) {
-                  if (win && !win.isDestroyed()) {
-                    win.webContents.send('ollama-stream-data', data);
-                  }
-                }
-              } else {
-                const terminalWindow = getPlatformModule().getTerminalWindow();
-                if (terminalWindow && !terminalWindow.isDestroyed()) {
-                  terminalWindow.webContents.send('ollama-stream-data', data);
-                }
-              }
+              const data = parseStreamingLine(tail);
+              if (data) emitStreamData(port, data);
             } catch (err) {
               console.error('[Ollama Common] Failed to parse stream tail chunk:', err);
             }
