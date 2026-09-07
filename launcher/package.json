@@ -1,6 +1,6 @@
 {
   "name": "psf-core-ce",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Pseudo Science Fiction Core Collection - Local LLM Toolkit",
   "main": "main.js",
   "scripts": {
