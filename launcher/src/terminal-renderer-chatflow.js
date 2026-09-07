@@ -405,6 +405,118 @@
       return false;
     }
 
+    async function tryRunRlm(message, localOnly, providerRuntime) {
+      if (getRlmAssisted() !== true || !shouldRunRlm(message)) return false;
+
+      setThinkingStatusText('Running RLM tools');
+      const activeProvider = String(providerRuntime?.provider || 'ollama').trim().toLowerCase();
+      const provider = activeProvider !== 'ollama'
+        ? 'engine'
+        : String(getRlmProvider() || 'legacy').trim().toLowerCase();
+      if (provider === 'engine') {
+        try {
+          const rlmResult = await runRlmTurn({
+            message,
+            conversationHistory: getConversationHistory(),
+            systemPrompt: getSystemPrompt() || '',
+            options: {
+              modelName: getCurrentModel(),
+              port: getTerminalPort(),
+              backendProvider: activeProvider,
+              providerBaseUrl: String(providerRuntime?.baseUrl || '').trim(),
+              providerModel: String(providerRuntime?.providerModel || '').trim(),
+              engineMode: 'mit-loop',
+              quality: getRlmQuality(),
+              budgets: getRlmBudgets(),
+              includeSharedAttachments: getRlmIncludeSharedAttachments(),
+              sharedAttachmentSessionId: 'terminal-shared'
+            }
+          });
+          if (rlmResult && rlmResult.handled) {
+            const rlmAnswer = localOnly ? `{local} ${rlmResult.answer}` : rlmResult.answer;
+            addMessage('assistant', rlmAnswer);
+            appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
+            const cov = rlmResult?.toolResult?.output?.coverage;
+            const coverageNote = cov && Number.isFinite(cov.processedRatio)
+              ? ` coverage=${Math.round(cov.processedRatio * 100)}% (${cov.processedChunks}/${cov.totalChunks} chunks)`
+              : '';
+            const traceTools = Array.isArray(rlmResult?.executedTools) && rlmResult.executedTools.length > 0
+              ? rlmResult.executedTools.join(' -> ')
+              : (Array.isArray(rlmResult?.steps) && rlmResult.steps.length > 0
+                ? rlmResult.steps.map((s) => s.tool).join(' -> ')
+                : (rlmResult?.plan?.tool || 'unknown'));
+            const stopNote = rlmResult?.stopReason ? ` stop=${rlmResult.stopReason}` : '';
+            const modeNote = rlmResult?.plan?.mode ? ` mode=${rlmResult.plan.mode}` : ' mode=engine';
+            addSystemMessage(`RLM Trace: tool=${traceTools} source=deterministic${coverageNote}${stopNote}`);
+            addSystemMessage(`RLM Engine:${modeNote}`);
+            if (rlmResult?.stopReason && STOP_REASON_MESSAGES[rlmResult.stopReason]) {
+              addSystemMessage(`RLM Notice: ${STOP_REASON_MESSAGES[rlmResult.stopReason]}`);
+            }
+            if (getRlmVerboseTrace() === true) {
+              if (rlmResult?.plan) {
+                addSystemMessage(`RLM Plan JSON: ${JSON.stringify(rlmResult.plan)}`);
+              }
+              if (Array.isArray(rlmResult?.trace)) {
+                rlmResult.trace.forEach((line) => addSystemMessage(`RLM Step: ${line}`));
+              }
+            }
+            setWaitingState(false);
+            focusInput();
+            return true;
+          }
+          if (rlmResult && rlmResult.error) {
+            addSystemMessage(`RLM engine fallback: ${rlmResult.error}`);
+          }
+        } catch (err) {
+          addSystemMessage(`RLM engine fallback: ${err.message || err}`);
+        }
+        return false;
+      }
+
+      const rlm = getRlmController();
+      if (rlm && typeof rlm.runSingleStep === 'function') {
+        try {
+          const rlmResult = await rlm.runSingleStep(message, getConversationHistory(), getSystemPrompt() || '');
+          if (rlmResult && rlmResult.handled) {
+            const rlmAnswer = localOnly ? `{local} ${rlmResult.answer}` : rlmResult.answer;
+            addMessage('assistant', rlmAnswer);
+            appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
+            const cov = rlmResult?.toolResult?.output?.coverage;
+            const coverageNote = cov && Number.isFinite(cov.processedRatio)
+              ? ` coverage=${Math.round(cov.processedRatio * 100)}% (${cov.processedChunks}/${cov.totalChunks} chunks)`
+              : '';
+            const traceTools = Array.isArray(rlmResult?.executedTools) && rlmResult.executedTools.length > 0
+              ? rlmResult.executedTools.join(' -> ')
+              : (Array.isArray(rlmResult?.steps) && rlmResult.steps.length > 0
+                ? rlmResult.steps.map((s) => s.tool).join(' -> ')
+                : (rlmResult?.plan?.tool || 'unknown'));
+            const stopNote = rlmResult?.stopReason ? ` stop=${rlmResult.stopReason}` : '';
+            addSystemMessage(`RLM Trace: tool=${traceTools} source=deterministic${coverageNote}${stopNote}`);
+            if (rlmResult?.stopReason && STOP_REASON_MESSAGES[rlmResult.stopReason]) {
+              addSystemMessage(`RLM Notice: ${STOP_REASON_MESSAGES[rlmResult.stopReason]}`);
+            }
+            if (getRlmVerboseTrace() === true) {
+              if (rlmResult?.plan) {
+                addSystemMessage(`RLM Plan JSON: ${JSON.stringify(rlmResult.plan)}`);
+              }
+              if (Array.isArray(rlmResult?.trace)) {
+                rlmResult.trace.forEach((line) => addSystemMessage(`RLM Step: ${line}`));
+              }
+            }
+            setWaitingState(false);
+            focusInput();
+            return true;
+          }
+          if (rlmResult && rlmResult.error) {
+            addSystemMessage(`RLM fallback: ${rlmResult.error}`);
+          }
+        } catch (err) {
+          addSystemMessage(`RLM fallback: ${err.message || err}`);
+        }
+      }
+      return false;
+    }
+
     async function sendMessage() {
       const userInput = getUserInput();
       let message = String(userInput?.value || '').trim();
@@ -471,6 +583,9 @@
       if (userInput) userInput.value = '';
 
       const providerRuntime = resolveProviderRuntime();
+      if (await tryRunRlm(message, localOnly, providerRuntime)) {
+        return;
+      }
       if (providerRuntime.provider !== 'ollama') {
         setThinkingStatusText(`Calling ${providerRuntime.provider}`);
         try {
@@ -509,108 +624,6 @@
           focusInput();
         }
         return;
-      }
-
-      if (getRlmAssisted() === true && shouldRunRlm(message)) {
-        setThinkingStatusText('Running RLM tools');
-        const provider = String(getRlmProvider() || 'legacy').trim().toLowerCase();
-        if (provider === 'engine') {
-          try {
-            const rlmResult = await runRlmTurn({
-              message,
-              conversationHistory: getConversationHistory(),
-              systemPrompt: getSystemPrompt() || '',
-              options: {
-                modelName: getCurrentModel(),
-                port: getTerminalPort(),
-                engineMode: 'mit-loop',
-                quality: getRlmQuality(),
-                budgets: getRlmBudgets(),
-                includeSharedAttachments: getRlmIncludeSharedAttachments(),
-                sharedAttachmentSessionId: 'terminal-shared'
-              }
-            });
-            if (rlmResult && rlmResult.handled) {
-              const rlmAnswer = localOnly ? `{local} ${rlmResult.answer}` : rlmResult.answer;
-              addMessage('assistant', rlmAnswer);
-              appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
-              const cov = rlmResult?.toolResult?.output?.coverage;
-              const coverageNote = cov && Number.isFinite(cov.processedRatio)
-                ? ` coverage=${Math.round(cov.processedRatio * 100)}% (${cov.processedChunks}/${cov.totalChunks} chunks)`
-                : '';
-              const traceTools = Array.isArray(rlmResult?.executedTools) && rlmResult.executedTools.length > 0
-                ? rlmResult.executedTools.join(' -> ')
-                : (Array.isArray(rlmResult?.steps) && rlmResult.steps.length > 0
-                  ? rlmResult.steps.map((s) => s.tool).join(' -> ')
-                  : (rlmResult?.plan?.tool || 'unknown'));
-              const stopNote = rlmResult?.stopReason ? ` stop=${rlmResult.stopReason}` : '';
-              const modeNote = rlmResult?.plan?.mode ? ` mode=${rlmResult.plan.mode}` : ' mode=engine';
-              addSystemMessage(`RLM Trace: tool=${traceTools} source=deterministic${coverageNote}${stopNote}`);
-              addSystemMessage(`RLM Engine:${modeNote}`);
-              if (rlmResult?.stopReason && STOP_REASON_MESSAGES[rlmResult.stopReason]) {
-                addSystemMessage(`RLM Notice: ${STOP_REASON_MESSAGES[rlmResult.stopReason]}`);
-              }
-              if (getRlmVerboseTrace() === true) {
-                if (rlmResult?.plan) {
-                  addSystemMessage(`RLM Plan JSON: ${JSON.stringify(rlmResult.plan)}`);
-                }
-                if (Array.isArray(rlmResult?.trace)) {
-                  rlmResult.trace.forEach((line) => addSystemMessage(`RLM Step: ${line}`));
-                }
-              }
-              setWaitingState(false);
-              focusInput();
-              return;
-            }
-            if (rlmResult && rlmResult.error) {
-              addSystemMessage(`RLM engine fallback: ${rlmResult.error}`);
-            }
-          } catch (err) {
-            addSystemMessage(`RLM engine fallback: ${err.message || err}`);
-          }
-        } else {
-          const rlm = getRlmController();
-          if (rlm && typeof rlm.runSingleStep === 'function') {
-            try {
-              const rlmResult = await rlm.runSingleStep(message, getConversationHistory(), getSystemPrompt() || '');
-              if (rlmResult && rlmResult.handled) {
-                const rlmAnswer = localOnly ? `{local} ${rlmResult.answer}` : rlmResult.answer;
-                addMessage('assistant', rlmAnswer);
-                appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
-                const cov = rlmResult?.toolResult?.output?.coverage;
-                const coverageNote = cov && Number.isFinite(cov.processedRatio)
-                  ? ` coverage=${Math.round(cov.processedRatio * 100)}% (${cov.processedChunks}/${cov.totalChunks} chunks)`
-                  : '';
-                const traceTools = Array.isArray(rlmResult?.executedTools) && rlmResult.executedTools.length > 0
-                  ? rlmResult.executedTools.join(' -> ')
-                  : (Array.isArray(rlmResult?.steps) && rlmResult.steps.length > 0
-                    ? rlmResult.steps.map((s) => s.tool).join(' -> ')
-                    : (rlmResult?.plan?.tool || 'unknown'));
-                const stopNote = rlmResult?.stopReason ? ` stop=${rlmResult.stopReason}` : '';
-                addSystemMessage(`RLM Trace: tool=${traceTools} source=deterministic${coverageNote}${stopNote}`);
-                if (rlmResult?.stopReason && STOP_REASON_MESSAGES[rlmResult.stopReason]) {
-                  addSystemMessage(`RLM Notice: ${STOP_REASON_MESSAGES[rlmResult.stopReason]}`);
-                }
-                if (getRlmVerboseTrace() === true) {
-                  if (rlmResult?.plan) {
-                    addSystemMessage(`RLM Plan JSON: ${JSON.stringify(rlmResult.plan)}`);
-                  }
-                  if (Array.isArray(rlmResult?.trace)) {
-                    rlmResult.trace.forEach((line) => addSystemMessage(`RLM Step: ${line}`));
-                  }
-                }
-                setWaitingState(false);
-                focusInput();
-                return;
-              }
-              if (rlmResult && rlmResult.error) {
-                addSystemMessage(`RLM fallback: ${rlmResult.error}`);
-              }
-            } catch (err) {
-              addSystemMessage(`RLM fallback: ${err.message || err}`);
-            }
-          }
-        }
       }
 
       const api = getElectronAPI();
