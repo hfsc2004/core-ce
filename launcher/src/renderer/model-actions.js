@@ -130,6 +130,15 @@ async function launchInOllama(collection, filename, projectorFilename = '', cata
     
     if (result.success) {
       const modelName = result.modelName || actualFilename.replace('.gguf', '');
+      const terminalLaunchOptions = String(result.provider || '').toLowerCase() === 'llama.cpp'
+        ? {
+            provider: 'llama.cpp',
+            modelPath: result.modelPath || modelPath,
+            llamaCppModelPath: result.llamaCppModelPath || result.modelPath || modelPath,
+            modelName,
+            forceCpu: result.forceCpu === true || forceCpu === true
+          }
+        : null;
       
       // Hide progress bar after success
       if (progressDiv) {
@@ -140,7 +149,7 @@ async function launchInOllama(collection, filename, projectorFilename = '', cata
       
       // Open terminal to interact with it - pass sessionId so we use the SAME Ollama instance
       const terminalResult = await window.electronAPI.openOllamaTerminal(
-        modelName, 0, result.port, collection, modelId, result.sessionId
+        modelName, 0, result.port, collection, modelId, terminalLaunchOptions
       );
       
       if (terminalResult.success) {

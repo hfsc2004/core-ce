@@ -220,6 +220,7 @@ function createSessionServiceLauncher(deps = {}) {
           ownerWindowId: Number.isFinite(Number(options.ownerWindowId)) ? Number(options.ownerWindowId) : null,
           modelPath: startResult.modelPath || options.modelPath || null,
           modelName: options.modelName || null,
+          logPath: startResult.logPath || null,
           chatTemplate: startResult.chatTemplate || options.chatTemplate || null,
           chatTemplateSource: startResult.chatTemplateSource || (options.chatTemplate ? 'explicit' : 'none'),
           gpuLayers: Number.isFinite(Number(options.gpuLayers)) ? Number(options.gpuLayers) : null,
@@ -242,6 +243,8 @@ function createSessionServiceLauncher(deps = {}) {
         sessionId,
         port: startPort,
         pid: startResult.pid,
+        logPath: startResult.logPath || null,
+        forceCpu: options.forceCpu === true,
         chatTemplate: startResult.chatTemplate || options.chatTemplate || null,
         chatTemplateSource: startResult.chatTemplateSource || (options.chatTemplate ? 'explicit' : 'none'),
         message: `llama.cpp started on port ${startPort} for ${serviceType}`

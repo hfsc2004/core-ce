@@ -18,6 +18,7 @@
   let providerApiKey = '';
   let providerModelId = '';
   let llamaCppModelPath = '';
+  let llamaCppForceCpu = false;
   let currentModel = null;
   let terminalPort = 52434;
   let attachmentSessionId = 'terminal-default';
@@ -357,7 +358,8 @@
         modelPath,
         modelName,
         contextSize: num_ctx,
-        gpuLayers: num_gpu
+        gpuLayers: num_gpu,
+        forceCpu: llamaCppForceCpu === true
       });
       meshPrewarmAtMs = Date.now();
       if (result?.success) {
@@ -690,6 +692,7 @@
         provider_api_key: providerApiKey,
         provider_model_id: providerModelId,
         llama_cpp_model_path: llamaCppModelPath,
+        llama_cpp_force_cpu: llamaCppForceCpu,
         systemPrompt,
         temperature,
         top_p,
@@ -707,7 +710,8 @@
           provider_base_url: payload.provider_base_url,
           provider_api_key: payload.provider_api_key,
           provider_model_id: payload.provider_model_id,
-          llama_cpp_model_path: payload.llama_cpp_model_path
+          llama_cpp_model_path: payload.llama_cpp_model_path,
+          llama_cpp_force_cpu: payload.llama_cpp_force_cpu
         }));
       } catch (_) {}
       if (!modelKey) return;
@@ -810,7 +814,10 @@
       getSystemPrompt: () => systemPrompt,
       setTemperature: (value) => { temperature = value; },
       getTemperature: () => temperature,
-      setProvider: (value) => { provider = String(value || 'ollama').trim().toLowerCase() || 'ollama'; },
+      setProvider: (value) => {
+        const raw = String(value || 'ollama').trim().toLowerCase();
+        provider = (raw === 'llamacpp' || raw === 'llama-cpp' || raw === 'llama.cpp') ? 'llama.cpp' : (raw || 'ollama');
+      },
       getProvider: () => provider,
       setProviderBaseUrl: (value) => { providerBaseUrl = String(value || '').trim(); },
       getProviderBaseUrl: () => providerBaseUrl,
@@ -820,6 +827,8 @@
       getProviderModelId: () => providerModelId,
       setLlamaCppModelPath: (value) => { llamaCppModelPath = String(value || '').trim(); },
       getLlamaCppModelPath: () => llamaCppModelPath,
+      setLlamaCppForceCpu: (value) => { llamaCppForceCpu = value === true; },
+      getLlamaCppForceCpu: () => llamaCppForceCpu,
       setTopP: (value) => { top_p = value; },
       getTopP: () => top_p,
       setTopK: (value) => { top_k = value; },
@@ -951,11 +960,12 @@
         const globalRaw = localStorage.getItem(GLOBAL_PROVIDER_PREFS_KEY);
         const globalPrefs = globalRaw ? JSON.parse(globalRaw) : null;
         if (globalPrefs && typeof globalPrefs === 'object') {
-          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider')) terminalConfig.provider = String(globalPrefs.provider || terminalConfig.provider || 'ollama');
+          if (!terminalConfig.providerExplicit && Object.prototype.hasOwnProperty.call(globalPrefs, 'provider')) terminalConfig.provider = String(globalPrefs.provider || terminalConfig.provider || 'ollama');
           if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_base_url')) terminalConfig.baseUrl = String(globalPrefs.provider_base_url || terminalConfig.baseUrl || '');
           if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_api_key')) terminalConfig.apiKey = String(globalPrefs.provider_api_key || terminalConfig.apiKey || '');
           if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_model_id')) terminalConfig.providerModel = String(globalPrefs.provider_model_id || terminalConfig.providerModel || '');
           if (Object.prototype.hasOwnProperty.call(globalPrefs, 'llama_cpp_model_path')) terminalConfig.llamaCppModelPath = String(globalPrefs.llama_cpp_model_path || terminalConfig.llamaCppModelPath || '');
+          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'llama_cpp_force_cpu')) terminalConfig.llamaCppForceCpu = globalPrefs.llama_cpp_force_cpu === true || terminalConfig.llamaCppForceCpu === true;
         }
       } catch (_) {}
       const preKey = String(terminalConfig?.modelName || '').trim();

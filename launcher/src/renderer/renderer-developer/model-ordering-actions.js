@@ -208,9 +208,18 @@ async function launchModelFromOrdering(collectionKey, filename, projectorFilenam
     
     if (result.success) {
       const modelName = result.modelName || actualFilename.replace('.gguf', '');
+      const terminalLaunchOptions = String(result.provider || '').toLowerCase() === 'llama.cpp'
+        ? {
+            provider: 'llama.cpp',
+            modelPath: result.modelPath || modelPath,
+            llamaCppModelPath: result.llamaCppModelPath || result.modelPath || modelPath,
+            modelName,
+            forceCpu: result.forceCpu === true || forceCpu === true
+          }
+        : null;
       
       // Open terminal
-      const terminalResult = await window.electronAPI.openOllamaTerminal(modelName, 0, result.port, collectionKey, modelId);
+      const terminalResult = await window.electronAPI.openOllamaTerminal(modelName, 0, result.port, collectionKey, modelId, terminalLaunchOptions);
       
       // Hide progress after success
       if (progressDiv) {

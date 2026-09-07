@@ -266,18 +266,20 @@ async function closeTerminalSession(windowId) {
  */
 async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlPath, gpuInfo, modelVramMB = 0, ollamaPort = null, modelConfig = null, terminalSessionId = null, terminalRuntime = null) {
   const { BrowserWindow, screen } = require('electron');
+  const provider = String(terminalRuntime?.provider || '').trim();
+  const isLlamaCppProvider = String(provider || '').toLowerCase() === 'llama.cpp';
 
   console.log(`[${LOG_PREFIX}] Opening terminal...`);
   console.log(`[${LOG_PREFIX}] Model: ${modelName}, Port: ${ollamaPort}`);
 
-  if (!ollamaPort) {
+  if (!ollamaPort && !isLlamaCppProvider) {
     console.log(`[${LOG_PREFIX}] No port provided - starting model server via session-manager...`);
     ollamaPort = await startOllamaServer(appPath, gpuInfo, 'terminal');
     console.log(`[${LOG_PREFIX}] Model server started on port ${ollamaPort}`);
   }
 
-  const sessionInfo = sessionStore.getPortSession(ollamaPort);
-  if (!sessionInfo) {
+  const sessionInfo = ollamaPort ? sessionStore.getPortSession(ollamaPort) : null;
+  if (ollamaPort && !sessionInfo) {
     console.warn(`[${LOG_PREFIX}] No session found for port ${ollamaPort} - server may have been started externally`);
   }
 
@@ -300,11 +302,13 @@ async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlP
   });
 
   const windowId = terminalWindow.id;
-  sessionStore.movePortSessionToWindow(ollamaPort, windowId, {
-    window: terminalWindow,
-    modelName,
-    sessionId: terminalSessionId || null
-  });
+  if (ollamaPort) {
+    sessionStore.movePortSessionToWindow(ollamaPort, windowId, {
+      window: terminalWindow,
+      modelName,
+      sessionId: terminalSessionId || null
+    });
+  }
 
   console.log(`[${LOG_PREFIX}] Terminal window ${windowId} -> model server port ${ollamaPort}`);
   console.log(`[${LOG_PREFIX}] Active terminal sessions: ${sessionStore.size()}`);
@@ -333,15 +337,16 @@ async function openOllamaTerminal(appPath, modelName, preloadPath, terminalHtmlP
     console.log(`[${LOG_PREFIX}] Including model config in terminal URL`);
   }
 
-  const provider = String(terminalRuntime?.provider || '').trim();
   const baseUrl = String(terminalRuntime?.baseUrl || '').trim();
   const providerModel = String(terminalRuntime?.providerModel || '').trim();
   const llamaCppModelPath = String(terminalRuntime?.llamaCppModelPath || '').trim();
+  const llamaCppForceCpu = terminalRuntime?.llamaCppForceCpu === true;
   if (provider) {
     url += `&provider=${encodeURIComponent(provider)}`;
     if (baseUrl) url += `&baseUrl=${encodeURIComponent(baseUrl)}`;
     if (providerModel) url += `&providerModel=${encodeURIComponent(providerModel)}`;
     if (llamaCppModelPath) url += `&llamaCppModelPath=${encodeURIComponent(llamaCppModelPath)}`;
+    if (llamaCppForceCpu) url += '&llamaCppForceCpu=1';
   }
 
   terminalWindow.loadURL(url);

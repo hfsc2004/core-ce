@@ -354,10 +354,12 @@
       gpuVram: urlParams.get('gpuVram') || '?',
       gpuUuid: urlParams.get('gpuUuid') || 'none',
       provider: urlParams.get('provider') || 'ollama',
+      providerExplicit: urlParams.has('provider'),
       baseUrl: urlParams.get('baseUrl') || '',
       apiKey: urlParams.get('apiKey') || '',
       providerModel: urlParams.get('providerModel') || '',
       llamaCppModelPath: urlParams.get('llamaCppModelPath') || '',
+      llamaCppForceCpu: urlParams.get('llamaCppForceCpu') === '1' || urlParams.get('llamaCppForceCpu') === 'true',
       // Modelfile parameters
       systemPrompt: urlParams.get('systemPrompt') || null,
       temperature: parseMaybeFloat('temperature'),

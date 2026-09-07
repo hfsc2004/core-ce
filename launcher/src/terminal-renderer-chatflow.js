@@ -26,6 +26,9 @@
     const getProviderApiKey = typeof deps?.getProviderApiKey === 'function' ? deps.getProviderApiKey : () => '';
     const getProviderModelId = typeof deps?.getProviderModelId === 'function' ? deps.getProviderModelId : () => '';
     const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
+    const getLlamaCppForceCpu = typeof deps?.getLlamaCppForceCpu === 'function' ? deps.getLlamaCppForceCpu : () => false;
+    const setTerminalPort = typeof deps?.setTerminalPort === 'function' ? deps.setTerminalPort : (() => {});
+    const setProviderBaseUrl = typeof deps?.setProviderBaseUrl === 'function' ? deps.setProviderBaseUrl : (() => {});
     const addAssistantShell = typeof deps?.addAssistantShell === 'function' ? deps.addAssistantShell : (() => null);
     const setActiveStream = typeof deps?.setActiveStream === 'function' ? deps.setActiveStream : (() => {});
     const getChatDisplay = typeof deps?.getChatDisplay === 'function' ? deps.getChatDisplay : () => null;
@@ -57,11 +60,11 @@
     };
     function normalizeProvider(value) {
       const raw = String(value || '').trim().toLowerCase();
-      if (raw === 'llamacpp') return 'llama.cpp';
+      if (raw === 'llamacpp' || raw === 'llama-cpp' || raw === 'llama.cpp') return 'llama.cpp';
       return raw || 'ollama';
     }
     function defaultBaseUrl(provider) {
-      if (provider === 'llama.cpp') return 'http://127.0.0.1:8080';
+      if (provider === 'llama.cpp') return '';
       if (provider === 'vllm') return 'http://127.0.0.1:8000';
       if (provider === 'openai-compatible') return 'http://127.0.0.1:8000';
       return '';
@@ -72,7 +75,8 @@
       const apiKey = String(getProviderApiKey() || '').trim();
       const providerModel = String(getProviderModelId() || '').trim();
       const llamaCppModelPath = String(getLlamaCppModelPath() || '').trim();
-      return { provider, baseUrl, apiKey, providerModel, llamaCppModelPath };
+      const llamaCppForceCpu = getLlamaCppForceCpu() === true;
+      return { provider, baseUrl, apiKey, providerModel, llamaCppModelPath, llamaCppForceCpu };
     }
     function isTransientProviderError(provider, message) {
       const p = String(provider || '').trim().toLowerCase();
@@ -107,6 +111,42 @@
       if (typeof parsed?.text === 'string') return parsed.text;
       return '';
     }
+    function applyLlamaCppChatDefaults(body, options = {}) {
+      if (!body || typeof body !== 'object') return body;
+      if (body.temperature === undefined || body.temperature === null || body.temperature === 0.7) {
+        body.temperature = 0.2;
+      }
+      if (body.max_tokens === undefined && options.num_predict === undefined) {
+        body.max_tokens = 256;
+      }
+      if (body.repeat_penalty === undefined && options.repeat_penalty === undefined) {
+        body.repeat_penalty = 1.08;
+      }
+      if (body.stop === undefined && options.stop === undefined) {
+        body.stop = [
+          '<|im_end|>',
+          '<|endoftext|>',
+          '<|fim_pad|>',
+          '<|repo_name|>',
+          '<|file_sep|>',
+          '\nUSER',
+          '\nASSISTANT'
+        ];
+      }
+      return body;
+    }
+    function normalizeLlamaCppMessages(messages = []) {
+      const rows = buildOpenAIStyleMessages(messages);
+      const hasSystem = rows.some((row) => String(row?.role || '').trim().toLowerCase() === 'system');
+      if (hasSystem) return rows;
+      return [
+        {
+          role: 'system',
+          content: 'You are a concise, helpful assistant. Reply in English unless the user explicitly asks for another language.'
+        },
+        ...rows
+      ];
+    }
     async function streamViaProvider(providerRuntime, messages = []) {
       const options = buildOllamaOptions();
       const model = String(providerRuntime.providerModel || getCurrentModel() || '').trim();
@@ -118,7 +158,7 @@
       if (providerRuntime.provider === 'exllamav2') {
         return { success: false, message: 'Provider "exllamav2" is not implemented yet in PSF Terminal.' };
       }
-      if (!endpointBase && providerRuntime.provider !== 'ollama') {
+      if (!endpointBase && providerRuntime.provider !== 'ollama' && providerRuntime.provider !== 'llama.cpp') {
         return { success: false, message: `Provider "${providerRuntime.provider}" requires Base URL.` };
       }
       if ((providerRuntime.provider === 'vllm' || providerRuntime.provider === 'openai-compatible') && !model) {
@@ -133,7 +173,8 @@
           modelPath: providerRuntime.llamaCppModelPath,
           modelName: model || '',
           contextSize: options?.num_ctx,
-          gpuLayers: options?.num_gpu
+          gpuLayers: options?.num_gpu,
+          forceCpu: providerRuntime.llamaCppForceCpu === true
         });
         if (!sessionResult?.success) {
           return {
@@ -146,18 +187,24 @@
         }
         const port = Number(sessionResult.port || sessionResult.ollamaPort || 0);
         endpointBase = String(sessionResult.baseUrl || (port > 0 ? `http://127.0.0.1:${port}` : '')).trim().replace(/\/+$/, '');
+        if (port > 0) setTerminalPort(port);
+        if (endpointBase) setProviderBaseUrl(endpointBase);
       }
 
       const body = {
         model: model || 'local-model',
-        messages: buildOpenAIStyleMessages(messages),
+        messages: providerRuntime.provider === 'llama.cpp'
+          ? normalizeLlamaCppMessages(messages)
+          : buildOpenAIStyleMessages(messages),
         temperature: options.temperature,
         stream: true
       };
       if (options.top_p !== undefined) body.top_p = options.top_p;
       if (options.top_k !== undefined) body.top_k = options.top_k;
       if (options.num_predict !== undefined) body.max_tokens = options.num_predict;
+      if (options.repeat_penalty !== undefined) body.repeat_penalty = options.repeat_penalty;
       if (options.stop !== undefined) body.stop = options.stop;
+      if (providerRuntime.provider === 'llama.cpp') applyLlamaCppChatDefaults(body, options);
 
       const assistantContentDiv = addAssistantShell();
       const abortController = new AbortController();
@@ -267,7 +314,7 @@
       if (providerRuntime.provider === 'exllamav2') {
         return { success: false, message: 'Provider "exllamav2" is not implemented yet in PSF Terminal.' };
       }
-      if (!endpointBase && providerRuntime.provider !== 'ollama') {
+      if (!endpointBase && providerRuntime.provider !== 'ollama' && providerRuntime.provider !== 'llama.cpp') {
         return { success: false, message: `Provider "${providerRuntime.provider}" requires Base URL.` };
       }
       if ((providerRuntime.provider === 'vllm' || providerRuntime.provider === 'openai-compatible') && !model) {
@@ -282,7 +329,8 @@
           modelPath: providerRuntime.llamaCppModelPath,
           modelName: model || '',
           contextSize: options?.num_ctx,
-          gpuLayers: options?.num_gpu
+          gpuLayers: options?.num_gpu,
+          forceCpu: providerRuntime.llamaCppForceCpu === true
         });
         if (!sessionResult?.success) {
           return {
@@ -295,18 +343,24 @@
         }
         const port = Number(sessionResult.port || sessionResult.ollamaPort || 0);
         endpointBase = String(sessionResult.baseUrl || (port > 0 ? `http://127.0.0.1:${port}` : '')).trim().replace(/\/+$/, '');
+        if (port > 0) setTerminalPort(port);
+        if (endpointBase) setProviderBaseUrl(endpointBase);
       }
 
       if (providerRuntime.provider === 'llama.cpp' || providerRuntime.provider === 'vllm' || providerRuntime.provider === 'openai-compatible') {
         const body = {
           model: model || 'local-model',
-          messages: buildOpenAIStyleMessages(messages),
+          messages: providerRuntime.provider === 'llama.cpp'
+            ? normalizeLlamaCppMessages(messages)
+            : buildOpenAIStyleMessages(messages),
           temperature: options.temperature
         };
         if (options.top_p !== undefined) body.top_p = options.top_p;
         if (options.top_k !== undefined) body.top_k = options.top_k;
         if (options.num_predict !== undefined) body.max_tokens = options.num_predict;
+        if (options.repeat_penalty !== undefined) body.repeat_penalty = options.repeat_penalty;
         if (options.stop !== undefined) body.stop = options.stop;
+        if (providerRuntime.provider === 'llama.cpp') applyLlamaCppChatDefaults(body, options);
         const response = await fetch(`${endpointBase}/v1/chat/completions`, {
           method: 'POST',
           headers,

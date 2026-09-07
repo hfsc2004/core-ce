@@ -14,21 +14,35 @@
  * Launch interface - called from Launch Interfaces screen buttons
  * @param {string} type - 'terminal', 'openwebui', or 'anythingllm'
  */
+async function copyThenAlert(message) {
+  const text = String(message || '');
+  try {
+    if (navigator?.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(text);
+    }
+  } catch (_) {
+    // Clipboard is best-effort; keep showing the existing alert either way.
+  }
+  alert(text);
+}
+
 async function launchInterface(type) {
   try {
     console.log(`[launchInterface] Launching ${type}...`);
     
     if (type === 'terminal') {
-      const launchOptions = (() => {
+      const launchOptions = await (async () => {
         try {
           const raw = localStorage.getItem('psf_terminal_provider_defaults');
           const parsed = raw ? JSON.parse(raw) : null;
-          if (!parsed || typeof parsed !== 'object') return null;
+          const settings = window.electronAPI?.getSettings ? await window.electronAPI.getSettings() : null;
+          const provider = String(settings?.inference_backend || parsed?.provider || '').trim();
+          if (!provider && (!parsed || typeof parsed !== 'object')) return null;
           return {
-            provider: String(parsed.provider || '').trim(),
-            baseUrl: String(parsed.provider_base_url || '').trim(),
-            providerModel: String(parsed.provider_model_id || '').trim(),
-            llamaCppModelPath: String(parsed.llama_cpp_model_path || '').trim()
+            provider,
+            baseUrl: String(parsed?.provider_base_url || '').trim(),
+            providerModel: String(parsed?.provider_model_id || '').trim(),
+            llamaCppModelPath: String(parsed?.llama_cpp_model_path || '').trim()
           };
         } catch (_) {
           return null;
@@ -36,10 +50,10 @@ async function launchInterface(type) {
       })();
       const provider = String(launchOptions?.provider || '').trim().toLowerCase();
 
-      if (provider === 'llama.cpp') {
+      if (provider === 'llama.cpp' || provider === 'llama-cpp' || provider === 'llamacpp') {
         const terminalResult = await window.electronAPI.openOllamaTerminal('', 0, null, '', '', launchOptions);
         if (!terminalResult?.success) {
-          alert(`Failed to start llama.cpp terminal session:\n${terminalResult?.message || 'Unknown error'}`);
+          await copyThenAlert(`Failed to start llama.cpp terminal session:\n${terminalResult?.message || 'Unknown error'}`);
         }
       } else {
         // Launch PSF Terminal through existing Ollama path.
@@ -74,7 +88,7 @@ async function launchInterface(type) {
     
   } catch (err) {
     console.error('[launchInterface] Error:', err);
-    alert(`Failed to launch interface:\n${err.message}`);
+    await copyThenAlert(`Failed to launch interface:\n${err.message}`);
   }
 }
 
