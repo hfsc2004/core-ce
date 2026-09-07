@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.5 Core-CE] - 2026-09-07
+
+### Added
+- Added direct RLM engine regression coverage for deterministic attachment summaries, shared attachment opt-in, no-attachment handling, and mocked model-backed code generation.
+- Added terminal chatflow regression coverage proving RLM-assisted llama.cpp attachment requests route to the RLM engine before provider streaming.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.5`.
+- Routed RLM-assisted attachment requests before backend streaming so llama.cpp terminals can use the deterministic RLM engine.
+
+### Fixed
+- Fixed RLM-assisted mode being bypassed whenever PSF Terminal was using a non-Ollama backend.
+
 ## [v1.1.4 Core-CE] - 2026-09-07
 
 ### Added
