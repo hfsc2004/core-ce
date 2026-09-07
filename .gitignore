@@ -31,5 +31,6 @@ huggingface.token
 hf_token.txt
 # Private local planning notes
 /TODO.private.md
+/RML_MIT.pdf
 /Screenshot at *.png
 /.gitignore.bak
