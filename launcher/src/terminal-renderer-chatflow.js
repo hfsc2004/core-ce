@@ -102,13 +102,42 @@
         content: String(m?.content || '')
       }));
     }
+    function extractProviderMessage(parsed = {}) {
+      const choice = parsed?.choices?.[0] || {};
+      return String(
+        choice?.message?.content ||
+        choice?.message?.reasoning_content ||
+        choice?.message?.reasoning ||
+        choice?.message?.thinking ||
+        choice?.text ||
+        choice?.delta?.content ||
+        choice?.delta?.reasoning_content ||
+        choice?.delta?.reasoning ||
+        parsed?.message?.content ||
+        parsed?.message?.reasoning_content ||
+        parsed?.message?.reasoning ||
+        parsed?.message?.thinking ||
+        parsed?.content ||
+        parsed?.text ||
+        parsed?.response ||
+        ''
+      );
+    }
     function extractProviderDelta(parsed = {}) {
       const choice = parsed?.choices?.[0] || {};
       const delta = choice?.delta;
       if (delta && typeof delta.content === 'string') return delta.content;
+      if (delta && typeof delta.reasoning_content === 'string') return delta.reasoning_content;
+      if (delta && typeof delta.reasoning === 'string') return delta.reasoning;
+      if (delta && typeof delta.thinking === 'string') return delta.thinking;
       if (choice?.message && typeof choice.message.content === 'string') return choice.message.content;
+      if (choice?.message && typeof choice.message.reasoning_content === 'string') return choice.message.reasoning_content;
+      if (choice?.message && typeof choice.message.reasoning === 'string') return choice.message.reasoning;
+      if (choice?.message && typeof choice.message.thinking === 'string') return choice.message.thinking;
+      if (typeof choice?.text === 'string') return choice.text;
       if (typeof parsed?.content === 'string') return parsed.content;
       if (typeof parsed?.text === 'string') return parsed.text;
+      if (typeof parsed?.response === 'string') return parsed.response;
       return '';
     }
     function applyLlamaCppChatDefaults(body, options = {}) {
@@ -239,7 +268,7 @@
         const text = await response.text();
         let parsed = {};
         try { parsed = JSON.parse(text || '{}'); } catch {}
-        const content = String(parsed?.choices?.[0]?.message?.content || '').trim();
+        const content = extractProviderMessage(parsed).trim();
         if (!content) return { success: false, message: 'No assistant content returned by provider.' };
         return { success: true, message: content };
       }
@@ -374,7 +403,7 @@
         try { parsed = JSON.parse(text || '{}'); } catch {
           return { success: false, message: 'Provider returned non-JSON response.' };
         }
-        const content = String(parsed?.choices?.[0]?.message?.content || '').trim();
+        const content = extractProviderMessage(parsed).trim();
         if (!content) return { success: false, message: 'No assistant content returned by provider.' };
         return { success: true, message: content };
       }

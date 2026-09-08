@@ -14,8 +14,13 @@ This release focuses on PSF Terminal's existing RLM-named attachment tool routin
 2. Regression coverage
 - Added direct engine coverage for no-attachment handling, deterministic attachment summaries, shared attachment opt-in, and mocked model-backed code generation.
 - Added terminal chatflow coverage proving llama.cpp attachment-tool requests call `rlm:run-turn` before provider streaming or BMOC llama.cpp startup.
+- Added terminal chatflow coverage for reasoning/thinking-only provider stream chunks so similar OpenAI-compatible models do not appear to return empty answers.
 
-3. Revision metadata
+3. Provider compatibility
+- PSF Terminal now extracts assistant output from `content`, `reasoning_content`, `reasoning`, `thinking`, `text`, and top-level response fields for streaming and non-streaming OpenAI-compatible provider responses.
+- The extraction is provider-response-shape based, not model-name based, so it applies to llama.cpp, vLLM, and other OpenAI-compatible backends with similar response fields.
+
+4. Revision metadata
 - Bumped PSF Core CE package and active catalog revision metadata to `1.1.5`.
 
 ## Validation

@@ -19,6 +19,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Fixed
 - Fixed the existing RLM-named attachment assistance mode being bypassed whenever PSF Terminal was using a non-Ollama backend.
+- Fixed PSF Terminal treating OpenAI-compatible provider responses as empty when models emit output through `reasoning_content`, `reasoning`, `thinking`, `text`, or top-level response fields instead of `message.content`.
 
 ## [v1.1.4 Core-CE] - 2026-09-07
 
