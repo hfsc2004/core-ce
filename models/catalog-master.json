@@ -921,6 +921,51 @@
               "reliability": 0.15
             }
           }
+        },
+        {
+          "id": "gemma-4-e2b-it-gguf",
+          "name": "gemma-4-E2B-it-GGUF",
+          "model_family": null,
+          "organization": "ggml-org",
+          "version": null,
+          "description": "Gemma 4 models are designed to deliver frontier level performance at each size, targeting deployment scenarios from mobile and edge devices (E2B, E4B) to consumer GPUs and workstations (12B, 26B A4B, 31B).",
+          "url": "https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF",
+          "download_url": "https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q8_0.gguf?download=true",
+          "filename": "gemma-4-E2B-it-Q8_0.gguf",
+          "huggingface_repo": "ggml-org/gemma-4-E2B-it-GGUF",
+          "size_mb": 4738,
+          "file_size_bytes": 4967497152,
+          "quantization": "Q8_0",
+          "context_length": 131072,
+          "parameters": "2B",
+          "architecture": "gemma4",
+          "supports_vision": true,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "supports_stt": false,
+          "supports_tts": false,
+          "min_ram_gb": 12,
+          "recommended_ram_gb": 15,
+          "gpu_layers": 35,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": "gemma4-e2b-it_Q8",
+          "base_model_url": "https://huggingface.co/google/gemma-4-E2B-it",
+          "hidden_size": 1536,
+          "num_layers": 35,
+          "num_kv_heads": 1,
+          "num_attention_heads": 8,
+          "sha256": "996d08777aadc6bfd3c7375ef70ba25a0f55240075860754fdb18d6d860aa63a",
+          "checksums": {
+            "main": "996d08777aadc6bfd3c7375ef70ba25a0f55240075860754fdb18d6d860aa63a",
+            "projector": "9406f99c16d68cda4f1f0552192dcc99021ea1fc6d2fd50b1dc3ccf30d04b292",
+            "files": {
+              "gemma-4-E2B-it-Q8_0.gguf": "996d08777aadc6bfd3c7375ef70ba25a0f55240075860754fdb18d6d860aa63a"
+            }
+          },
+          "projector_url": "https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/mmproj-gemma-4-E2B-it-Q8_0.gguf?download=true",
+          "projector_filename": "mmproj-gemma-4-E2B-it-Q8_0.gguf",
+          "projector_sha256": "9406f99c16d68cda4f1f0552192dcc99021ea1fc6d2fd50b1dc3ccf30d04b292"
         }
       ]
     },

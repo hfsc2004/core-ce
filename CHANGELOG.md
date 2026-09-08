@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.9 Core-CE] - 2026-09-08
+
+### Added
+- Added Qwen3.8 4B Distill Q8_0 GGUF catalog metadata.
+- Added Gemma 4 E2B IT Q8_0 GGUF catalog metadata.
+
+### Changed
+- Bumped package revision metadata to `1.1.9`.
+- Updated active catalog files only; local catalog backup files remain untracked/uncommitted.
+
 ## [v1.1.8 Core-CE] - 2026-09-08
 
 ### Changed
