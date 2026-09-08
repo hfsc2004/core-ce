@@ -526,6 +526,19 @@ body {
   word-break: break-word;
 }
 
+.message-thinking {
+  color: #6f8193;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13.92px;
+  line-height: 1.45;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-left: 2px solid rgba(88, 166, 255, 0.35);
+  background: rgba(88, 166, 255, 0.05);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .message-content p {
   margin: 0.4em 0;
 }
