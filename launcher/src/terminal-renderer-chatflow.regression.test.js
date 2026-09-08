@@ -12,6 +12,7 @@ function loadChatFlowController(fetchImpl) {
     clearTimeout,
     AbortController,
     TextDecoder,
+    performance: { now: () => Date.now() },
     document: {
       createElement: () => ({ className: '', textContent: '', parentElement: null })
     },
@@ -314,12 +315,97 @@ async function testLlamaCppRejectsOversizedCurrentPrompt() {
   assert.ok(errorMessage.includes('Reduce the current message'));
 }
 
+async function testOrdinaryChatSkipsAttachmentContext() {
+  const sse = [
+    'data: {"choices":[{"delta":{"content":"hello"}}]}',
+    'data: [DONE]',
+    ''
+  ].join('\n');
+  let attachmentContextCalled = false;
+  const createChatFlowController = loadChatFlowController(async () => ({
+    ok: true,
+    status: 200,
+    body: {
+      getReader: () => {
+        let sent = false;
+        return {
+          async read() {
+            if (sent) return { done: true };
+            sent = true;
+            return { done: false, value: Buffer.from(sse, 'utf8') };
+          },
+          releaseLock() {}
+        };
+      }
+    }
+  }));
+  const userInput = { value: 'Tell me a story about ants' };
+  let activeStream = null;
+  const shell = { textContent: '', parentElement: { querySelector: () => null, insertBefore() {} } };
+  const subject = createChatFlowController({
+    getUserInput: () => userInput,
+    addInputRecallEntry: () => {},
+    handleCommand: async () => {},
+    getActiveStream: () => activeStream,
+    setWaitingState: () => {},
+    addSystemMessage: () => {},
+    addMessage: () => {},
+    getSystemPrompt: () => '',
+    buildAttachmentContext: async () => {
+      attachmentContextCalled = true;
+      return '';
+    },
+    shouldInjectAttachmentContext: () => false,
+    getConversationHistory: () => [],
+    appendConversationPair: () => {},
+    getCurrentModel: () => 'Qwen3.8-4B-Q8_0.gguf',
+    buildOllamaOptions: () => ({ num_ctx: 4096, num_gpu: 34 }),
+    getProvider: () => 'llama.cpp',
+    getProviderBaseUrl: () => '',
+    getProviderApiKey: () => '',
+    getProviderModelId: () => '',
+    getLlamaCppModelPath: () => '/tmp/Qwen3.8-4B-Q8_0.gguf',
+    getLlamaCppForceCpu: () => false,
+    setTerminalPort: () => {},
+    setProviderBaseUrl: () => {},
+    addAssistantShell: () => shell,
+    setActiveStream: (value) => { activeStream = value; },
+    getChatDisplay: () => ({ scrollTop: 0, scrollHeight: 0 }),
+    finalizeStreamingMessage: () => {},
+    getTerminalPort: () => 52454,
+    getElectronAPI: () => ({
+      ensureTerminalLlamaCppSession: async () => ({ success: true, reused: true, port: 52454 })
+    }),
+    sanitizeQwenSelfDialogue: (value) => String(value || ''),
+    addErrorMessage: (message) => {
+      throw new Error(message);
+    },
+    focusInput: () => {},
+    setStreamStopRequested: () => {},
+    getStreamStopRequested: () => false,
+    getRlmAssisted: () => false,
+    getRlmController: () => null,
+    getRlmProvider: () => 'legacy',
+    runRlmTurn: async () => ({ handled: false }),
+    getRlmVerboseTrace: () => false,
+    getRlmQuality: () => 'balanced',
+    getRlmBudgets: () => ({}),
+    getRlmIncludeSharedAttachments: () => false,
+    setThinkingStatusText: () => {}
+  });
+
+  await subject.sendMessage();
+
+  assert.strictEqual(attachmentContextCalled, false);
+}
+
 async function run() {
   await testRlmRunsBeforeLlamaCppProvider();
   await testLlamaCppThinkingAndAnswerStaySeparate();
   await testLlamaCppThinkingOnlyStreamIsNotAnswer();
   await testLlamaCppDropsOldHistoryWhenContextIsTight();
   await testLlamaCppRejectsOversizedCurrentPrompt();
+  await testOrdinaryChatSkipsAttachmentContext();
   console.log('terminal-renderer-chatflow regression tests passed');
 }
 

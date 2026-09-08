@@ -7,6 +7,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.8 Core-CE] - 2026-09-08
+
+### Changed
+- Bumped package revision metadata to `1.1.8`.
+- Tightened llama.cpp startup readiness so PSF Terminal waits for a real ready `/health` response instead of treating early loading responses as ready.
+- Reduced pre-provider work in PSF Terminal by skipping attachment context and image attachment scans for ordinary chat turns.
+- Added lightweight PSF Terminal timing logs for request preparation, BMOC llama.cpp session ensure, prompt estimate, provider response headers, and first stream chunk.
+
+### Fixed
+- Fixed a slow first-message path where llama.cpp could still be loading after Terminal opened, causing provider warmup delays before inference began.
+- Fixed unconditional attachment IPC/audit work before normal chat prompts.
+
 ## [v1.1.7 Core-CE] - 2026-09-08
 
 ### Changed

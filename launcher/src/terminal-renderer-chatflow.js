@@ -17,6 +17,7 @@
     const getSystemPrompt = typeof deps?.getSystemPrompt === 'function' ? deps.getSystemPrompt : () => null;
     const buildAttachmentContext = typeof deps?.buildAttachmentContext === 'function' ? deps.buildAttachmentContext : (async () => '');
     const shouldInjectAttachmentContext = typeof deps?.shouldInjectAttachmentContext === 'function' ? deps.shouldInjectAttachmentContext : (() => false);
+    const hasKnownAttachments = typeof deps?.hasKnownAttachments === 'function' ? deps.hasKnownAttachments : (() => false);
     const getConversationHistory = typeof deps?.getConversationHistory === 'function' ? deps.getConversationHistory : () => [];
     const appendConversationPair = typeof deps?.appendConversationPair === 'function' ? deps.appendConversationPair : (() => {});
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => null;
@@ -102,6 +103,19 @@
         return { maxAttempts: 25, delayMs: 5000 };
       }
       return { maxAttempts: 1, delayMs: 0 };
+    }
+    function nowMs() {
+      try {
+        if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+          return performance.now();
+        }
+      } catch (_) {}
+      return Date.now();
+    }
+    function logTiming(stage, startedAt, details = '') {
+      const elapsed = Math.round(nowMs() - startedAt);
+      const suffix = details ? ` ${details}` : '';
+      console.log(`[Terminal Timing] ${stage}: ${elapsed}ms${suffix}`);
     }
     function buildOpenAIStyleMessages(messages = []) {
       return (Array.isArray(messages) ? messages : []).map((m) => ({
@@ -276,6 +290,7 @@
         if (!api || typeof api.ensureTerminalLlamaCppSession !== 'function') {
           return { success: false, message: 'BMOC llama.cpp session API is unavailable in this build.' };
         }
+        const ensureStartedAt = nowMs();
         const sessionResult = await api.ensureTerminalLlamaCppSession({
           modelPath: providerRuntime.llamaCppModelPath,
           modelName: model || '',
@@ -283,6 +298,7 @@
           gpuLayers: options?.num_gpu,
           forceCpu: providerRuntime.llamaCppForceCpu === true
         });
+        logTiming('llama.cpp session ensure', ensureStartedAt, `reused=${sessionResult?.reused === true} port=${Number(sessionResult?.port || sessionResult?.ollamaPort || 0) || 'n/a'}`);
         if (!sessionResult?.success) {
           return {
             success: false,
@@ -301,6 +317,9 @@
       const providerMessages = providerRuntime.provider === 'llama.cpp'
         ? fitMessagesToContext(normalizeLlamaCppMessages(messages), options)
         : { messages: buildOpenAIStyleMessages(messages), trimmed: 0, tooLarge: false };
+      if (providerRuntime.provider === 'llama.cpp') {
+        console.log(`[Terminal Timing] llama.cpp prompt estimate: ${Number(providerMessages.estimatedTokens || 0)} tokens, messages=${providerMessages.messages.length}, trimmed=${providerMessages.trimmed || 0}`);
+      }
       if (providerMessages.tooLarge) {
         return { success: false, message: buildPromptTooLargeMessage(providerMessages) };
       }
@@ -334,12 +353,14 @@
 
       let response;
       try {
+        const fetchStartedAt = nowMs();
         response = await fetch(`${endpointBase}/v1/chat/completions`, {
           method: 'POST',
           headers,
           body: JSON.stringify(body),
           signal: abortController.signal
         });
+        logTiming('provider response headers', fetchStartedAt, `status=${response?.status || 'n/a'}`);
       } catch (err) {
         if (abortController.signal.aborted || getStreamStopRequested()) {
           return { success: false, stopped: true, message: 'Generation stopped.' };
@@ -369,6 +390,8 @@
       let full = '';
       let thinking = '';
       let doneSeen = false;
+      let firstChunkSeen = false;
+      const streamStartedAt = nowMs();
       try {
         while (true) {
           if (getStreamStopRequested()) {
@@ -377,6 +400,10 @@
           }
           const { value, done } = await reader.read();
           if (done) break;
+          if (!firstChunkSeen) {
+            firstChunkSeen = true;
+            logTiming('first stream chunk', streamStartedAt);
+          }
           buffer += decoder.decode(value, { stream: true });
           let lineBreak;
           while ((lineBreak = buffer.indexOf('\n')) >= 0) {
@@ -695,6 +722,7 @@
         addSystemMessage('Local-only turn: response will stay in this terminal.');
       }
       addMessage('user', message);
+      const turnStartedAt = nowMs();
 
       const messages = [];
       const systemParts = [];
@@ -702,10 +730,15 @@
       if (systemPrompt) {
         systemParts.push(systemPrompt);
       }
-      setThinkingStatusText('Reading attachments');
-      const attachmentContext = await buildAttachmentContext();
-      if (attachmentContext && shouldInjectAttachmentContext(message)) {
-        systemParts.push(`Attached context (verbatim snippets from user-attached files):\n${attachmentContext}`);
+      const shouldReadAttachmentContext = shouldInjectAttachmentContext(message) || hasKnownAttachments();
+      if (shouldReadAttachmentContext) {
+        setThinkingStatusText('Reading attachments');
+        const attachmentsStartedAt = nowMs();
+        const attachmentContext = await buildAttachmentContext();
+        logTiming('attachment context', attachmentsStartedAt, `used=${Boolean(attachmentContext)}`);
+        if (attachmentContext) {
+          systemParts.push(`Attached context (verbatim snippets from user-attached files):\n${attachmentContext}`);
+        }
       }
       if (systemParts.length > 0) {
         messages.push({ role: 'system', content: systemParts.join('\n\n') });
@@ -713,13 +746,14 @@
       messages.push(...getConversationHistory());
       messages.push({ role: 'user', content: message });
 
-      const imagePayload = await buildImagePayloadForUserMessage({
+      const imageIntent = /\b(image|images|picture|pictures|photo|photos|screenshot|screenshots|vision|look at|see this)\b/i.test(message);
+      const imagePayload = imageIntent ? await buildImagePayloadForUserMessage({
         api: getElectronAPI(),
         port: getTerminalPort(),
         modelName: getCurrentModel(),
         setThinkingStatusText,
         addSystemMessage
-      });
+      }) : null;
       if (imagePayload && imagePayload.images && imagePayload.images.length > 0) {
         messages[messages.length - 1].images = imagePayload.images;
       }
@@ -727,9 +761,13 @@
       if (userInput) userInput.value = '';
 
       const providerRuntime = resolveProviderRuntime();
+      const rlmStartedAt = nowMs();
       if (await tryRunRlm(message, localOnly, providerRuntime)) {
+        logTiming('rlm handled', rlmStartedAt);
         return;
       }
+      logTiming('rlm skipped/fallback', rlmStartedAt);
+      logTiming('pre-provider request build', turnStartedAt);
       if (providerRuntime.provider !== 'ollama') {
         setThinkingStatusText(`Calling ${providerRuntime.provider}`);
         try {

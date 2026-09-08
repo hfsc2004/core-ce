@@ -248,33 +248,41 @@ function inferChatTemplate(appDir, options = {}) {
   return { value: null, source: 'none' };
 }
 
-function pingEndpoint(url, timeoutMs = 2000) {
+function probeEndpoint(url, timeoutMs = 2000) {
   return new Promise((resolve) => {
     const req = http.get(url, (res) => {
       res.resume();
-      resolve(res.statusCode >= 200 && res.statusCode < 500);
+      resolve({ ok: true, statusCode: Number(res.statusCode || 0) });
     });
-    req.on('error', () => resolve(false));
+    req.on('error', () => resolve({ ok: false, statusCode: 0 }));
     req.setTimeout(timeoutMs, () => {
       req.destroy();
-      resolve(false);
+      resolve({ ok: false, statusCode: 0 });
     });
   });
 }
 
 async function checkServerReady(port, timeoutMs = 600000) {
   const startedAt = Date.now();
-  const endpoints = [
-    `http://127.0.0.1:${port}/health`,
+  const healthEndpoint = `http://127.0.0.1:${port}/health`;
+  const fallbackEndpoints = [
     `http://127.0.0.1:${port}/v1/models`,
     `http://127.0.0.1:${port}/`
   ];
 
   while ((Date.now() - startedAt) <= timeoutMs) {
-    for (const endpoint of endpoints) {
-      // eslint-disable-next-line no-await-in-loop
-      const ok = await pingEndpoint(endpoint, 2000);
-      if (ok) return true;
+    // eslint-disable-next-line no-await-in-loop
+    const health = await probeEndpoint(healthEndpoint, 2000);
+    if (health.statusCode >= 200 && health.statusCode < 300) return true;
+
+    // Newer llama.cpp exposes /health and returns 503 while the model is still
+    // loading. Only fall back to older probes if /health is unavailable.
+    if (health.statusCode === 404 || health.statusCode === 405) {
+      for (const endpoint of fallbackEndpoints) {
+        // eslint-disable-next-line no-await-in-loop
+        const probe = await probeEndpoint(endpoint, 2000);
+        if (probe.statusCode >= 200 && probe.statusCode < 300) return true;
+      }
     }
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => setTimeout(resolve, 1000));
