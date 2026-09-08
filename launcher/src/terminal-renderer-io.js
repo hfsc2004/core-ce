@@ -81,6 +81,12 @@
       return attachmentController.buildAttachmentContext();
     }
 
+    function hasKnownAttachments() {
+      const attachmentController = getAttachmentController();
+      if (!attachmentController || typeof attachmentController.hasKnownAttachments !== 'function') return false;
+      return attachmentController.hasKnownAttachments() === true;
+    }
+
     function formatBytes(bytes) {
       const value = Number(bytes);
       if (!Number.isFinite(value) || value <= 0) return '0 B';
@@ -190,6 +196,7 @@
       clearAttachments,
       openAttachmentManager,
       buildAttachmentContext,
+      hasKnownAttachments,
       formatBytes,
       handleInputKeypress,
       handleStopClick,

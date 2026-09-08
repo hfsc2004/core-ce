@@ -16,6 +16,7 @@
     const formatBytes = typeof deps?.formatBytes === 'function' ? deps.formatBytes : ((v) => `${v || 0} B`);
     let activeBucketId = '';
     let bucketLoaded = false;
+    let knownAttachmentCount = 0;
 
     function normalizeBucketId(value) {
       return String(value || '')
@@ -57,6 +58,7 @@
     function setAttachmentBucketId(bucketId) {
       ensureBucketLoaded();
       activeBucketId = normalizeBucketId(bucketId);
+      knownAttachmentCount = 0;
       try {
         if (activeBucketId) {
           window.localStorage?.setItem?.(bucketStorageKey(), activeBucketId);
@@ -67,6 +69,16 @@
         // Ignore storage failures.
       }
       return activeBucketId;
+    }
+
+    function noteAttachmentAdded(att = {}) {
+      if (!att || !att.id) return;
+      if (knownAttachmentCount <= 0) knownAttachmentCount = 1;
+      else if (!att.duplicate) knownAttachmentCount += 1;
+    }
+
+    function hasKnownAttachments() {
+      return knownAttachmentCount > 0;
     }
 
     function normalizeAttachmentArg(raw) {
@@ -150,6 +162,7 @@
           return;
         }
         const att = result.attachment || {};
+        noteAttachmentAdded(att);
         if (att.duplicate) {
           addSystemMessage(`ℹ️ Already attached: ${att.displayName || sourcePath} (id=${att.id || '?'})`);
         } else {
@@ -179,6 +192,7 @@
           return;
         }
         const att = result.attachment || {};
+        noteAttachmentAdded(att);
         if (att.duplicate) {
           addSystemMessage(`ℹ️ Already attached: ${att.displayName || displayName} (id=${att.id || '?'})`);
         } else {
@@ -207,6 +221,7 @@
           return;
         }
         const att = result.attachment || {};
+        noteAttachmentAdded(att);
         if (att.duplicate) {
           addSystemMessage(`ℹ️ Already attached: ${att.displayName || displayName} (id=${att.id || '?'})`);
         } else {
@@ -247,6 +262,7 @@
           addErrorMessage(`Detach failed: ${result?.error || result?.message || 'not found'}`);
           return;
         }
+        knownAttachmentCount = Math.max(0, knownAttachmentCount - 1);
         addSystemMessage(`Removed attachment: ${attachmentId}`);
       } catch (err) {
         addErrorMessage(`Detach failed: ${err.message || err}`);
@@ -267,6 +283,7 @@
           addErrorMessage(`Clear attachments failed: ${result?.error || result?.message || 'unknown error'}`);
           return;
         }
+        knownAttachmentCount = 0;
         addSystemMessage('🧹 Cleared all attachments for this terminal session.');
       } catch (err) {
         addErrorMessage(`Clear attachments failed: ${err.message || err}`);
@@ -316,6 +333,9 @@
           maxChars: 24 * 1024
         });
         if (!result || result.success === false) return '';
+        if (Number.isFinite(Number(result.totalAttachments))) {
+          knownAttachmentCount = Math.max(0, Number(result.totalAttachments) || 0);
+        }
         return String(result.contextText || '');
       } catch (_) {
         return '';
@@ -338,6 +358,7 @@
       closeAttachmentManager,
       openAttachmentManager,
       buildAttachmentContext,
+      hasKnownAttachments,
       getAttachmentTarget,
       getAttachmentBucketId,
       setAttachmentBucketId

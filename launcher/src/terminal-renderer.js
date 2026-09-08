@@ -167,6 +167,7 @@
   async function clearAttachments() { await callAsync(ioController, 'clearAttachments'); }
   async function openAttachmentManager() { await callAsync(ioController, 'openAttachmentManager'); }
   async function buildAttachmentContext() { return callAsync(ioController, 'buildAttachmentContext', ''); }
+  function hasKnownAttachments() { return call(ioController, 'hasKnownAttachments', false); }
   function clearConversation() {
     conversationHistory.length = 0;
     chatDisplay.innerHTML = '';
@@ -921,6 +922,7 @@
       addInputRecallEntry,
       handleCommand,
       buildAttachmentContext,
+      hasKnownAttachments,
       shouldInjectAttachmentContext,
       buildOllamaOptions,
       addAssistantShell,

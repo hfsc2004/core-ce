@@ -81,7 +81,7 @@
       if (/(file|files|doc|docs|document|attachment|attached|pdf|markdown|md|read|summari[sz]e|analy[sz]e|review|inspect|based on|from the file|from attachments?)/i.test(lower)) {
         return true;
       }
-      return true;
+      return false;
     }
 
     function buildOllamaOptions() {
