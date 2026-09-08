@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.7 Core-CE] - 2026-09-08
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.7`.
+- Updated llama.cpp Prepare so stale local source can be refreshed when catalog models require newer GGUF architecture support.
+- Reduced default llama.cpp local build parallelism and staged shared runtime libraries for newer llama.cpp builds.
+- Extended PSF Terminal llama.cpp warm-load retries so first requests wait for cold model loading instead of failing after a few seconds.
+
+### Fixed
+- Fixed Catalog Launch into PSF Terminal so explicit llama.cpp launch paths override saved last-used terminal preferences.
+- Fixed the llama.cpp model dropdown so a Catalog-launched model remains selected instead of reverting to the persisted previous model.
+- Fixed BMOC llama.cpp session reuse so loading servers returning HTTP 503 are treated as live reusable sessions.
+- Fixed duplicate llama.cpp terminal sessions caused by relative-vs-absolute GGUF path comparisons.
+- Added a clearer unsupported-GGUF-architecture diagnostic when a stale llama.cpp runtime cannot load a model such as Gemma 4.
+
 ## [v1.1.6 Core-CE] - 2026-09-07
 
 ### Changed

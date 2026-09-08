@@ -96,6 +96,13 @@
       if (!duration) return;
       await new Promise((resolve) => setTimeout(resolve, duration));
     }
+    function getProviderRetryConfig(provider) {
+      const p = String(provider || '').trim().toLowerCase();
+      if (p === 'llama.cpp') {
+        return { maxAttempts: 25, delayMs: 5000 };
+      }
+      return { maxAttempts: 1, delayMs: 0 };
+    }
     function buildOpenAIStyleMessages(messages = []) {
       return (Array.isArray(messages) ? messages : []).map((m) => ({
         role: String(m?.role || 'user'),
@@ -726,16 +733,16 @@
       if (providerRuntime.provider !== 'ollama') {
         setThinkingStatusText(`Calling ${providerRuntime.provider}`);
         try {
-          const maxAttempts = providerRuntime.provider === 'llama.cpp' ? 4 : 1;
+          const retryConfig = getProviderRetryConfig(providerRuntime.provider);
+          const maxAttempts = retryConfig.maxAttempts;
           let result = null;
           for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
             result = await streamViaProvider(providerRuntime, messages);
             if (result?.success || result?.stopped) break;
             if (!isTransientProviderError(providerRuntime.provider, result?.message || '')) break;
             if (attempt >= maxAttempts) break;
-            const delayMs = 900 * attempt;
             addSystemMessage(`Provider warming up (${attempt}/${maxAttempts - 1} retries)...`);
-            await waitMs(delayMs);
+            await waitMs(retryConfig.delayMs);
           }
           if (result && result.success) {
             const assistantMessage = sanitizeQwenSelfDialogue(result.message || '');
