@@ -228,6 +228,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const gpuInfo = getGpuInfo() || null;
     const nvidiaDetected = String(gpuInfo?.accelerationType || '').toLowerCase() === 'nvidia';
     const requestedGpuLayersRaw = Number(payload?.gpuLayers);
+    const requestedContextSize = Math.max(256, Number(payload?.contextSize) || 32768);
     const catalogRuntime = catalogRuntimeConfigForModel(modelPath, modelName);
     const catalogGpuLayers = Number(catalogRuntime?.gpuLayers);
     const forceCpu = payload?.forceCpu === true || catalogRuntime?.forceCpu === true;
@@ -252,6 +253,11 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         if (modelName && sessionModelName && sessionModelName !== modelName.toLowerCase()) continue;
         const sessionTemplate = String(session?.metadata?.chatTemplate || '').trim();
         if (chatTemplate && sessionTemplate && sessionTemplate !== chatTemplate) continue;
+        const sessionContextSize = Number(session?.metadata?.contextSize || 0);
+        if (Number.isFinite(requestedContextSize) && requestedContextSize > 0) {
+          if (!Number.isFinite(sessionContextSize) || sessionContextSize <= 0) continue;
+          if (sessionContextSize < requestedContextSize) continue;
+        }
         if (requireGpuSession) {
           const sessionForceCpu = session?.metadata?.forceCpu === true;
           const sessionGpuLayers = Number(session?.metadata?.gpuLayers);
@@ -317,7 +323,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       modelPath,
       modelName: modelName || null,
       chatTemplate: chatTemplate || null,
-      contextSize: Number.isFinite(Number(payload?.contextSize)) ? Number(payload.contextSize) : undefined,
+      contextSize: requestedContextSize,
       threads: Number.isFinite(Number(payload?.threads)) ? Number(payload.threads) : undefined,
       parallel: Number.isFinite(Number(payload?.parallel)) ? Number(payload.parallel) : undefined,
       gpuLayers: effectiveGpuLayers,

@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.6 Core-CE] - 2026-09-07
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.6`.
+- Removed PSF Terminal's implicit llama.cpp chat output cap; explicit `num_predict` settings still limit generation when configured.
+- Raised the default llama.cpp terminal context to the Normal profile target of 32768 tokens.
+- Added llama.cpp prompt budgeting that drops older history before provider calls and warns when the current prompt is still too large.
+
+### Fixed
+- Fixed PSF Terminal provider parsing so OpenAI-compatible `reasoning_content`, `reasoning`, and `thinking` fields are separated from assistant answer content instead of being treated as empty or displayed inline.
+
 ## [v1.1.5 Core-CE] - 2026-09-07
 
 ### Added
@@ -19,7 +30,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Fixed
 - Fixed the existing RLM-named attachment assistance mode being bypassed whenever PSF Terminal was using a non-Ollama backend.
-- Fixed PSF Terminal provider parsing so OpenAI-compatible `reasoning_content`, `reasoning`, and `thinking` fields are separated from assistant answer content instead of being treated as empty or displayed inline.
 
 ## [v1.1.4 Core-CE] - 2026-09-07
 

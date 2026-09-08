@@ -113,23 +113,27 @@ async function testRlmRunsBeforeLlamaCppProvider() {
 }
 
 function createLlamaCppControllerForSse(sse, hooks = {}) {
-  const createChatFlowController = loadChatFlowController(async () => ({
-    ok: true,
-    body: {
-      getReader: () => {
-        let sent = false;
-        return {
-          async read() {
-            if (sent) return { done: true };
-            sent = true;
-            return { done: false, value: Buffer.from(sse, 'utf8') };
-          },
-          releaseLock() {}
-        };
+  const defaultFetch = async (_url, request = {}) => {
+    if (typeof hooks.onFetch === 'function') hooks.onFetch(request);
+    return {
+      ok: true,
+      body: {
+        getReader: () => {
+          let sent = false;
+          return {
+            async read() {
+              if (sent) return { done: true };
+              sent = true;
+              return { done: false, value: Buffer.from(sse, 'utf8') };
+            },
+            releaseLock() {}
+          };
+        }
       }
-    }
-  }));
-  const userInput = { value: 'tell me a story about ants' };
+    };
+  };
+  const createChatFlowController = loadChatFlowController(hooks.fetch || defaultFetch);
+  const userInput = { value: hooks.userMessage || 'tell me a story about ants' };
   const messageDiv = {
     children: [],
     querySelector(selector) {
@@ -157,10 +161,10 @@ function createLlamaCppControllerForSse(sse, hooks = {}) {
     getSystemPrompt: () => '',
     buildAttachmentContext: async () => '',
     shouldInjectAttachmentContext: () => false,
-    getConversationHistory: () => [],
+    getConversationHistory: () => hooks.conversationHistory || [],
     appendConversationPair: hooks.appendConversationPair || (() => {}),
     getCurrentModel: () => 'Qwen3.8-4B-Q8_0.gguf',
-    buildOllamaOptions: () => ({ num_ctx: 4096, num_gpu: 34 }),
+    buildOllamaOptions: () => hooks.ollamaOptions || ({ num_ctx: 4096, num_gpu: 34 }),
     getProvider: () => 'llama.cpp',
     getProviderBaseUrl: () => '',
     getProviderApiKey: () => '',
@@ -256,10 +260,66 @@ async function testLlamaCppThinkingOnlyStreamIsNotAnswer() {
   assert.ok(errorMessage.includes('reasoning/thinking tokens but no final assistant answer'));
 }
 
+async function testLlamaCppDropsOldHistoryWhenContextIsTight() {
+  const sse = [
+    'data: {"choices":[{"delta":{"content":"ok"}}]}',
+    'data: [DONE]',
+    ''
+  ].join('\n');
+  let requestBody = null;
+  const oldContent = 'old '.repeat(4000);
+  const { controller } = createLlamaCppControllerForSse(sse, {
+    userMessage: 'Please answer the current request.',
+    ollamaOptions: { num_ctx: 2048, num_gpu: 34 },
+    conversationHistory: [
+      { role: 'user', content: oldContent },
+      { role: 'assistant', content: oldContent },
+      { role: 'user', content: 'recent question' },
+      { role: 'assistant', content: 'recent answer' }
+    ],
+    onFetch: (request) => { requestBody = JSON.parse(String(request?.body || '{}')); },
+    appendConversationPair: () => {}
+  });
+
+  await controller.sendMessage();
+
+  assert.ok(requestBody);
+  const joined = requestBody.messages.map((row) => String(row.content || '')).join('\n');
+  assert.ok(joined.includes('Please answer the current request.'));
+  assert.ok(!joined.includes(oldContent.trim()));
+}
+
+async function testLlamaCppRejectsOversizedCurrentPrompt() {
+  const sse = [
+    'data: {"choices":[{"delta":{"content":"should not fetch"}}]}',
+    'data: [DONE]',
+    ''
+  ].join('\n');
+  let fetchCalled = false;
+  let errorMessage = '';
+  const { controller } = createLlamaCppControllerForSse(sse, {
+    userMessage: 'huge '.repeat(3000),
+    ollamaOptions: { num_ctx: 2048, num_gpu: 34 },
+    fetch: async () => {
+      fetchCalled = true;
+      throw new Error('fetch should not be called for oversized current prompt');
+    },
+    addErrorMessage: (message) => { errorMessage = String(message || ''); }
+  });
+
+  await controller.sendMessage();
+
+  assert.strictEqual(fetchCalled, false);
+  assert.ok(errorMessage.includes('estimated at'));
+  assert.ok(errorMessage.includes('Reduce the current message'));
+}
+
 async function run() {
   await testRlmRunsBeforeLlamaCppProvider();
   await testLlamaCppThinkingAndAnswerStaySeparate();
   await testLlamaCppThinkingOnlyStreamIsNotAnswer();
+  await testLlamaCppDropsOldHistoryWhenContextIsTight();
+  await testLlamaCppRejectsOversizedCurrentPrompt();
   console.log('terminal-renderer-chatflow regression tests passed');
 }
 

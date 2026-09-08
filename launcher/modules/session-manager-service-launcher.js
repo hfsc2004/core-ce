@@ -123,9 +123,9 @@ function createSessionServiceLauncher(deps = {}) {
   }
 
   async function startLlamaCppForService(serviceType, appPath, options = {}) {
-    console.log(`[Session Manager] 🚀 startLlamaCppForService called for: ${serviceType}`);
+      console.log(`[Session Manager] 🚀 startLlamaCppForService called for: ${serviceType}`);
 
-    const normalizedType = normalizeServiceType(serviceType);
+      const normalizedType = normalizeServiceType(serviceType);
     if (!normalizedType) {
       return {
         success: false,
@@ -149,6 +149,7 @@ function createSessionServiceLauncher(deps = {}) {
     try {
       const PortPool = require('./port-pool/port-pool-ollama');
       const llamaCppManager = require('./llama-cpp-manager');
+      const effectiveContextSize = Math.max(256, Number(options.contextSize) || 32768);
       const maxStartAttempts = 3;
       let startResult = null;
       let startPort = null;
@@ -175,7 +176,7 @@ function createSessionServiceLauncher(deps = {}) {
             modelPath: options.modelPath,
             modelName: options.modelName,
             chatTemplate: options.chatTemplate,
-            contextSize: options.contextSize,
+            contextSize: effectiveContextSize,
             threads: options.threads,
             parallel: options.parallel,
             gpuLayers: options.gpuLayers,
@@ -223,6 +224,7 @@ function createSessionServiceLauncher(deps = {}) {
           logPath: startResult.logPath || null,
           chatTemplate: startResult.chatTemplate || options.chatTemplate || null,
           chatTemplateSource: startResult.chatTemplateSource || (options.chatTemplate ? 'explicit' : 'none'),
+          contextSize: effectiveContextSize,
           gpuLayers: Number.isFinite(Number(options.gpuLayers)) ? Number(options.gpuLayers) : null,
           forceCpu: options.forceCpu === true,
           splitMode: options.splitMode || null,
@@ -244,6 +246,7 @@ function createSessionServiceLauncher(deps = {}) {
         port: startPort,
         pid: startResult.pid,
         logPath: startResult.logPath || null,
+        contextSize: effectiveContextSize,
         forceCpu: options.forceCpu === true,
         chatTemplate: startResult.chatTemplate || options.chatTemplate || null,
         chatTemplateSource: startResult.chatTemplateSource || (options.chatTemplate ? 'explicit' : 'none'),

@@ -320,7 +320,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     modelPath,
     modelName,
     chatTemplate,
-    contextSize = 8192,
+    contextSize = 32768,
     threads = 0,
     gpuLayers = null,
     forceCpu = false,
@@ -352,7 +352,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     '--model', resolvedModelPath,
     '--host', '127.0.0.1',
     '--port', String(port),
-    '--ctx-size', String(Math.max(256, Number(contextSize) || 8192)),
+    '--ctx-size', String(Math.max(256, Number(contextSize) || 32768)),
     '--parallel', String(Math.max(1, Number(parallel) || 1))
   ];
 
