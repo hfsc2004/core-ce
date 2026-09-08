@@ -95,6 +95,12 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     return catalogRuntimeConfigForModel(modelPath, modelName).forceCpu === true;
   }
 
+  function normalizeLlamaCppModelPathForCompare(modelPath) {
+    const raw = String(modelPath || '').trim();
+    if (!raw) return '';
+    return path.isAbsolute(raw) ? raw : path.resolve(path.join(appDir, '..'), raw);
+  }
+
   async function isOllamaResponsive(port) {
     const candidatePort = Number(port || 0);
     if (candidatePort <= 0) return false;
@@ -127,7 +133,9 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         timeout: 1500
       }, (res) => {
         res.resume();
-        resolve(res.statusCode >= 200 && res.statusCode < 500);
+        // llama.cpp returns 503 while a model is still loading. That is a live
+        // reusable process, not a reason to start a duplicate server/session.
+        resolve((res.statusCode >= 200 && res.statusCode < 500) || res.statusCode === 503);
       });
       req.on('timeout', () => {
         try { req.destroy(new Error('timeout')); } catch (_) {}
@@ -240,6 +248,9 @@ function registerOpsHandlers(ipcMain, deps = {}) {
           ? catalogGpuLayers
           : (nvidiaDetected ? 999 : null)));
     const requireGpuSession = !forceCpu && nvidiaDetected && Number(effectiveGpuLayers) > 0;
+    if (modelPath) {
+      modelPath = normalizeLlamaCppModelPathForCompare(modelPath);
+    }
     const existingSessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
     if (Array.isArray(existingSessions)) {
       for (const session of existingSessions) {
@@ -247,7 +258,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         if (backend !== 'llama-cpp') continue;
         const sessionOwnerWindowId = Number(session?.metadata?.ownerWindowId || 0) || null;
         if (ownerWindowId && sessionOwnerWindowId && sessionOwnerWindowId !== ownerWindowId) continue;
-        const sessionModelPath = String(session?.metadata?.modelPath || '').trim();
+        const sessionModelPath = normalizeLlamaCppModelPathForCompare(session?.metadata?.modelPath || '');
         if (modelPath && sessionModelPath && sessionModelPath !== modelPath) continue;
         const sessionModelName = String(session?.metadata?.modelName || '').trim().toLowerCase();
         if (modelName && sessionModelName && sessionModelName !== modelName.toLowerCase()) continue;
@@ -315,6 +326,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         };
       }
     }
+    modelPath = normalizeLlamaCppModelPathForCompare(modelPath);
 
     await cleanupTerminalLlamaCppSessions();
 

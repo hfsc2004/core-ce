@@ -5,6 +5,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execFileSync } = require('child_process');
 const { getCurrentPlatformKey } = require('./binary-manager-platform');
 const {
@@ -67,6 +68,128 @@ async function ensureLlamaCppSourceTree(sourceRoot, platformKey, progressCallbac
   }
 }
 
+function getCatalogModelEntries(catalog) {
+  if (!catalog || typeof catalog !== 'object') return [];
+  if (Array.isArray(catalog.models)) return catalog.models;
+  const out = [];
+  const collections = catalog.collections;
+  if (collections && typeof collections === 'object') {
+    Object.values(collections).forEach((collection) => {
+      if (Array.isArray(collection?.models)) out.push(...collection.models);
+    });
+  }
+  return out;
+}
+
+function getRequiredCatalogArchitectures(projectRoot) {
+  const modelsDir = path.join(projectRoot, 'models');
+  const required = new Set();
+  let files = [];
+  try {
+    files = fs.readdirSync(modelsDir)
+      .filter((name) => /^catalog(?:-|\.json)/i.test(name) && /\.json$/i.test(name));
+  } catch (_) {
+    return required;
+  }
+
+  for (const fileName of files) {
+    let parsed = null;
+    try {
+      parsed = JSON.parse(fs.readFileSync(path.join(modelsDir, fileName), 'utf8'));
+    } catch (_) {
+      continue;
+    }
+    for (const entry of getCatalogModelEntries(parsed)) {
+      const arch = String(entry?.architecture || '').trim().toLowerCase();
+      if (arch) required.add(arch);
+    }
+  }
+  return required;
+}
+
+function sourceContainsArchitecture(sourceRoot, arch) {
+  const wanted = String(arch || '').trim().toLowerCase();
+  if (!wanted) return true;
+  const candidates = [
+    path.join(sourceRoot, 'src', 'llama-arch.cpp'),
+    path.join(sourceRoot, 'src', 'llama-arch.h'),
+    path.join(sourceRoot, 'src', 'models', `${wanted}.cpp`)
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate) && fs.readFileSync(candidate, 'utf8').toLowerCase().includes(wanted)) {
+        return true;
+      }
+    } catch (_) {
+      // Continue scanning the remaining source files.
+    }
+  }
+  return false;
+}
+
+function getCurrentRuntimeRequiredArchitectures() {
+  return ['gemma4'];
+}
+
+function checkRequiredArchitectureSupport(projectRoot, sourceRoot) {
+  const catalogArchitectures = getRequiredCatalogArchitectures(projectRoot);
+  const runtimeRequired = getCurrentRuntimeRequiredArchitectures();
+  const required = new Set(runtimeRequired.filter((arch) => catalogArchitectures.has(arch)));
+  if (required.size === 0) return { ok: true, missing: [] };
+  const missing = [];
+  for (const arch of required) {
+    if (!sourceContainsArchitecture(sourceRoot, arch)) missing.push(arch);
+  }
+  return { ok: missing.length === 0, missing };
+}
+
+function getBuildParallelism() {
+  const explicit = Number(process.env.PSF_LLAMA_CPP_BUILD_JOBS || process.env.CMAKE_BUILD_PARALLEL_LEVEL);
+  if (Number.isInteger(explicit) && explicit > 0) return explicit;
+  const cpuCount = Array.isArray(os.cpus()) ? os.cpus().length : 0;
+  return Math.max(1, Math.min(2, cpuCount || 1));
+}
+
+function copyRuntimeFile(src, dest) {
+  fs.copyFileSync(src, dest);
+  if (process.platform !== 'win32') fs.chmodSync(dest, 0o755);
+}
+
+async function refreshLlamaCppSourceTree(sourceRoot, platformKey, progressCallback = null) {
+  const parentDir = path.dirname(sourceRoot);
+  const tempDir = path.join(parentDir, `.llama-cpp-src-refresh-${platformKey}-${Date.now()}`);
+  const repoUrl = 'https://github.com/ggml-org/llama.cpp.git';
+
+  if (!hasCommand('git', ['--version'])) {
+    throw new Error('git is required to refresh llama.cpp source but is not available');
+  }
+
+  if (progressCallback) {
+    progressCallback({
+      progress: 6,
+      filename: 'llama.cpp',
+      completed: 0,
+      total: 1,
+      speed: 0,
+      message: `Refreshing llama.cpp source for newer catalog architectures (${platformKey})...`
+    });
+  }
+
+  execFileSync('git', ['clone', '--depth', '1', repoUrl, tempDir], {
+    stdio: 'pipe',
+    maxBuffer: 8 * 1024 * 1024
+  });
+
+  const entries = fs.readdirSync(tempDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === '.git') continue;
+    const src = path.join(tempDir, entry.name);
+    const dest = path.join(sourceRoot, entry.name);
+    fs.cpSync(src, dest, { recursive: true, force: true });
+  }
+  fs.rmSync(tempDir, { recursive: true, force: true });
+}
+
 async function downloadLlamaCpp(fromPath, progressCallback = null) {
   try {
     const projectRoot = path.join(fromPath, '..');
@@ -82,10 +205,13 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
     const buildProfile = detectLlamaCppBuildProfile();
     const desired = [exe('llama-server'), exe('llama-cli'), exe('llama-gguf-split')];
     const existsAll = desired.every((name) => fs.existsSync(path.join(binDir, name)));
+    const sourceRoot = platformDir;
+    let sourceRefreshed = false;
     if (existsAll) {
       const serverPath = path.join(binDir, exe('llama-server'));
       const capabilityCheck = verifyExistingLlamaServerCapability(serverPath, buildProfile);
-      if (!capabilityCheck.ok) {
+      const archSupport = checkRequiredArchitectureSupport(projectRoot, sourceRoot);
+      if (!capabilityCheck.ok && archSupport.ok) {
         return {
           success: true,
           message:
@@ -94,10 +220,23 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
             'Binaries are kept and can run CPU-only. Rebuild for CUDA after toolkit/driver fixes if desired.'
         };
       }
-      return { success: true, message: `✅ llama.cpp binaries already present for ${platformKey}` };
+      if (capabilityCheck.ok && archSupport.ok) {
+        return { success: true, message: `✅ llama.cpp binaries already present for ${platformKey}` };
+      }
+      if (progressCallback) {
+        progressCallback({
+          progress: 5,
+          filename: 'llama.cpp',
+          completed: 0,
+          total: 1,
+          speed: 0,
+          message: `Existing llama.cpp source is missing catalog architecture support: ${archSupport.missing.join(', ')}`
+        });
+      }
+      await refreshLlamaCppSourceTree(sourceRoot, platformKey, progressCallback);
+      sourceRefreshed = true;
     }
 
-    const sourceRoot = platformDir;
     const cmakeLists = path.join(sourceRoot, 'CMakeLists.txt');
     if (!fs.existsSync(cmakeLists)) {
       await ensureLlamaCppSourceTree(sourceRoot, platformKey, progressCallback);
@@ -134,6 +273,19 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
 
     const buildDir = path.join(sourceRoot, 'build');
     const cachePath = path.join(buildDir, 'CMakeCache.txt');
+    if (sourceRefreshed && fs.existsSync(buildDir)) {
+      if (progressCallback) {
+        progressCallback({
+          progress: 20,
+          filename: 'llama.cpp',
+          completed: 0,
+          total: 1,
+          speed: 0,
+          message: 'Source refreshed, cleaning llama.cpp build directory...'
+        });
+      }
+      fs.rmSync(buildDir, { recursive: true, force: true });
+    }
     if (fs.existsSync(cachePath)) {
       try {
         const cacheText = fs.readFileSync(cachePath, 'utf8');
@@ -223,7 +375,12 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
 
     execFileSync(
       'cmake',
-      ['--build', buildDir, '--config', 'Release', '--target', 'llama-server', 'llama-cli', 'llama-gguf-split'],
+      [
+        '--build', buildDir,
+        '--config', 'Release',
+        '--target', 'llama-server', 'llama-cli', 'llama-gguf-split',
+        '--parallel', String(getBuildParallelism())
+      ],
       { stdio: 'pipe', maxBuffer: 16 * 1024 * 1024 }
     );
 
@@ -242,9 +399,14 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
       const src = path.join(builtBin, name);
       if (!fs.existsSync(src)) continue;
       const dest = path.join(binDir, name);
-      fs.copyFileSync(src, dest);
-      if (!isWindows) fs.chmodSync(dest, 0o755);
+      copyRuntimeFile(src, dest);
       copied += 1;
+    }
+    if (!isWindows) {
+      for (const name of fs.readdirSync(builtBin)) {
+        if (!/^lib.*\.so(?:\.\d+)*$/i.test(name)) continue;
+        copyRuntimeFile(path.join(builtBin, name), path.join(binDir, name));
+      }
     }
 
     if (progressCallback) {

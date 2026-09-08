@@ -961,11 +961,11 @@
         const globalPrefs = globalRaw ? JSON.parse(globalRaw) : null;
         if (globalPrefs && typeof globalPrefs === 'object') {
           if (!terminalConfig.providerExplicit && Object.prototype.hasOwnProperty.call(globalPrefs, 'provider')) terminalConfig.provider = String(globalPrefs.provider || terminalConfig.provider || 'ollama');
-          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_base_url')) terminalConfig.baseUrl = String(globalPrefs.provider_base_url || terminalConfig.baseUrl || '');
-          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_api_key')) terminalConfig.apiKey = String(globalPrefs.provider_api_key || terminalConfig.apiKey || '');
-          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_model_id')) terminalConfig.providerModel = String(globalPrefs.provider_model_id || terminalConfig.providerModel || '');
-          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'llama_cpp_model_path')) terminalConfig.llamaCppModelPath = String(globalPrefs.llama_cpp_model_path || terminalConfig.llamaCppModelPath || '');
-          if (Object.prototype.hasOwnProperty.call(globalPrefs, 'llama_cpp_force_cpu')) terminalConfig.llamaCppForceCpu = globalPrefs.llama_cpp_force_cpu === true || terminalConfig.llamaCppForceCpu === true;
+          if (!terminalConfig.baseUrlExplicit && Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_base_url')) terminalConfig.baseUrl = String(globalPrefs.provider_base_url || terminalConfig.baseUrl || '');
+          if (!terminalConfig.apiKeyExplicit && Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_api_key')) terminalConfig.apiKey = String(globalPrefs.provider_api_key || terminalConfig.apiKey || '');
+          if (!terminalConfig.providerModelExplicit && Object.prototype.hasOwnProperty.call(globalPrefs, 'provider_model_id')) terminalConfig.providerModel = String(globalPrefs.provider_model_id || terminalConfig.providerModel || '');
+          if (!terminalConfig.llamaCppModelPathExplicit && Object.prototype.hasOwnProperty.call(globalPrefs, 'llama_cpp_model_path')) terminalConfig.llamaCppModelPath = String(globalPrefs.llama_cpp_model_path || terminalConfig.llamaCppModelPath || '');
+          if (!terminalConfig.llamaCppForceCpuExplicit && Object.prototype.hasOwnProperty.call(globalPrefs, 'llama_cpp_force_cpu')) terminalConfig.llamaCppForceCpu = globalPrefs.llama_cpp_force_cpu === true || terminalConfig.llamaCppForceCpu === true;
         }
       } catch (_) {}
       const preKey = String(terminalConfig?.modelName || '').trim();

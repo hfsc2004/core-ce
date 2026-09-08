@@ -297,6 +297,20 @@ function waitForChildExit(child, timeoutMs = 3000) {
   });
 }
 
+function formatStartupError(port, exitInfo, startupError) {
+  const stderr = String(startupError || '').trim();
+  const unsupportedArchMatch = stderr.match(/unknown model architecture:\s*'([^']+)'/i);
+  if (unsupportedArchMatch) {
+    const arch = unsupportedArchMatch[1];
+    return [
+      `llama.cpp runtime does not support GGUF architecture "${arch}".`,
+      'Prepare llama.cpp again to refresh/rebuild the local runtime from the latest ggml-org/llama.cpp source.',
+      `Original startup failure: llama.cpp server startup timeout on port ${port}${exitInfo}${stderr ? ` (${stderr.slice(0, 1200)})` : ''}`
+    ].join('\n');
+  }
+  return `llama.cpp server startup timeout on port ${port}${exitInfo}${stderr ? ` (${stderr.slice(0, 1200)})` : ''}`;
+}
+
 async function terminateChildProcessGroup(child, isExited = () => false) {
   if (!child || !child.pid || isExited()) return;
   try {
@@ -472,9 +486,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     const exitInfo = exited
       ? ` (llama-server exited: code=${String(exitCode)}, signal=${String(exitSignal)})`
       : '';
-    throw new Error(
-      `llama.cpp server startup timeout on port ${port}${exitInfo}${startupError ? ` (${startupError.trim().slice(0, 1200)})` : ''}`
-    );
+    throw new Error(formatStartupError(port, exitInfo, startupError));
   }
 
   return {

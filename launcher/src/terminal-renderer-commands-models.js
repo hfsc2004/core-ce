@@ -187,7 +187,7 @@
             const currentPath = String(getLlamaCppModelPath() || '').trim();
             const persisted = await loadPersistedModel();
             const persistedBaseName = String(persisted || '').trim().replace(/\.gguf$/i, '');
-            const preferredName = persistedBaseName || currentModel;
+            const preferredName = currentModel || persistedBaseName;
             let foundMatch = false;
             let firstModelName = null;
             let firstModelPath = '';
@@ -204,9 +204,10 @@
               option.textContent = String(model.pathRel || model.filename || modelName);
               option.dataset.llamaPath = modelPath;
               if (
-                (persistedBaseName && modelName === persistedBaseName) ||
-                (!persistedBaseName && currentPath && (modelPath === currentPath)) ||
-                (!persistedBaseName && !currentPath && preferredName && modelName === preferredName)
+                (currentPath && modelPath === currentPath) ||
+                (currentModel && modelName === currentModel) ||
+                (!currentPath && !currentModel && persistedBaseName && modelName === persistedBaseName) ||
+                (!currentPath && !currentModel && preferredName && modelName === preferredName)
               ) {
                 option.selected = true;
                 foundMatch = true;
