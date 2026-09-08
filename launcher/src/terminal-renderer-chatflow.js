@@ -138,6 +138,16 @@
       const suffix = chars > 0 ? ` Captured ${chars} reasoning/thinking characters.` : '';
       return `Provider returned reasoning/thinking tokens but no final assistant answer.${suffix}`;
     }
+    function buildPromptTooLargeMessage(fit = {}) {
+      const estimated = Math.max(0, Number(fit.estimatedTokens) || 0);
+      const budget = Math.max(0, Number(fit.budget) || 0);
+      const contextSize = Math.max(0, Number(fit.contextSize) || 0);
+      const reduceBy = Math.max(1, estimated - budget);
+      return [
+        `Your message is estimated at ${estimated} tokens, but this llama.cpp session can fit about ${budget} prompt tokens after reserved response space.`,
+        `Context size is ${contextSize} tokens. Reduce the current message by about ${reduceBy} tokens, attach the material as a file, or increase the model context size.`
+      ].join(' ');
+    }
     function updateProviderThinkingDisplay(active, thinking = '') {
       const contentDiv = active?.contentDiv || null;
       const text = String(thinking || '').trim();
@@ -158,9 +168,6 @@
       if (!body || typeof body !== 'object') return body;
       if (body.temperature === undefined || body.temperature === null || body.temperature === 0.7) {
         body.temperature = 0.2;
-      }
-      if (body.max_tokens === undefined && options.num_predict === undefined) {
-        body.max_tokens = 256;
       }
       if (body.repeat_penalty === undefined && options.repeat_penalty === undefined) {
         body.repeat_penalty = 1.08;
@@ -189,6 +196,56 @@
         },
         ...rows
       ];
+    }
+    function estimatePromptTokens(messages = []) {
+      const rows = Array.isArray(messages) ? messages : [];
+      let chars = 0;
+      for (const row of rows) {
+        chars += String(row?.role || '').length + String(row?.content || '').length + 12;
+      }
+      return Math.ceil(chars / 4);
+    }
+    function fitMessagesToContext(messages = [], options = {}) {
+      const rows = Array.isArray(messages) ? messages : [];
+      const contextSize = Math.max(1024, Number(options.num_ctx) || 32768);
+      const reserveTokens = Math.max(512, Math.min(4096, Math.floor(contextSize * 0.12)));
+      const budget = Math.max(512, contextSize - reserveTokens);
+      if (estimatePromptTokens(rows) <= budget) return { messages: rows, trimmed: 0, estimatedTokens: estimatePromptTokens(rows), budget };
+
+      const systemRows = [];
+      const bodyRows = [];
+      for (const row of rows) {
+        if (String(row?.role || '').trim().toLowerCase() === 'system') systemRows.push(row);
+        else bodyRows.push(row);
+      }
+      const currentUser = bodyRows.length > 0 ? bodyRows[bodyRows.length - 1] : null;
+      const historyRows = currentUser ? bodyRows.slice(0, -1) : bodyRows;
+      const currentOnly = currentUser ? [...systemRows, currentUser] : systemRows;
+      const currentOnlyTokens = estimatePromptTokens(currentOnly);
+      if (currentOnlyTokens > budget) {
+        return {
+          messages: currentOnly,
+          trimmed: historyRows.length,
+          estimatedTokens: currentOnlyTokens,
+          budget,
+          contextSize,
+          tooLarge: true
+        };
+      }
+      const keptHistory = [];
+      for (let i = historyRows.length - 1; i >= 0; i -= 1) {
+        const candidate = [...systemRows, historyRows[i], ...keptHistory];
+        if (currentUser) candidate.push(currentUser);
+        if (estimatePromptTokens(candidate) <= budget) {
+          keptHistory.unshift(historyRows[i]);
+        }
+      }
+      let fitted = currentUser
+        ? [...systemRows, ...keptHistory, currentUser]
+        : [...systemRows, ...keptHistory];
+      let trimmed = historyRows.length - keptHistory.length;
+
+      return { messages: fitted, trimmed, estimatedTokens: estimatePromptTokens(fitted), budget, contextSize, tooLarge: false };
     }
     async function streamViaProvider(providerRuntime, messages = []) {
       const options = buildOllamaOptions();
@@ -234,11 +291,19 @@
         if (endpointBase) setProviderBaseUrl(endpointBase);
       }
 
+      const providerMessages = providerRuntime.provider === 'llama.cpp'
+        ? fitMessagesToContext(normalizeLlamaCppMessages(messages), options)
+        : { messages: buildOpenAIStyleMessages(messages), trimmed: 0, tooLarge: false };
+      if (providerMessages.tooLarge) {
+        return { success: false, message: buildPromptTooLargeMessage(providerMessages) };
+      }
+      if (providerRuntime.provider === 'llama.cpp' && providerMessages.trimmed > 0) {
+        addSystemMessage(`Context budget: omitted ${providerMessages.trimmed} older history message(s) for this llama.cpp request.`);
+      }
+
       const body = {
         model: model || 'local-model',
-        messages: providerRuntime.provider === 'llama.cpp'
-          ? normalizeLlamaCppMessages(messages)
-          : buildOpenAIStyleMessages(messages),
+        messages: providerMessages.messages,
         temperature: options.temperature,
         stream: true
       };
@@ -408,11 +473,19 @@
       }
 
       if (providerRuntime.provider === 'llama.cpp' || providerRuntime.provider === 'vllm' || providerRuntime.provider === 'openai-compatible') {
+        const providerMessages = providerRuntime.provider === 'llama.cpp'
+          ? fitMessagesToContext(normalizeLlamaCppMessages(messages), options)
+          : { messages: buildOpenAIStyleMessages(messages), trimmed: 0, tooLarge: false };
+        if (providerMessages.tooLarge) {
+          return { success: false, message: buildPromptTooLargeMessage(providerMessages) };
+        }
+        if (providerRuntime.provider === 'llama.cpp' && providerMessages.trimmed > 0) {
+          addSystemMessage(`Context budget: omitted ${providerMessages.trimmed} older history message(s) for this llama.cpp request.`);
+        }
+
         const body = {
           model: model || 'local-model',
-          messages: providerRuntime.provider === 'llama.cpp'
-            ? normalizeLlamaCppMessages(messages)
-            : buildOpenAIStyleMessages(messages),
+          messages: providerMessages.messages,
           temperature: options.temperature
         };
         if (options.top_p !== undefined) body.top_p = options.top_p;
