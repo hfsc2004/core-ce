@@ -12,6 +12,9 @@ function loadChatFlowController(fetchImpl) {
     clearTimeout,
     AbortController,
     TextDecoder,
+    document: {
+      createElement: () => ({ className: '', textContent: '', parentElement: null })
+    },
     fetch: fetchImpl || (async () => {
       throw new Error('provider fetch should not be called for handled RLM turn');
     })
@@ -109,13 +112,7 @@ async function testRlmRunsBeforeLlamaCppProvider() {
   assert.ok(systemMessages.some((message) => message.includes('RLM Engine:')));
 }
 
-async function testLlamaCppReasoningOnlyStreamIsNotEmpty() {
-  const sse = [
-    'data: {"choices":[{"delta":{"reasoning_content":"Once upon a time, "}}]}',
-    'data: {"choices":[{"delta":{"reasoning":"a colony learned to share."}}]}',
-    'data: [DONE]',
-    ''
-  ].join('\n');
+function createLlamaCppControllerForSse(sse, hooks = {}) {
   const createChatFlowController = loadChatFlowController(async () => ({
     ok: true,
     body: {
@@ -133,10 +130,21 @@ async function testLlamaCppReasoningOnlyStreamIsNotEmpty() {
     }
   }));
   const userInput = { value: 'tell me a story about ants' };
-  const assistantShell = { textContent: '' };
+  const messageDiv = {
+    children: [],
+    querySelector(selector) {
+      return this.children.find((child) => child.className === selector.replace('.', '')) || null;
+    },
+    insertBefore(child, before) {
+      const idx = this.children.indexOf(before);
+      if (idx >= 0) this.children.splice(idx, 0, child);
+      else this.children.push(child);
+      child.parentElement = this;
+    }
+  };
+  const assistantShell = { textContent: '', parentElement: messageDiv };
+  messageDiv.children.push(assistantShell);
   let activeStream = null;
-  let finalAssistant = '';
-  let pairAppended = false;
 
   const controller = createChatFlowController({
     getUserInput: () => userInput,
@@ -150,10 +158,7 @@ async function testLlamaCppReasoningOnlyStreamIsNotEmpty() {
     buildAttachmentContext: async () => '',
     shouldInjectAttachmentContext: () => false,
     getConversationHistory: () => [],
-    appendConversationPair: (_user, assistant) => {
-      pairAppended = true;
-      finalAssistant = String(assistant || '');
-    },
+    appendConversationPair: hooks.appendConversationPair || (() => {}),
     getCurrentModel: () => 'Qwen3.8-4B-Q8_0.gguf',
     buildOllamaOptions: () => ({ num_ctx: 4096, num_gpu: 34 }),
     getProvider: () => 'llama.cpp',
@@ -178,9 +183,9 @@ async function testLlamaCppReasoningOnlyStreamIsNotEmpty() {
       })
     }),
     sanitizeQwenSelfDialogue: (value) => String(value || ''),
-    addErrorMessage: (message) => {
+    addErrorMessage: hooks.addErrorMessage || ((message) => {
       throw new Error(message);
-    },
+    }),
     focusInput: () => {},
     setStreamStopRequested: () => {},
     getStreamStopRequested: () => false,
@@ -194,7 +199,29 @@ async function testLlamaCppReasoningOnlyStreamIsNotEmpty() {
     getRlmQuality: () => 'balanced',
     getRlmBudgets: () => ({}),
     getRlmIncludeSharedAttachments: () => false,
-    setThinkingStatusText: () => {}
+    setThinkingStatusText: hooks.setThinkingStatusText || (() => {})
+  });
+
+  return { controller, userInput, assistantShell, getActiveStream: () => activeStream };
+}
+
+async function testLlamaCppThinkingAndAnswerStaySeparate() {
+  const sse = [
+    'data: {"choices":[{"delta":{"reasoning_content":"internal thought "}}]}',
+    'data: {"choices":[{"delta":{"content":"Once upon a time, "}}]}',
+    'data: {"choices":[{"delta":{"thinking":"more internal thought "}}]}',
+    'data: {"choices":[{"delta":{"content":"a colony learned to share."}}]}',
+    'data: [DONE]',
+    ''
+  ].join('\n');
+  let finalAssistant = '';
+  let pairAppended = false;
+
+  const { controller, assistantShell, getActiveStream } = createLlamaCppControllerForSse(sse, {
+    appendConversationPair: (_user, assistant) => {
+      pairAppended = true;
+      finalAssistant = String(assistant || '');
+    },
   });
 
   await controller.sendMessage();
@@ -202,11 +229,37 @@ async function testLlamaCppReasoningOnlyStreamIsNotEmpty() {
   assert.strictEqual(pairAppended, true);
   assert.strictEqual(finalAssistant, 'Once upon a time, a colony learned to share.');
   assert.strictEqual(assistantShell.textContent, finalAssistant);
+  const thinkingDiv = assistantShell.parentElement.querySelector('.message-thinking');
+  assert.ok(thinkingDiv);
+  assert.strictEqual(thinkingDiv.textContent, 'internal thought more internal thought');
+  assert.strictEqual(getActiveStream(), null);
+}
+
+async function testLlamaCppThinkingOnlyStreamIsNotAnswer() {
+  const sse = [
+    'data: {"choices":[{"delta":{"reasoning_content":"internal thought only "}}]}',
+    'data: {"choices":[{"delta":{"thinking":"still no final answer"}}]}',
+    'data: [DONE]',
+    ''
+  ].join('\n');
+  let errorMessage = '';
+  let pairAppended = false;
+  const { controller, assistantShell } = createLlamaCppControllerForSse(sse, {
+    appendConversationPair: () => { pairAppended = true; },
+    addErrorMessage: (message) => { errorMessage = String(message || ''); }
+  });
+
+  await controller.sendMessage();
+
+  assert.strictEqual(pairAppended, false);
+  assert.strictEqual(assistantShell.textContent, '');
+  assert.ok(errorMessage.includes('reasoning/thinking tokens but no final assistant answer'));
 }
 
 async function run() {
   await testRlmRunsBeforeLlamaCppProvider();
-  await testLlamaCppReasoningOnlyStreamIsNotEmpty();
+  await testLlamaCppThinkingAndAnswerStaySeparate();
+  await testLlamaCppThinkingOnlyStreamIsNotAnswer();
   console.log('terminal-renderer-chatflow regression tests passed');
 }
 

@@ -102,43 +102,57 @@
         content: String(m?.content || '')
       }));
     }
-    function extractProviderMessage(parsed = {}) {
+    function extractProviderAnswer(parsed = {}) {
       const choice = parsed?.choices?.[0] || {};
       return String(
         choice?.message?.content ||
-        choice?.message?.reasoning_content ||
-        choice?.message?.reasoning ||
-        choice?.message?.thinking ||
         choice?.text ||
         choice?.delta?.content ||
-        choice?.delta?.reasoning_content ||
-        choice?.delta?.reasoning ||
         parsed?.message?.content ||
-        parsed?.message?.reasoning_content ||
-        parsed?.message?.reasoning ||
-        parsed?.message?.thinking ||
         parsed?.content ||
         parsed?.text ||
         parsed?.response ||
         ''
       );
     }
-    function extractProviderDelta(parsed = {}) {
+    function extractProviderThinking(parsed = {}) {
       const choice = parsed?.choices?.[0] || {};
-      const delta = choice?.delta;
-      if (delta && typeof delta.content === 'string') return delta.content;
-      if (delta && typeof delta.reasoning_content === 'string') return delta.reasoning_content;
-      if (delta && typeof delta.reasoning === 'string') return delta.reasoning;
-      if (delta && typeof delta.thinking === 'string') return delta.thinking;
-      if (choice?.message && typeof choice.message.content === 'string') return choice.message.content;
-      if (choice?.message && typeof choice.message.reasoning_content === 'string') return choice.message.reasoning_content;
-      if (choice?.message && typeof choice.message.reasoning === 'string') return choice.message.reasoning;
-      if (choice?.message && typeof choice.message.thinking === 'string') return choice.message.thinking;
-      if (typeof choice?.text === 'string') return choice.text;
-      if (typeof parsed?.content === 'string') return parsed.content;
-      if (typeof parsed?.text === 'string') return parsed.text;
-      if (typeof parsed?.response === 'string') return parsed.response;
-      return '';
+      return String(
+        choice?.message?.reasoning_content ||
+        choice?.message?.reasoning ||
+        choice?.message?.thinking ||
+        choice?.delta?.reasoning_content ||
+        choice?.delta?.reasoning ||
+        choice?.delta?.thinking ||
+        parsed?.message?.reasoning_content ||
+        parsed?.message?.reasoning ||
+        parsed?.message?.thinking ||
+        parsed?.reasoning_content ||
+        parsed?.reasoning ||
+        parsed?.thinking ||
+        ''
+      );
+    }
+    function buildThinkingOnlyProviderMessage(thinking = '') {
+      const chars = String(thinking || '').trim().length;
+      const suffix = chars > 0 ? ` Captured ${chars} reasoning/thinking characters.` : '';
+      return `Provider returned reasoning/thinking tokens but no final assistant answer.${suffix}`;
+    }
+    function updateProviderThinkingDisplay(active, thinking = '') {
+      const contentDiv = active?.contentDiv || null;
+      const text = String(thinking || '').trim();
+      if (!contentDiv || !contentDiv.parentElement || !text) return;
+      let thinkingDiv = active.thinkingDiv || null;
+      if (!thinkingDiv) {
+        thinkingDiv = contentDiv.parentElement.querySelector('.message-thinking');
+        if (!thinkingDiv) {
+          thinkingDiv = document.createElement('div');
+          thinkingDiv.className = 'message-thinking';
+          contentDiv.parentElement.insertBefore(thinkingDiv, contentDiv);
+        }
+        active.thinkingDiv = thinkingDiv;
+      }
+      thinkingDiv.textContent = text;
     }
     function applyLlamaCppChatDefaults(body, options = {}) {
       if (!body || typeof body !== 'object') return body;
@@ -268,8 +282,12 @@
         const text = await response.text();
         let parsed = {};
         try { parsed = JSON.parse(text || '{}'); } catch {}
-        const content = extractProviderMessage(parsed).trim();
-        if (!content) return { success: false, message: 'No assistant content returned by provider.' };
+        const content = extractProviderAnswer(parsed).trim();
+        if (!content) {
+          const thinking = extractProviderThinking(parsed).trim();
+          if (thinking) return { success: false, message: buildThinkingOnlyProviderMessage(thinking) };
+          return { success: false, message: 'No assistant content returned by provider.' };
+        }
         return { success: true, message: content };
       }
 
@@ -277,6 +295,7 @@
       const reader = response.body.getReader();
       let buffer = '';
       let full = '';
+      let thinking = '';
       let doneSeen = false;
       try {
         while (true) {
@@ -305,10 +324,19 @@
             } catch (_) {
               continue;
             }
-            const delta = extractProviderDelta(parsed);
-            if (!delta) continue;
-            full += delta;
+            const answerDelta = extractProviderAnswer(parsed);
+            const thinkingDelta = extractProviderThinking(parsed);
+            if (thinkingDelta) thinking += thinkingDelta;
+            if (thinkingDelta && !answerDelta) {
+              setThinkingStatusText('Thinking');
+            }
             const active = getActiveStream();
+            if (active) {
+              active.thinking = thinking;
+              if (thinkingDelta) updateProviderThinkingDisplay(active, thinking);
+            }
+            if (!answerDelta) continue;
+            full += answerDelta;
             if (active && active.contentDiv) active.contentDiv.textContent = full;
             const chat = getChatDisplay();
             if (chat) chat.scrollTop = chat.scrollHeight;
@@ -328,6 +356,9 @@
         return { success: false, stopped: true, message: 'Generation stopped.' };
       }
       if (!content) {
+        if (String(thinking || '').trim()) {
+          return { success: false, message: buildThinkingOnlyProviderMessage(thinking) };
+        }
         return { success: false, message: 'No assistant content returned by provider.' };
       }
       return { success: true, message: content };
@@ -403,8 +434,12 @@
         try { parsed = JSON.parse(text || '{}'); } catch {
           return { success: false, message: 'Provider returned non-JSON response.' };
         }
-        const content = extractProviderMessage(parsed).trim();
-        if (!content) return { success: false, message: 'No assistant content returned by provider.' };
+        const content = extractProviderAnswer(parsed).trim();
+        if (!content) {
+          const thinking = extractProviderThinking(parsed).trim();
+          if (thinking) return { success: false, message: buildThinkingOnlyProviderMessage(thinking) };
+          return { success: false, message: 'No assistant content returned by provider.' };
+        }
         return { success: true, message: content };
       }
 
