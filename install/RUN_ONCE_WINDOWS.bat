@@ -1,4 +1,4 @@
-REM @version 1.1.14 - September 9, 2026
+REM @version 1.1.15 - September 9, 2026
 REM @copyright 2026 Pseudo SF
 @echo off
 echo ============================================================

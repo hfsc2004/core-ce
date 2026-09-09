@@ -1,5 +1,5 @@
 {
-  "version": "1.1.14",
+  "version": "1.1.15",
   "last_updated": "2026-09-09",
   "sku_id": "sku-001",
   "sku_name": "Entry Bundle",
@@ -969,7 +969,55 @@
           },
           "projector_url": "https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/mmproj-gemma-4-E2B-it-Q8_0.gguf?download=true",
           "projector_filename": "mmproj-gemma-4-E2B-it-Q8_0.gguf",
-          "projector_sha256": "9406f99c16d68cda4f1f0552192dcc99021ea1fc6d2fd50b1dc3ccf30d04b292"
+          "projector_sha256": "9406f99c16d68cda4f1f0552192dcc99021ea1fc6d2fd50b1dc3ccf30d04b292",
+          "runtimes": [
+            "llama.cpp"
+          ],
+          "accelerators": [
+            "cpu",
+            "cuda",
+            "rocm"
+          ],
+          "profiles": {
+            "edge": {
+              "availability": "supported",
+              "min_ram_gb": 12
+            },
+            "pro": {
+              "availability": "recommended",
+              "min_ram_gb": 12
+            },
+            "enterprise": {
+              "availability": "recommended",
+              "min_ram_gb": 12
+            },
+            "datacenter": {
+              "availability": "recommended",
+              "min_ram_gb": 12
+            }
+          },
+          "lifecycle": "active",
+          "catalog_score": 80,
+          "recommendation": "good",
+          "last_reviewed": "2026-09-09",
+          "psf_score": {
+            "version": "1.0.0",
+            "source": "heuristic",
+            "breakdown": {
+              "quality": 72,
+              "deployability": 96,
+              "performance": 86,
+              "reliability": 72,
+              "utility": null,
+              "discipline": null
+            },
+            "weights": {
+              "quality": 0.4,
+              "deployability": 0.25,
+              "performance": 0.2,
+              "reliability": 0.15
+            }
+          }
         }
       ]
     },

@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.15 Core-CE] - 2026-09-09
+
+### Fixed
+- Fixed Gemma 4 E2B IT GGUF catalog metadata so the Catalog Browser shows `llama.cpp` instead of the fallback `runtime?` label.
+- Fixed Catalog Browser readiness indicators so downloaded llama.cpp/GGUF models are treated as runnable without requiring an Ollama wrapper.
+
+### Changed
+- Bumped package, installer, and active catalog revision metadata to `1.1.15`.
+
 ## [v1.1.14 Core-CE] - 2026-09-09
 
 ### Added
