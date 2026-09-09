@@ -25,12 +25,12 @@ function loadChatFlowController(fetchImpl) {
   return context.window.TerminalChatFlow.createChatFlowController;
 }
 
-async function testRlmRunsBeforeLlamaCppProvider() {
+async function testRecursiveRlmRunsBeforeLlamaCppProvider() {
   const createChatFlowController = loadChatFlowController();
-  const userInput = { value: 'summarize the attached file' };
+  const userInput = { value: 'outline a story about ants' };
   const assistantMessages = [];
   const systemMessages = [];
-  let runRlmCalled = false;
+  let runRlmLoopCalled = false;
   let pairAppended = false;
 
   const controller = createChatFlowController({
@@ -78,22 +78,25 @@ async function testRlmRunsBeforeLlamaCppProvider() {
     getStreamStopRequested: () => false,
     getRlmAssisted: () => true,
     getRlmController: () => null,
-    getRlmProvider: () => 'legacy',
+    getRlmProvider: () => 'engine',
     runRlmTurn: async (payload = {}) => {
-      runRlmCalled = true;
-      assert.strictEqual(payload.message, 'summarize the attached file');
-      assert.strictEqual(payload.options.backendProvider, 'llama.cpp');
+      throw new Error(`legacy RLM turn should not run: ${JSON.stringify(payload)}`);
+    },
+    runRlmLoop: async (payload = {}) => {
+      runRlmLoopCalled = true;
+      assert.strictEqual(payload.prompt, 'outline a story about ants');
+      assert.strictEqual(payload.backend, 'llama.cpp');
+      assert.strictEqual(payload.mode, 'recursive-repl');
       return {
         success: true,
         handled: true,
-        answer: 'Summary of attached file',
-        executedTools: ['chunk_text', 'accumulate_summaries'],
-        plan: { mode: 'engine' },
-        toolResult: {
-          output: {
-            coverage: { processedRatio: 1, processedChunks: 1, totalChunks: 1 }
-          }
-        }
+        final: 'Ant story outline',
+        iterations: 3,
+        observations: [
+          { action: { type: 'inspect_environment_metadata' }, success: true },
+          { action: { type: 'slice_prompt' }, success: true },
+          { action: { type: 'set_final' }, success: true, finalSet: true }
+        ]
       };
     },
     getRlmVerboseTrace: () => false,
@@ -105,12 +108,12 @@ async function testRlmRunsBeforeLlamaCppProvider() {
 
   await controller.sendMessage();
 
-  assert.strictEqual(runRlmCalled, true);
-  assert.deepStrictEqual(assistantMessages, ['Summary of attached file']);
+  assert.strictEqual(runRlmLoopCalled, true);
+  assert.deepStrictEqual(assistantMessages, ['Ant story outline']);
   assert.strictEqual(pairAppended, true);
   assert.strictEqual(userInput.value, '');
-  assert.ok(systemMessages.some((message) => message.includes('RLM Trace:')));
-  assert.ok(systemMessages.some((message) => message.includes('RLM Engine:')));
+  assert.ok(systemMessages.some((message) => message.includes('RLM Trace: actions=inspect_environment_metadata -> slice_prompt -> set_final')));
+  assert.ok(systemMessages.some((message) => message.includes('RLM Engine: mode=recursive-repl')));
 }
 
 function createLlamaCppControllerForSse(sse, hooks = {}) {
@@ -400,7 +403,7 @@ async function testOrdinaryChatSkipsAttachmentContext() {
 }
 
 async function run() {
-  await testRlmRunsBeforeLlamaCppProvider();
+  await testRecursiveRlmRunsBeforeLlamaCppProvider();
   await testLlamaCppThinkingAndAnswerStaySeparate();
   await testLlamaCppThinkingOnlyStreamIsNotAnswer();
   await testLlamaCppDropsOldHistoryWhenContextIsTight();

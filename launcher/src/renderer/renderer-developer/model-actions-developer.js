@@ -45,11 +45,10 @@ function showCopyableErrorDialog(title, message) {
     'z-index:99999'
   ].join(';');
   const safeTitle = escapeHtml(title || 'Error');
-  const safeMessage = escapeHtml(message || 'Unknown error');
   modal.innerHTML = `
     <div style="width:min(760px,92vw); max-height:80vh; overflow:auto; background:#121826; border:1px solid #2b3650; border-radius:10px; padding:14px;">
-      <div style="font-weight:700; color:#ff6b6b; margin-bottom:8px;">${safeTitle}</div>
-      <pre style="white-space:pre-wrap; word-break:break-word; background:#0b1220; border:1px solid #24324d; color:#dbe7ff; padding:10px; border-radius:8px; font-size:12px;">${safeMessage}</pre>
+      <div style="font-weight:700; color:#ff6b6b; margin-bottom:8px; user-select:text;">${safeTitle}</div>
+      <textarea id="model-action-error-text" readonly spellcheck="false" style="width:100%; min-height:260px; max-height:58vh; resize:vertical; white-space:pre; background:#0b1220; border:1px solid #24324d; color:#dbe7ff; padding:10px; border-radius:8px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace; font-size:12px; line-height:1.45; user-select:text;"></textarea>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
         <button id="model-action-error-copy" style="padding:8px 12px; border-radius:8px; border:1px solid #345ea8; background:#173a73; color:#fff; cursor:pointer;">Copy</button>
         <button id="model-action-error-close" style="padding:8px 12px; border-radius:8px; border:1px solid #3a3a3a; background:#1c1c1c; color:#ddd; cursor:pointer;">Close</button>
@@ -62,6 +61,12 @@ function showCopyableErrorDialog(title, message) {
   document.body.appendChild(modal);
   const closeBtn = document.getElementById('model-action-error-close');
   const copyBtn = document.getElementById('model-action-error-copy');
+  const textArea = document.getElementById('model-action-error-text');
+  if (textArea) {
+    textArea.value = String(message || 'Unknown error');
+    textArea.focus();
+    textArea.select();
+  }
   if (closeBtn) closeBtn.addEventListener('click', () => modal.remove());
   if (copyBtn) {
     copyBtn.addEventListener('click', async () => {

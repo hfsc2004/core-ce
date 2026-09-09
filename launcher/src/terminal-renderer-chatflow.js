@@ -45,8 +45,16 @@
     const getRlmController = typeof deps?.getRlmController === 'function' ? deps.getRlmController : () => null;
     const getRlmProvider = typeof deps?.getRlmProvider === 'function' ? deps.getRlmProvider : () => 'legacy';
     const runRlmTurn = typeof deps?.runRlmTurn === 'function' ? deps.runRlmTurn : (async () => ({ success: false, handled: false, error: 'rlm engine unavailable' }));
+    const runRlmLoop = typeof deps?.runRlmLoop === 'function'
+      ? deps.runRlmLoop
+      : (async () => ({
+        success: false,
+        handled: false,
+        error: 'recursive RLM bridge unavailable; restart PSF Core and open a fresh Terminal window'
+      }));
     const getRlmVerboseTrace = typeof deps?.getRlmVerboseTrace === 'function' ? deps.getRlmVerboseTrace : () => false;
     const getRlmQuality = typeof deps?.getRlmQuality === 'function' ? deps.getRlmQuality : () => 'balanced';
+    const getRlmProfile = typeof deps?.getRlmProfile === 'function' ? deps.getRlmProfile : () => 'balanced';
     const getRlmBudgets = typeof deps?.getRlmBudgets === 'function' ? deps.getRlmBudgets : () => ({});
     const getRlmIncludeSharedAttachments = typeof deps?.getRlmIncludeSharedAttachments === 'function'
       ? deps.getRlmIncludeSharedAttachments
@@ -58,6 +66,13 @@
       max_chunks_processed: 'Stopped at document-coverage limit. Increase profile or enable Advanced budgets.',
       max_evidence_hits: 'Stopped at evidence-sampling limit. Increase profile or enable Advanced budgets.',
       max_recursion_depth: 'Stopped at reasoning-depth limit. Increase profile or enable Advanced budgets.'
+    };
+    const RLM_PROFILE_ITERATIONS = {
+      fast: 4,
+      balanced: 8,
+      deep: 16,
+      'industrial-safe': 6,
+      custom: 8
     };
     function normalizeProvider(value) {
       const raw = String(value || '').trim().toLowerCase();
@@ -116,6 +131,36 @@
       const elapsed = Math.round(nowMs() - startedAt);
       const suffix = details ? ` ${details}` : '';
       console.log(`[Terminal Timing] ${stage}: ${elapsed}ms${suffix}`);
+    }
+    function normalizeRlmProfile(value) {
+      const key = String(value || '').trim().toLowerCase();
+      return Object.prototype.hasOwnProperty.call(RLM_PROFILE_ITERATIONS, key) ? key : 'balanced';
+    }
+    function buildRecursiveRlmBudget() {
+      const budgets = getRlmBudgets() || {};
+      const profile = normalizeRlmProfile(getRlmProfile());
+      const maxToolCalls = Number(budgets.maxToolCalls);
+      const maxRuntimeMs = Number(budgets.maxRuntimeMs);
+      const maxRecursionDepth = Number(budgets.maxRecursionDepth);
+      const maxRootIterations = Number.isFinite(maxToolCalls)
+        ? Math.max(1, Math.min(64, Math.floor(maxToolCalls)))
+        : RLM_PROFILE_ITERATIONS[profile];
+      const out = {
+        profile,
+        modelBehavior: 'unknown',
+        maxRootIterations,
+        maxTokensPerSubcall: profile === 'deep' ? 1536 : 1024
+      };
+      if (Number.isFinite(maxRuntimeMs) && maxRuntimeMs > 0) out.maxRuntimeMs = Math.floor(maxRuntimeMs);
+      if (Number.isFinite(maxRecursionDepth) && maxRecursionDepth > 0) out.maxRecursionDepth = Math.floor(maxRecursionDepth);
+      return out;
+    }
+    function summarizeRecursiveRlmActions(observations = []) {
+      if (!Array.isArray(observations) || observations.length === 0) return 'none';
+      return observations.map((entry) => {
+        if (entry && entry.action && entry.action.type) return String(entry.action.type);
+        return entry && entry.error ? 'invalid_action' : 'unknown';
+      }).join(' -> ');
     }
     function buildOpenAIStyleMessages(messages = []) {
       return (Array.isArray(messages) ? messages : []).map((m) => ({
@@ -568,11 +613,9 @@
       const hasAction = /(summari[sz]e|analy[sz]e|review|inspect|read|extract|search|find|quote|compare|list)\b/i.test(lower);
       const directAttachmentAsk = /(from (the )?attached|from attachments?|in (the )?attachment|attached file)/i.test(lower);
       const provider = String(getRlmProvider() || 'legacy').trim().toLowerCase();
-      const hasCodeIntent = /(write|generate|create|program|build)\s+(a\s+)?(python|script|function|program|code)\b/i.test(lower)
-        || /\bpython\b/i.test(lower);
 
+      if (provider === 'engine') return true;
       if ((hasSource && hasAction) || directAttachmentAsk) return true;
-      if (provider === 'engine' && hasCodeIntent) return true;
       return false;
     }
 
@@ -581,54 +624,56 @@
 
       setThinkingStatusText('Running RLM tools');
       const activeProvider = String(providerRuntime?.provider || 'ollama').trim().toLowerCase();
-      const provider = activeProvider !== 'ollama'
-        ? 'engine'
-        : String(getRlmProvider() || 'legacy').trim().toLowerCase();
+      const provider = String(getRlmProvider() || 'legacy').trim().toLowerCase();
       if (provider === 'engine') {
         try {
-          const rlmResult = await runRlmTurn({
-            message,
-            conversationHistory: getConversationHistory(),
+          const rlmResult = await runRlmLoop({
+            prompt: message,
+            messages: getConversationHistory(),
             systemPrompt: getSystemPrompt() || '',
-            options: {
-              modelName: getCurrentModel(),
-              port: getTerminalPort(),
-              backendProvider: activeProvider,
-              providerBaseUrl: String(providerRuntime?.baseUrl || '').trim(),
-              providerModel: String(providerRuntime?.providerModel || '').trim(),
-              engineMode: 'mit-loop',
-              quality: getRlmQuality(),
-              budgets: getRlmBudgets(),
-              includeSharedAttachments: getRlmIncludeSharedAttachments(),
-              sharedAttachmentSessionId: 'terminal-shared'
-            }
+            parentSessionId: `terminal-${getTerminalPort()}`,
+            attachmentSessionId: `terminal-${getTerminalPort()}`,
+            surface: 'terminal',
+            mode: 'recursive-repl',
+            model: String(providerRuntime?.providerModel || '').trim() || getCurrentModel(),
+            backend: activeProvider,
+            providerBaseUrl: String(providerRuntime?.baseUrl || '').trim() || (
+              activeProvider === 'llama.cpp' && getTerminalPort() > 0
+                ? `http://127.0.0.1:${getTerminalPort()}`
+                : ''
+            ),
+            providerApiKey: String(providerRuntime?.apiKey || '').trim(),
+            providerModel: String(providerRuntime?.providerModel || '').trim(),
+            quality: getRlmQuality(),
+            includeSharedAttachments: getRlmIncludeSharedAttachments(),
+            sharedAttachmentSessionId: 'terminal-shared',
+            budget: buildRecursiveRlmBudget()
           });
           if (rlmResult && rlmResult.handled) {
-            const rlmAnswer = localOnly ? `{local} ${rlmResult.answer}` : rlmResult.answer;
+            const answer = String(rlmResult.final || rlmResult.answer || '').trim();
+            if (!answer && rlmResult.budgetExhausted) {
+              addSystemMessage('RLM Notice: Stopped at root-loop iteration limit before final answer. Increase profile or Advanced RLM budgets.');
+              setWaitingState(false);
+              focusInput();
+              return true;
+            }
+            if (!answer) {
+              addSystemMessage('RLM engine fallback: no final answer returned.');
+              return false;
+            }
+            const rlmAnswer = localOnly ? `{local} ${answer}` : answer;
             addMessage('assistant', rlmAnswer);
             appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
-            const cov = rlmResult?.toolResult?.output?.coverage;
-            const coverageNote = cov && Number.isFinite(cov.processedRatio)
-              ? ` coverage=${Math.round(cov.processedRatio * 100)}% (${cov.processedChunks}/${cov.totalChunks} chunks)`
-              : '';
-            const traceTools = Array.isArray(rlmResult?.executedTools) && rlmResult.executedTools.length > 0
-              ? rlmResult.executedTools.join(' -> ')
-              : (Array.isArray(rlmResult?.steps) && rlmResult.steps.length > 0
-                ? rlmResult.steps.map((s) => s.tool).join(' -> ')
-                : (rlmResult?.plan?.tool || 'unknown'));
-            const stopNote = rlmResult?.stopReason ? ` stop=${rlmResult.stopReason}` : '';
-            const modeNote = rlmResult?.plan?.mode ? ` mode=${rlmResult.plan.mode}` : ' mode=engine';
-            addSystemMessage(`RLM Trace: tool=${traceTools} source=deterministic${coverageNote}${stopNote}`);
-            addSystemMessage(`RLM Engine:${modeNote}`);
-            if (rlmResult?.stopReason && STOP_REASON_MESSAGES[rlmResult.stopReason]) {
-              addSystemMessage(`RLM Notice: ${STOP_REASON_MESSAGES[rlmResult.stopReason]}`);
+            const traceTools = summarizeRecursiveRlmActions(rlmResult.observations);
+            const exhaustedNote = rlmResult.budgetExhausted ? ' budget_exhausted=true' : '';
+            addSystemMessage(`RLM Trace: actions=${traceTools} source=recursive-loop iterations=${rlmResult.iterations || 0}${exhaustedNote}`);
+            addSystemMessage(`RLM Engine: mode=recursive-repl profile=${normalizeRlmProfile(getRlmProfile())}`);
+            if (rlmResult.budgetExhausted) {
+              addSystemMessage('RLM Notice: Stopped at root-loop iteration limit. Increase profile or Advanced RLM budgets.');
             }
             if (getRlmVerboseTrace() === true) {
-              if (rlmResult?.plan) {
-                addSystemMessage(`RLM Plan JSON: ${JSON.stringify(rlmResult.plan)}`);
-              }
-              if (Array.isArray(rlmResult?.trace)) {
-                rlmResult.trace.forEach((line) => addSystemMessage(`RLM Step: ${line}`));
+              if (Array.isArray(rlmResult?.observations)) {
+                rlmResult.observations.forEach((entry) => addSystemMessage(`RLM Step: ${JSON.stringify(entry)}`));
               }
             }
             setWaitingState(false);

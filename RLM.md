@@ -113,6 +113,8 @@ Required variables:
 
 2. `Messages`
 - Conversation history or selected history, stored outside root context.
+- Root metadata exposes message count, roles, and lengths only by default.
+- Message text previews should not be sent to the root model unless the current prompt explicitly asks for conversation history.
 
 3. `Attachments`
 - Attached files as metadata plus lazy read handles.
@@ -658,7 +660,16 @@ Current implementation status:
 3. Unsupported actions fail closed.
 4. Prompt slices are capped by the session budget before returning text.
 5. The action executor is exposed through BMOC-owned service methods and IPC/preload channels.
-6. Live root-model orchestration is not implemented yet; this layer gives the future root loop a constrained target instead of letting free-form text drive internals.
+6. Added a root-loop orchestrator in `launcher/modules/rlm-service/rlm-root-loop.js`.
+7. The loop asks the root model for exactly one JSON action per iteration, executes it through the structured action executor, and returns only bounded observations back to the root model.
+8. The loop stops when `Final` is set, when the RLM session is stopped, or when the root-iteration budget is exhausted.
+9. The full prompt stays in the environment; regression coverage verifies hidden prompt tails are not included in root model messages.
+10. IPC/preload expose `rlm:run-loop`.
+11. PSF Terminal now has first opt-in wiring for Recursive RLM through the existing RLM toggle plus a visible RLM Engine selector.
+12. When `Recursive RLM` is selected, substantive prompts route through `rlm:run-loop` before normal provider streaming.
+13. Simple greetings bypass Recursive RLM so normal chat stays fast.
+14. Sandbox execution remains disabled by default.
+15. Prior conversation message text is hidden from root metadata by default so current-prompt RLM turns do not drift into older tasks.
 
 Acceptance:
 1. Root model can inspect prompt slices.
@@ -689,6 +700,16 @@ Tasks:
 3. Add trace panel sections.
 4. Separate model thinking from RLM trace.
 5. Add warnings for enabling Recursive REPL.
+
+Current implementation status:
+1. PSF Terminal exposes RLM as an opt-in mode through `RLM Mode`.
+2. The settings panel now includes an `RLM Engine` selector with `Document Assist` and `Recursive RLM`.
+3. `/rlm provider legacy` selects the existing Document Assist path.
+4. `/rlm provider engine` selects the Recursive RLM root loop.
+5. Recursive RLM uses Ollama transport for Ollama-backed sessions and OpenAI-compatible `/v1/chat/completions` transport for llama.cpp, vLLM, and OpenAI-compatible backends.
+6. Recursive RLM output is rendered as the assistant answer, with compact root action trace lines rendered separately as system messages.
+7. Verbose trace mode renders bounded root-loop observations as separate `RLM Step` system messages.
+8. Full dedicated trace panels, behavior-profile controls, and user warnings are still pending.
 
 Acceptance:
 1. Normal chat defaults to Off.
@@ -777,9 +798,9 @@ The next engineering step is hardening the sandbox boundary:
 4. Prove blocked IO, blocked network, bounded stdout/stderr, and timeout cleanup across supported platforms.
 5. Keep recursive `sub_lm` and `sub_rlm` disabled until the sandbox is reliable under test.
 
-In parallel, the root-loop orchestration can now target the structured action executor:
-1. Ask the root model for one JSON action per iteration.
-2. Validate that action against the supported action set.
-3. Execute through `rlm:run-action`.
-4. Return only the bounded action result and trace summary to the root model.
-5. Stop when the environment reports `Final.set === true` or budget expires.
+The next RLM orchestration step is UI and policy integration:
+1. Add model behavior controls for `thinking`, `non_thinking`, and `unknown`.
+2. Use behavior-specific prompts and budget presets in the root loop.
+3. Add a dedicated trace view so root actions, sandbox observations, model thinking, and final output are visually distinct.
+4. Add explicit warnings before enabling Recursive RLM for unknown-behavior models or deep profiles.
+5. Keep sandbox execution disabled by default until the hardening list above is complete.

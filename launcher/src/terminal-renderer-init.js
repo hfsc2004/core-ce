@@ -217,8 +217,10 @@
         getRlmController: ctx.getRlmController,
         getRlmProvider: ctx.getRlmProvider,
         runRlmTurn: ctx.runRlmTurn,
+        runRlmLoop: ctx.runRlmLoop,
         getRlmVerboseTrace: ctx.getRlmVerboseTrace,
         getRlmQuality: ctx.getRlmQuality,
+        getRlmProfile: ctx.getRlmProfile,
         getRlmBudgets: ctx.getRlmBudgets,
         getRlmIncludeSharedAttachments: ctx.getRlmIncludeSharedAttachments,
         getConfig: ctx.getConfig

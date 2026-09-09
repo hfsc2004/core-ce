@@ -137,7 +137,15 @@
 
     <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
       <input type="checkbox" id="cfg-rlm-assisted" />
-      <label for="cfg-rlm-assisted" style="color: #aaa; font-size: 12px;">RLM Assisted Mode (planner + deterministic tools)</label>
+      <label for="cfg-rlm-assisted" style="color: #aaa; font-size: 12px;">RLM Mode (Document Assist or Recursive RLM tools)</label>
+    </div>
+
+    <div style="margin-bottom: 12px;">
+      <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 4px;">RLM Engine</label>
+      <select id="cfg-rlm-provider" style="width: 100%; padding: 8px; background: #16162a; border: 1px solid #2d2d44; border-radius: 5px; color: #fff;">
+        <option value="legacy">Document Assist</option>
+        <option value="engine">Recursive RLM</option>
+      </select>
     </div>
 
     <div style="margin-bottom: 12px;">

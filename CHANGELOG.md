@@ -7,6 +7,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.11 Core-CE] - 2026-09-08
+
+### Added
+- Added the RLM root-loop orchestrator for one-action-per-iteration model control, bounded observations, budget exhaustion handling, finalization detection, and IPC/preload access through `rlm:run-loop`.
+- Added PSF Terminal opt-in wiring for Recursive RLM mode, including a visible RLM engine selector, recursive-loop routing before provider streaming, llama.cpp/OpenAI-compatible root model transport, compact trace notices, and regression coverage.
+
+### Fixed
+- Fixed PSF Terminal bootstrap wiring so Recursive RLM receives the `rlm:run-loop` bridge instead of falling back with `recursive RLM unavailable`.
+- Replaced launch failure alerts with copyable/selectable error dialogs so long llama.cpp and Terminal startup errors can be copied for debugging.
+- Hid prior conversation text previews from Recursive RLM root metadata by default to reduce task drift during current-prompt RLM turns.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.11`.
+
 ## [v1.1.10 Core-CE] - 2026-09-08
 
 ### Added

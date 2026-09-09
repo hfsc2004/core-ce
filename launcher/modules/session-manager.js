@@ -269,6 +269,10 @@ async function runRlmAction(request = {}) {
   return rlmService.runAction(request);
 }
 
+async function runRlmLoop(request = {}, options = {}) {
+  return rlmService.runLoop(request, options);
+}
+
 function startGpuMonitor(callback) {
   return gpuMonitorManager.startGpuMonitor(callback);
 }
@@ -329,6 +333,7 @@ module.exports = {
   validateRlmSandboxCode,
   executeRlmSandboxCode,
   runRlmAction,
+  runRlmLoop,
   startGpuMonitor,
   stopGpuMonitor,
   isGpuMonitorRunning

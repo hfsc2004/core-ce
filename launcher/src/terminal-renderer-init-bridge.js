@@ -155,6 +155,7 @@
       getRlmController: api.getRlmController,
       getRlmProvider: api.getRlmProvider,
       runRlmTurn: api.runRlmTurn,
+      runRlmLoop: api.runRlmLoop,
       configureMarkdown: api.configureMarkdown,
       installDragAndDropAttach: api.installDragAndDropAttach,
       updateGPUIndicator: api.updateGPUIndicator,

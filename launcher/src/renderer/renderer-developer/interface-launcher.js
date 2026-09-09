@@ -11,16 +11,148 @@ let allModels = [];
 let recommendedModels = [];
 let originalShowScreen = null;
 
-async function copyThenAlert(message) {
-  const text = String(message || '');
+function ensureCopyableErrorStyles() {
+  if (document.getElementById('psf-copyable-error-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'psf-copyable-error-styles';
+  style.textContent = `
+    .psf-copyable-error-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.72);
+    }
+    .psf-copyable-error-dialog {
+      width: min(920px, 94vw);
+      max-height: 86vh;
+      display: grid;
+      grid-template-rows: auto minmax(260px, 1fr) auto;
+      gap: 12px;
+      padding: 16px;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+      color: #f9fafb;
+    }
+    .psf-copyable-error-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      user-select: text;
+    }
+    .psf-copyable-error-text {
+      width: 100%;
+      min-height: 260px;
+      max-height: 62vh;
+      resize: vertical;
+      padding: 10px;
+      background: #020617;
+      border: 1px solid #4b5563;
+      border-radius: 6px;
+      color: #f8fafc;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre;
+      user-select: text;
+    }
+    .psf-copyable-error-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .psf-copyable-error-actions button {
+      padding: 8px 12px;
+      border: 1px solid #4b5563;
+      border-radius: 6px;
+      background: #1f2937;
+      color: #f9fafb;
+      cursor: pointer;
+    }
+    .psf-copyable-error-actions button:hover {
+      background: #374151;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+async function copyTextToClipboard(text) {
   try {
     if (navigator?.clipboard && typeof navigator.clipboard.writeText === 'function') {
       await navigator.clipboard.writeText(text);
+      return true;
     }
-  } catch (_) {
-    // Clipboard is best-effort; keep showing the existing alert either way.
-  }
-  alert(text);
+  } catch (_) {}
+  return false;
+}
+
+async function showCopyableError(message, title = 'Error') {
+  const text = String(message || '');
+  await copyTextToClipboard(text);
+  ensureCopyableErrorStyles();
+
+  const previous = document.getElementById('psf-copyable-error-backdrop');
+  if (previous) previous.remove();
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'psf-copyable-error-backdrop';
+  backdrop.className = 'psf-copyable-error-backdrop';
+
+  const dialog = document.createElement('div');
+  dialog.className = 'psf-copyable-error-dialog';
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-modal', 'true');
+  dialog.setAttribute('aria-labelledby', 'psf-copyable-error-title');
+
+  const heading = document.createElement('h2');
+  heading.id = 'psf-copyable-error-title';
+  heading.className = 'psf-copyable-error-title';
+  heading.textContent = title;
+
+  const textarea = document.createElement('textarea');
+  textarea.className = 'psf-copyable-error-text';
+  textarea.readOnly = true;
+  textarea.spellcheck = false;
+  textarea.value = text;
+
+  const actions = document.createElement('div');
+  actions.className = 'psf-copyable-error-actions';
+
+  const copyButton = document.createElement('button');
+  copyButton.type = 'button';
+  copyButton.textContent = 'Copy';
+  copyButton.onclick = async () => {
+    const copied = await copyTextToClipboard(text);
+    copyButton.textContent = copied ? 'Copied' : 'Select Text';
+    setTimeout(() => { copyButton.textContent = 'Copy'; }, 1600);
+  };
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.textContent = 'Close';
+  closeButton.onclick = () => backdrop.remove();
+
+  actions.appendChild(copyButton);
+  actions.appendChild(closeButton);
+  dialog.appendChild(heading);
+  dialog.appendChild(textarea);
+  dialog.appendChild(actions);
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) backdrop.remove();
+  });
+  backdrop.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') backdrop.remove();
+  });
+  textarea.focus();
+  textarea.select();
 }
 
 // Load models when entering webui-select screen
@@ -247,7 +379,7 @@ async function launchInterfaceWithModel(interfaceType) {
     }
     
     if (!modelPath) {
-      alert('Could not find model file. Please make sure the model is downloaded.');
+      await showCopyableError('Could not find model file. Please make sure the model is downloaded.', 'Model File Not Found');
       return;
     }
     
@@ -256,7 +388,7 @@ async function launchInterfaceWithModel(interfaceType) {
     const loadResult = await window.electronAPI.launchModelInOllama(modelPath);
     
     if (!loadResult.success) {
-      alert(`Failed to load model into Ollama:\n${loadResult.message}`);
+      await showCopyableError(`Failed to load model into Ollama:\n${loadResult.message}`, 'Failed to Load Model');
       return;
     }
     
@@ -264,7 +396,7 @@ async function launchInterfaceWithModel(interfaceType) {
     
   } catch (err) {
     console.error('Error preparing model:', err);
-    alert(`Error preparing model:\n${err.message}`);
+    await showCopyableError(`Error preparing model:\n${err.message}`, 'Model Prepare Error');
     return;
   }
   
@@ -280,11 +412,11 @@ async function launchInterfaceWithModel(interfaceType) {
     if (result.success) {
       console.log(`${interfaceType} launched successfully with model: ${selectedModel}`);
     } else {
-      alert(`Failed to launch ${interfaceType}:\n${result.message}`);
+      await showCopyableError(`Failed to launch ${interfaceType}:\n${result.message}`, 'Interface Launch Failed');
     }
   } catch (err) {
     console.error('Launch failed:', err);
-    alert(`Error launching ${interfaceType}:\n${err.message}`);
+    await showCopyableError(`Error launching ${interfaceType}:\n${err.message}`, 'Interface Launch Error');
   }
 }
 
@@ -304,11 +436,11 @@ async function launchInterface(interfaceType) {
     if (result.success) {
       console.log(`${interfaceType} launched successfully`);
     } else {
-      alert(`Failed to launch ${interfaceType}:\n${result.message}`);
+      await showCopyableError(`Failed to launch ${interfaceType}:\n${result.message}`, 'Interface Launch Failed');
     }
   } catch (err) {
     console.error('Launch failed:', err);
-    alert(`Error launching ${interfaceType}:\n${err.message}`);
+    await showCopyableError(`Error launching ${interfaceType}:\n${err.message}`, 'Interface Launch Error');
   }
 }
 
@@ -395,11 +527,11 @@ async function launchTerminal() {
     if (result && result.success) {
       console.log('Terminal launched successfully');
     } else {
-      await copyThenAlert(`Failed to launch terminal:\n${result?.message || 'Unknown error'}`);
+      await showCopyableError(`Failed to launch terminal:\n${result?.message || 'Unknown error'}`, 'Failed to Launch Terminal');
     }
   } catch (err) {
     console.error('Terminal launch failed:', err);
-    await copyThenAlert(`Error launching terminal:\n${err.message}`);
+    await showCopyableError(`Error launching terminal:\n${err.message}`, 'Terminal Launch Error');
   }
 }
 
@@ -413,11 +545,11 @@ async function launchCodingTerminal() {
   try {
     const result = await window.electronAPI.openCodingTerminal({ docked: false });
     if (!result?.success) {
-      alert(`Failed to launch coding terminal:\n${result?.message || 'Unknown error'}`);
+      await showCopyableError(`Failed to launch coding terminal:\n${result?.message || 'Unknown error'}`, 'Failed to Launch Coding Terminal');
     }
   } catch (err) {
     console.error('Coding terminal launch failed:', err);
-    alert(`Error launching coding terminal:\n${err.message}`);
+    await showCopyableError(`Error launching coding terminal:\n${err.message}`, 'Coding Terminal Launch Error');
   }
 }
 
