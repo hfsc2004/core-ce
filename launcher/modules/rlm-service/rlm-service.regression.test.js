@@ -1,6 +1,7 @@
 const assert = require('assert');
 const { createRlmService } = require('./rlm-service');
 const { executePythonSnippet } = require('./rlm-python-runner');
+const { extractFirstJsonObject } = require('./rlm-root-loop');
 
 function createFakeBmoc() {
   let counter = 0;
@@ -57,7 +58,8 @@ function createService(options = {}) {
         }];
       }
     },
-    enableSandboxExecution: options.enableSandboxExecution === true
+    enableSandboxExecution: options.enableSandboxExecution === true,
+    sendMessage: options.sendMessage
   });
   return { service, bmoc };
 }
@@ -339,7 +341,96 @@ async function testStructuredActionsFailClosed() {
   assert.match(result.error, /Unsupported RLM action/);
 }
 
+function testRootLoopJsonExtraction() {
+  assert.deepEqual(
+    extractFirstJsonObject('```json\n{"type":"len_prompt","args":{}}\n```'),
+    { type: 'len_prompt', args: {} }
+  );
+  assert.deepEqual(
+    extractFirstJsonObject('Here is the action:\n{"type":"set_final","args":{"value":"done"}}\nThanks'),
+    { type: 'set_final', args: { value: 'done' } }
+  );
+}
+
+async function testRootLoopExecutesStructuredActions() {
+  const hiddenTail = 'SECRET_TAIL_SHOULD_NOT_REACH_ROOT_MODEL';
+  const hiddenMessage = 'OLD_STORY_CONTEXT_SHOULD_NOT_REACH_ROOT_MODEL';
+  const prompt = `${'Alpha treaty text. '.repeat(200)}${hiddenTail}`;
+  const seenMessages = [];
+  const actions = [
+    { type: 'search_prompt', args: { pattern: 'treaty', maxHits: 1 } },
+    { type: 'slice_prompt', args: { start: 0, end: 80 } },
+    { type: 'set_final', args: { value: 'The prompt discusses Alpha treaty text.' } }
+  ];
+  const { service } = createService({
+    sendMessage: async (_model, messages) => {
+      seenMessages.push(JSON.stringify(messages));
+      return { response: { message: { content: JSON.stringify(actions.shift()) } } };
+    }
+  });
+
+  const result = await service.runLoop({
+    prompt,
+    messages: [
+      { role: 'user', content: hiddenMessage }
+    ],
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 4,
+      maxPromptSliceChars: 512
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'The prompt discusses Alpha treaty text.');
+  assert.equal(result.iterations, 3);
+  assert.equal(seenMessages.length, 3);
+  assert.equal(seenMessages.some((text) => text.includes(hiddenTail)), false);
+  assert.equal(seenMessages.some((text) => text.includes(hiddenMessage)), false);
+  assert.ok(result.observations.some((item) => item.action.type === 'search_prompt'));
+  assert.ok(result.observations.some((item) => item.action.type === 'slice_prompt'));
+}
+
+async function testRootLoopRetriesInvalidJsonAction() {
+  let callCount = 0;
+  const { service } = createService({
+    sendMessage: async () => {
+      callCount += 1;
+      if (callCount === 1) return { response: { message: { content: 'not-json' } } };
+      return { response: { message: { content: '{"type":"set_final","args":{"value":"recovered"}}' } } };
+    }
+  });
+  const result = await service.runLoop({
+    prompt: 'Short prompt',
+    model: 'mock-root',
+    budget: { maxRootIterations: 3 }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'recovered');
+  assert.equal(callCount, 2);
+  assert.equal(result.observations[0].success, false);
+  assert.match(result.observations[0].error, /Invalid JSON action/);
+}
+
+async function testRootLoopBudgetExhaustion() {
+  const { service } = createService({
+    sendMessage: async () => ({ response: { message: { content: '{"type":"len_prompt","args":{}}' } } })
+  });
+  const result = await service.runLoop({
+    prompt: 'Never finalized',
+    model: 'mock-root',
+    budget: { maxRootIterations: 2 }
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.budgetExhausted, true);
+  assert.equal(result.iterations, 2);
+  assert.equal(result.final, '');
+}
+
 (async () => {
+  testRootLoopJsonExtraction();
   await testStartSessionRegistersWithBmoc();
   await testDryRunDoesNotSendFullPromptToRootModel();
   await testBehaviorProfilesSelectDifferentBudgets();
@@ -354,6 +445,9 @@ async function testStructuredActionsFailClosed() {
   await testSandboxWorkerBlocksAstEscapes();
   await testStructuredActionsOperateOnEnvironment();
   await testStructuredActionsFailClosed();
+  await testRootLoopExecutesStructuredActions();
+  await testRootLoopRetriesInvalidJsonAction();
+  await testRootLoopBudgetExhaustion();
   console.log('rlm-service regression tests passed');
 })().catch((err) => {
   console.error(err);

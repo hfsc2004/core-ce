@@ -114,10 +114,10 @@
         applyRlmProfile(profile, true);
       } else if (mode === 'provider legacy') {
         setRlmProvider('legacy');
-        addSystemMessage('RLM provider: legacy');
+        addSystemMessage('RLM provider: legacy Document Assist');
       } else if (mode === 'provider engine') {
         setRlmProvider('engine');
-        addSystemMessage('RLM provider: engine');
+        addSystemMessage('RLM provider: recursive engine');
       } else if (mode === 'shared on') {
         setRlmIncludeSharedAttachments(true);
         addSystemMessage('RLM include shared attachments: ON');

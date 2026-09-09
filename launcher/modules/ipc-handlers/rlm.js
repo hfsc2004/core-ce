@@ -5,6 +5,8 @@
  */
 const { createRlmEngine } = require('../rlm-engine/rlm-engine');
 const bucketSecurity = require('../security-layer/security-buckets');
+const http = require('http');
+const https = require('https');
 
 function buildSecureAttachmentStore(rawStore, actor = {}) {
   const store = rawStore || {};
@@ -40,6 +42,82 @@ function buildSecureAttachmentStore(rawStore, actor = {}) {
 }
 
 function createRlmHandlers() {
+  function postJson(urlValue, payload = {}, headers = {}) {
+    return new Promise((resolve, reject) => {
+      let parsed;
+      try {
+        parsed = new URL(urlValue);
+      } catch (err) {
+        reject(err);
+        return;
+      }
+      const body = JSON.stringify(payload);
+      const transport = parsed.protocol === 'https:' ? https : http;
+      const req = transport.request({
+        hostname: parsed.hostname,
+        port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+        path: `${parsed.pathname}${parsed.search}`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          ...headers
+        }
+      }, (res) => {
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          let parsedBody = null;
+          try {
+            parsedBody = data ? JSON.parse(data) : {};
+          } catch (err) {
+            reject(new Error(`RLM provider returned invalid JSON: ${err.message}`));
+            return;
+          }
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error(`RLM provider HTTP ${res.statusCode}: ${data.slice(0, 500)}`));
+            return;
+          }
+          resolve(parsedBody);
+        });
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+  }
+
+  async function sendRlmModelMessage(ctx, rootPayload = {}, modelName, messages, options = {}) {
+    const backend = String(rootPayload?.backend || '').trim().toLowerCase();
+    const baseUrl = String(rootPayload?.providerBaseUrl || '').trim().replace(/\/+$/, '');
+    if ((backend === 'llama.cpp' || backend === 'vllm' || backend === 'openai-compatible') && baseUrl) {
+      const headers = {};
+      const apiKey = String(rootPayload?.providerApiKey || '').trim();
+      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+      const response = await postJson(`${baseUrl}/v1/chat/completions`, {
+        model: String(rootPayload?.providerModel || modelName || '').trim() || modelName,
+        messages,
+        stream: false,
+        max_tokens: Math.min(2048, Number(options?.maxTokens) || 1024),
+        temperature: Number.isFinite(Number(options?.temperature)) ? Number(options.temperature) : 0.2
+      }, headers);
+      const choice = Array.isArray(response?.choices) ? response.choices[0] : null;
+      const content = String(choice?.message?.content || choice?.text || response?.content || response?.text || '');
+      return {
+        success: true,
+        response: {
+          message: {
+            role: 'assistant',
+            content
+          },
+          raw: response
+        }
+      };
+    }
+    return ctx.ollamaManager.sendMessage(modelName, messages, options);
+  }
+
   return {
     'rlm:run-turn': async (ctx, event, payload = {}) => {
       const actor = {
@@ -109,6 +187,16 @@ function createRlmHandlers() {
         return { success: false, error: 'RLM action service is unavailable.' };
       }
       return ctx.sessionManager.runRlmAction(payload || {});
+    },
+
+    'rlm:run-loop': async (ctx, event, payload = {}) => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.runRlmLoop !== 'function') {
+        return { success: false, error: 'RLM loop service is unavailable.' };
+      }
+      return ctx.sessionManager.runRlmLoop(payload || {}, {
+        sendMessage: (modelName, messages, options = {}) =>
+          sendRlmModelMessage(ctx, payload || {}, modelName, messages, options)
+      });
     }
   };
 }

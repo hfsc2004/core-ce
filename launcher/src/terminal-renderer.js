@@ -936,6 +936,12 @@
         }
         return window.electronAPI.rlmRunTurn(payload);
       },
+      runRlmLoop: (payload = {}) => {
+        if (!window.electronAPI || typeof window.electronAPI.rlmRunLoop !== 'function') {
+          return Promise.resolve({ success: false, handled: false, error: 'rlmRunLoop API unavailable' });
+        }
+        return window.electronAPI.rlmRunLoop(payload);
+      },
       getLlmAssistedFileNaming: () => llmAssistedFileNaming,
       configureMarkdown,
       installDragAndDropAttach,

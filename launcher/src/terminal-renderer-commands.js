@@ -174,6 +174,7 @@
         const repeatInput = document.getElementById('cfg-repeat-penalty');
         const systemInput = document.getElementById('cfg-system-prompt');
         const rlmInput = document.getElementById('cfg-rlm-assisted');
+        const rlmProviderInput = document.getElementById('cfg-rlm-provider');
         const rlmVerboseInput = document.getElementById('cfg-rlm-verbose');
         const rlmProfileInput = document.getElementById('cfg-rlm-profile');
         const rlmAdvancedInput = document.getElementById('cfg-rlm-advanced');
@@ -196,6 +197,7 @@
         if (repeatInput) repeatInput.value = getRepeatPenalty() || 1.1;
         if (systemInput) systemInput.value = getSystemPrompt() || '';
         if (rlmInput) rlmInput.checked = getRlmAssisted() === true;
+        if (rlmProviderInput) rlmProviderInput.value = String(getRlmProvider() || 'legacy');
         if (rlmVerboseInput) rlmVerboseInput.checked = getRlmVerboseTrace() === true;
         if (rlmProfileInput) rlmProfileInput.value = normalizeProfile(getRlmProfile());
         if (rlmAdvancedInput) rlmAdvancedInput.checked = getRlmAdvancedBudgets() === true;
@@ -237,6 +239,7 @@
       const repeatInput = document.getElementById('cfg-repeat-penalty');
       const systemInput = document.getElementById('cfg-system-prompt');
       const rlmInput = document.getElementById('cfg-rlm-assisted');
+      const rlmProviderInput = document.getElementById('cfg-rlm-provider');
       const rlmVerboseInput = document.getElementById('cfg-rlm-verbose');
       const rlmProfileInput = document.getElementById('cfg-rlm-profile');
       const rlmAdvancedInput = document.getElementById('cfg-rlm-advanced');
@@ -266,6 +269,7 @@
       if (repeatInput) setRepeatPenalty(parseFloat(repeatInput.value) || null);
       if (systemInput) setSystemPromptValue(systemInput.value || null);
       if (rlmInput) setRlmAssisted(rlmInput.checked === true);
+      if (rlmProviderInput) setRlmProvider(rlmProviderInput.value || 'legacy');
       if (rlmVerboseInput) setRlmVerboseTrace(rlmVerboseInput.checked === true);
       if (rlmAdvancedInput) setRlmAdvancedBudgets(rlmAdvancedInput.checked === true);
       const selectedProfile = rlmProfileInput ? normalizeProfile(rlmProfileInput.value) : normalizeProfile(getRlmProfile());

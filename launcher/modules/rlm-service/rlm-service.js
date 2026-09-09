@@ -10,6 +10,7 @@ const { normalizeModelBehavior, normalizeProfile } = require('./rlm-budget');
 const { validatePythonSource, normalizeSandboxPolicy } = require('./rlm-sandbox-policy');
 const { executePythonSnippet } = require('./rlm-python-runner');
 const { createRlmActionExecutor } = require('./rlm-action-executor');
+const { runRootLoop } = require('./rlm-root-loop');
 
 function createRlmService(deps = {}) {
   const registerSession = typeof deps.registerSession === 'function' ? deps.registerSession : null;
@@ -18,6 +19,7 @@ function createRlmService(deps = {}) {
   const getBmocSession = typeof deps.getSession === 'function' ? deps.getSession : null;
   const attachmentStore = deps.attachmentStore || null;
   const sandboxExecutionEnabled = deps.enableSandboxExecution === true;
+  const defaultSendMessage = typeof deps.sendMessage === 'function' ? deps.sendMessage : null;
   const sessions = new Map();
   const actionExecutor = createRlmActionExecutor({
     getSession: (sessionId) => sessions.get(sessionId),
@@ -242,6 +244,28 @@ function createRlmService(deps = {}) {
     return actionExecutor.runAction(request.sessionId, request.action || request);
   }
 
+  async function runLoop(request = {}, options = {}) {
+    let sessionId = String(request.sessionId || '').trim();
+    if (!sessionId) {
+      const status = await startSession(request);
+      if (!status?.success) return status;
+      sessionId = String(status.sessionId || '');
+    }
+    const session = sessions.get(sessionId);
+    if (!session) {
+      return { success: false, error: `RLM session not found: ${sessionId}` };
+    }
+    if (session.isStopped()) {
+      return { success: false, error: `RLM session is stopped: ${sessionId}` };
+    }
+    return runRootLoop({
+      session,
+      model: request.model || request.modelName || session.model,
+      runAction: (id, action) => actionExecutor.runAction(id, action),
+      sendMessage: options.sendMessage || request.sendMessage || defaultSendMessage
+    });
+  }
+
   function listSessions() {
     return {
       success: true,
@@ -255,6 +279,7 @@ function createRlmService(deps = {}) {
     validateSandboxCode,
     executeSandboxCode,
     runAction,
+    runLoop,
     getSession: getSessionStatus,
     stopSession,
     listSessions

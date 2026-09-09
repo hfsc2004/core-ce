@@ -22,8 +22,7 @@ function normalizeMessages(messages = []) {
   if (!Array.isArray(messages)) return [];
   return messages.map((message) => ({
     role: String(message?.role || 'user'),
-    contentLength: String(message?.content || '').length,
-    contentPreview: previewText(message?.content, 160)
+    contentLength: String(message?.content || '').length
   }));
 }
 
