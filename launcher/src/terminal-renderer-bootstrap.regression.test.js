@@ -28,6 +28,7 @@ function loadBootstrapController(extraContext = {}) {
 
 function testBootstrapPassesRecursiveRlmDepsToChatflow() {
   const { createBootstrapController, getCapturedChatFlowDeps } = loadBootstrapController();
+  const runRlmStartSession = async () => ({ success: true, sessionId: 'rlm-test' });
   const runRlmLoop = async () => ({ handled: true });
   const getRlmProfile = () => 'balanced';
   const ctx = {
@@ -133,6 +134,7 @@ function testBootstrapPassesRecursiveRlmDepsToChatflow() {
     setStreamStopRequested: () => {},
     getStreamStopRequested: () => false,
     getRlmController: () => null,
+    runRlmStartSession,
     runRlmTurn: async () => ({ handled: false }),
     runRlmLoop,
     setThinkingStatusText: () => {}
@@ -141,6 +143,7 @@ function testBootstrapPassesRecursiveRlmDepsToChatflow() {
   createBootstrapController().buildControllers(ctx);
   const deps = getCapturedChatFlowDeps();
   assert.ok(deps);
+  assert.strictEqual(deps.runRlmStartSession, runRlmStartSession);
   assert.strictEqual(deps.runRlmLoop, runRlmLoop);
   assert.strictEqual(deps.getRlmProfile, getRlmProfile);
 }
@@ -148,6 +151,7 @@ function testBootstrapPassesRecursiveRlmDepsToChatflow() {
 function testBootstrapWiresAttachPlusButton() {
   let clickHandler = null;
   let attachClicks = 0;
+  const systemMessages = [];
   const { createBootstrapController } = loadBootstrapController({
     document: {
       getElementById: () => null,
@@ -184,7 +188,11 @@ function testBootstrapWiresAttachPlusButton() {
     getTerminalPort: () => 52454,
     getProviderBaseUrl: () => '',
     getLlamaCppModelPath: () => '',
-    addSystemMessage: () => {},
+    addSystemMessage: (message) => systemMessages.push(String(message || '')),
+    getRlmAssisted: () => true,
+    getRlmProvider: () => 'engine',
+    getRlmProfile: () => 'balanced',
+    getRlmVerboseTrace: () => false,
     getSystemPrompt: () => '',
     loadSessionMemoryPreferences: async () => {},
     loadInputRecallHistory: async () => {},
@@ -192,6 +200,7 @@ function testBootstrapWiresAttachPlusButton() {
   };
   createBootstrapController().runPostInit(ctx);
   assert.strictEqual(typeof clickHandler, 'function');
+  assert.ok(systemMessages.some((message) => message === 'RLM status: ON provider=engine profile=balanced verbose=OFF'));
   clickHandler();
   assert.strictEqual(attachClicks, 1);
 }

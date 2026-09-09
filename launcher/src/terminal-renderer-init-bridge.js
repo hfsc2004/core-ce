@@ -156,6 +156,7 @@
       getStreamStopRequested: api.getStreamStopRequested,
       getRlmController: api.getRlmController,
       getRlmProvider: api.getRlmProvider,
+      runRlmStartSession: api.runRlmStartSession,
       runRlmTurn: api.runRlmTurn,
       runRlmLoop: api.runRlmLoop,
       configureMarkdown: api.configureMarkdown,

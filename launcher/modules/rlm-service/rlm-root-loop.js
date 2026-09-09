@@ -17,6 +17,8 @@ const ACTION_SCHEMA = {
         'slice_prompt',
         'search_prompt',
         'chunk_prompt',
+        'map_prompt_chunks',
+        'compose_final',
         'set_value',
         'get_value',
         'list_values',
@@ -135,7 +137,11 @@ function getRequiredActions(session) {
   const actions = Array.isArray(metadata?.prompt?.requestedRlmActions)
     ? metadata.prompt.requestedRlmActions
     : [];
-  return actions.map((action) => String(action || '').trim()).filter(Boolean);
+  const normalized = actions.map((action) => String(action || '').trim()).filter(Boolean);
+  if (normalized.includes('map_prompt_chunks')) {
+    return normalized.filter((action) => action !== 'chunk_prompt' && action !== 'sub_lm');
+  }
+  return normalized;
 }
 
 function hasActionRun(observations = [], actionType = '') {
@@ -143,8 +149,16 @@ function hasActionRun(observations = [], actionType = '') {
   if (!wanted) return true;
   return observations.some((entry) =>
     entry?.success === true &&
-    String(entry?.action?.type || '').trim() === wanted
+    (
+      String(entry?.action?.type || '').trim() === wanted ||
+      (wanted === 'sub_lm' && String(entry?.action?.type || '').trim() === 'map_prompt_chunks')
+    )
   );
+}
+
+function getObservationResult(observation = {}) {
+  if (!observation || observation.success !== true) return null;
+  return observation.result || null;
 }
 
 function buildRequiredAction(actionType, session, observations = []) {
@@ -161,13 +175,47 @@ function buildRequiredAction(actionType, session, observations = []) {
       }
     };
   }
+  if (actionType === 'chunk_prompt') {
+    return {
+      type: 'chunk_prompt',
+      args: {
+        chunkSize: Math.min(Math.max(promptLength, 1), 1600),
+        overlap: 160,
+        maxChunks: 8,
+        includeText: false
+      }
+    };
+  }
+  if (actionType === 'map_prompt_chunks') {
+    return {
+      type: 'map_prompt_chunks',
+      args: {
+        chunkSize: 1600,
+        overlap: 160,
+        maxChunks: 4,
+        maxTokens: 128,
+        outputName: 'prompt_chunk_summaries',
+        instruction: 'Return one concise sentence identifying the central task, conflict, constraints, or facts in this prompt chunk.'
+      }
+    };
+  }
+  if (actionType === 'compose_final') {
+    return {
+      type: 'compose_final',
+      args: {
+        promptChars: 4000,
+        maxTokens: 768,
+        instruction: 'Use the user task and Scratch summaries to produce the requested final answer. Return only the final answer.'
+      }
+    };
+  }
   if (actionType === 'sub_lm') {
     const sliceObservation = [...observations].reverse().find((entry) =>
       entry?.success === true &&
-      String(entry?.action?.type || '') === 'slice_prompt' &&
-      typeof entry?.result === 'string'
+      String(entry?.action?.type || '') === 'slice_prompt'
     );
-    const promptSlice = String(sliceObservation?.result || '').trim();
+    const sliceResult = getObservationResult(sliceObservation);
+    const promptSlice = String(sliceResult?.text || sliceResult || '').trim();
     return {
       type: 'sub_lm',
       args: {
@@ -188,6 +236,45 @@ function enforceRequiredActions(action, session, observations = []) {
   const missing = required.find((actionType) => !hasActionRun(observations, actionType));
   if (!missing) return action;
   return buildRequiredAction(missing, session, observations) || action;
+}
+
+function actionSignature(action = {}) {
+  return JSON.stringify({
+    type: String(action?.type || '').trim(),
+    args: action?.args && typeof action.args === 'object' ? action.args : {}
+  });
+}
+
+function countRepeatedAction(observations = [], action = {}) {
+  const signature = actionSignature(action);
+  let count = 0;
+  for (let i = observations.length - 1; i >= 0; i -= 1) {
+    const entry = observations[i];
+    if (!entry || entry.success !== true || !entry.action) break;
+    if (actionSignature(entry.action) !== signature) break;
+    count += 1;
+  }
+  return count;
+}
+
+function redirectRepeatedAction(action, session, observations = []) {
+  const type = String(action?.type || '').trim();
+  if (!type || type === 'set_final') return action;
+  const hasScratch = session?.environment?.getMetadata?.()?.scratch?.count > 0;
+
+  if ((type === 'chunk_prompt' || type === 'slice_prompt' || type === 'search_prompt') && hasActionRun(observations, 'map_prompt_chunks') && hasScratch) {
+    return buildRequiredAction('compose_final', session, observations) || action;
+  }
+
+  if (countRepeatedAction(observations, action) < 1) return action;
+
+  if (type === 'chunk_prompt' && !hasActionRun(observations, 'map_prompt_chunks')) {
+    return buildRequiredAction('map_prompt_chunks', session, observations) || action;
+  }
+  if ((type === 'chunk_prompt' || type === 'slice_prompt' || type === 'search_prompt') && hasScratch) {
+    return buildRequiredAction('compose_final', session, observations) || action;
+  }
+  return action;
 }
 
 function buildActionObservation(iteration, action, actionResult) {
@@ -267,6 +354,7 @@ function buildRootMessages(session, observations = []) {
     'Set the final answer with {"type":"set_final","args":{"value":"..."}} when ready.',
     'Do not ask for the full prompt.',
     'Use sub_lm only for bounded sub-questions over prompt slices or intermediate values.',
+    'For long prompts or decomposition tasks, prefer map_prompt_chunks, then compose_final or set_final from the stored Scratch summaries.',
     'Sandbox execution may be unavailable; if execute_sandbox_code is rejected, continue with non-execution actions.'
   ].join('\n');
   const userPayload = {
@@ -372,6 +460,7 @@ async function runRootLoop(options = {}) {
       await runMissingRequiredActions(session, runAction, observations, iteration, onProgress);
     }
     action = enforceRequiredActions(action, session, observations);
+    action = redirectRepeatedAction(action, session, observations);
     await runActionAndRecord(session, runAction, observations, iteration, action, onProgress);
   }
 

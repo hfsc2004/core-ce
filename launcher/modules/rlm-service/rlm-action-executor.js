@@ -22,6 +22,11 @@ function normalizeActionType(value = '') {
   return String(value || '').trim().toLowerCase().replace(/[-\s]+/g, '_');
 }
 
+function normalizeScratchName(value, fallback = 'value') {
+  const name = String(value || fallback || 'value').trim().replace(/[^\w.-]+/g, '_');
+  return name || fallback;
+}
+
 function createRlmActionExecutor(options = {}) {
   const getSession = typeof options.getSession === 'function' ? options.getSession : null;
   const validateSandboxCode = typeof options.validateSandboxCode === 'function' ? options.validateSandboxCode : null;
@@ -75,6 +80,105 @@ function createRlmActionExecutor(options = {}) {
         chars: String(chunk.text || '').length,
         text: includeText ? truncateText(chunk.text, maxSlice) : undefined
       }));
+    } else if (type === 'map_prompt_chunks') {
+      if (!runSubLm) return { success: false, error: 'RLM sub_lm transport is unavailable.' };
+      const chunkSize = clampInt(args.chunkSize || args.chunk_size, Math.min(4000, maxSlice), 128, maxSlice);
+      const overlap = clampInt(args.overlap, 200, 0, Math.max(0, chunkSize - 1));
+      const maxChunks = clampInt(args.maxChunks || args.max_chunks, 4, 1, 32);
+      const maxTokens = clampInt(args.maxTokens || args.max_tokens, 160, 64, 2048);
+      const outputName = normalizeScratchName(args.outputName || args.output_name, 'chunk_summaries');
+      const instruction = String(args.instruction || args.instructions || args.query || 'Summarize the useful information in this prompt chunk in one concise sentence.').trim();
+      const chunks = env.chunkPrompt(chunkSize, overlap).slice(0, maxChunks);
+      const mapped = [];
+      for (const chunk of chunks) {
+        if (session.isStopped && session.isStopped()) {
+          return { success: false, error: `RLM session is stopped: ${id}` };
+        }
+        const subResult = await runSubLm(session, {
+          prompt: [
+            instruction,
+            `Chunk ${chunk.index} (${chunk.start}-${chunk.end}):`,
+            truncateText(chunk.text, maxSlice)
+          ].join('\n\n'),
+          max_tokens: maxTokens
+        });
+        if (!subResult || subResult.success !== true) {
+          return {
+            success: false,
+            handled: true,
+            sessionId: id,
+            action: type,
+            error: subResult?.error || 'RLM chunk map sub_lm failed.',
+            budgetExhausted: subResult?.budgetExhausted === true,
+            result: {
+              outputName,
+              processed: mapped.length,
+              totalSelected: chunks.length
+            },
+            environment: env.getMetadata()
+          };
+        }
+        mapped.push({
+          index: chunk.index,
+          start: chunk.start,
+          end: chunk.end,
+          chars: String(chunk.text || '').length,
+          summary: truncateText(subResult.content, maxSlice)
+        });
+      }
+      const stored = JSON.stringify(mapped, null, 2);
+      env.setValue(outputName, stored);
+      result = {
+        outputName,
+        processed: mapped.length,
+        totalSelected: chunks.length,
+        summaries: mapped.map((item) => ({
+          index: item.index,
+          start: item.start,
+          end: item.end,
+          chars: item.chars,
+          summary: truncateText(item.summary, 1000)
+        }))
+      };
+    } else if (type === 'compose_final') {
+      if (!runSubLm) return { success: false, error: 'RLM sub_lm transport is unavailable.' };
+      const promptLimit = clampInt(args.promptChars || args.prompt_chars, Math.min(maxSlice, 4000), 512, maxSlice);
+      const maxTokens = clampInt(args.maxTokens || args.max_tokens, 768, 64, 4096);
+      const instruction = String(args.instruction || args.instructions || 'Produce the final answer for the user. Use the task prompt and Scratch summaries. Return only the final answer.').trim();
+      const names = Array.isArray(args.scratchNames || args.scratch_names)
+        ? (args.scratchNames || args.scratch_names)
+        : env.listValues();
+      const scratchSections = names.map((name) => {
+        const key = String(name || '').trim();
+        if (!key) return '';
+        const value = env.getValue(key, 0, maxSlice);
+        return value ? `Scratch ${key}:\n${value}` : '';
+      }).filter(Boolean);
+      const subResult = await runSubLm(session, {
+        prompt: [
+          instruction,
+          `User task:\n${env.slicePrompt(0, promptLimit)}`,
+          scratchSections.join('\n\n')
+        ].filter(Boolean).join('\n\n'),
+        max_tokens: maxTokens
+      });
+      if (!subResult || subResult.success !== true) {
+        return {
+          success: false,
+          handled: true,
+          sessionId: id,
+          action: type,
+          error: subResult?.error || 'RLM final composition sub_lm failed.',
+          budgetExhausted: subResult?.budgetExhausted === true,
+          environment: env.getMetadata()
+        };
+      }
+      const finalText = truncateText(subResult.content, clampInt(budget.maxFinalOutputChars, 24000, 512, 1000000));
+      env.setFinal(finalText);
+      result = {
+        chars: finalText.length,
+        scratchNames: names.map((name) => String(name || '').trim()).filter(Boolean)
+      };
     } else if (type === 'set_value') {
       const value = truncateText(args.value, maxValue);
       result = env.setValue(args.name, value);

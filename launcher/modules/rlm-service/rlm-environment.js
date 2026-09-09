@@ -54,6 +54,12 @@ function inferRequestedRlmActions(prompt = '') {
   if (/read[^.\n]{0,80}slice|slice[^.\n]{0,80}prompt|\bslice_prompt\b/.test(lower)) {
     actions.push('slice_prompt');
   }
+  if (/chunk[^.\n]{0,80}prompt|\bchunk_prompt\b|decompos/.test(lower)) {
+    actions.push('chunk_prompt');
+  }
+  if (/\bmap_prompt_chunks\b|map[^.\n]{0,80}chunks?|chunks?[^.\n]{0,80}sub[_ -]?lm|decompos[^.\n]{0,120}sub[_ -]?lm/.test(lower)) {
+    actions.push('map_prompt_chunks');
+  }
   if (/\bsub_lm\b|sub[- ]?lm|bounded sub[_ -]?lm|subcall/.test(lower)) {
     actions.push('sub_lm');
   }
@@ -108,6 +114,8 @@ function createRlmEnvironment(options = {}) {
         'slice_prompt(start, end)',
         'search_prompt(pattern, max_hits)',
         'chunk_prompt(chunk_size, overlap)',
+        'map_prompt_chunks(chunk_size, overlap, max_chunks, instruction)',
+        'compose_final(instruction, scratch_names)',
         'set_value(name, value)',
         'get_value(name, offset, length)',
         'list_values()',

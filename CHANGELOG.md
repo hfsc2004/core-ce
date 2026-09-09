@@ -7,6 +7,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.16 Core-CE] - 2026-09-09
+
+### Added
+- Added `map_prompt_chunks` to the Recursive RLM action executor so Core can deterministically chunk the external prompt, run bounded `sub_lm` calls over selected chunks, and store summaries in `Scratch`.
+- Added `compose_final` so Recursive RLM can synthesize a final answer from the user task and Scratch summaries when the root controller gets stuck doing extra prompt inspection.
+- Added PSF Terminal startup RLM status output so a fresh Terminal shows whether RLM is enabled, which provider is selected, the active profile, and verbose trace state.
+- Added regression coverage for chunk mapping, final composition, repeated chunk inspection recovery, startup RLM status, and the Recursive RLM session-start bridge.
+
+### Fixed
+- Fixed PSF Terminal Recursive RLM wiring so the chatflow receives `rlm:start-session`, allowing BMOC-owned RLM sessions, progress events, and final trace messages to work from Terminal.
+- Fixed repeated `chunk_prompt` loops by redirecting no-progress prompt inspection toward chunk mapping or final composition instead of spinning until the iteration budget is exhausted.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.16`.
+- Updated RLM documentation with the implemented chunk-map, progress, and final-composition behavior.
+
 ## [v1.1.15 Core-CE] - 2026-09-09
 
 ### Fixed

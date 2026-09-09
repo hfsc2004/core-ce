@@ -420,6 +420,96 @@ async function testSubLmActionFailsClosedAtBudgetLimit() {
   assert.equal(callCount, 1);
 }
 
+async function testMapPromptChunksUsesBoundedSubcallsAndScratch() {
+  const calls = [];
+  const { service } = createService({
+    sendMessage: async (_model, messages, options = {}) => {
+      calls.push({ messages, options });
+      const content = String(messages?.[1]?.content || '');
+      return { response: { message: { content: content.includes('Beta') ? 'Beta chunk summary.' : 'Alpha chunk summary.' } } };
+    }
+  });
+  const status = await service.startSession({
+    prompt: `${'Alpha treaty clause. '.repeat(30)}${'Beta pirate clause. '.repeat(30)}`,
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 3,
+      maxPromptSliceChars: 512
+    }
+  });
+
+  const result = await service.runAction({
+    sessionId: status.sessionId,
+    action: {
+      type: 'map_prompt_chunks',
+      args: {
+        chunkSize: 320,
+        overlap: 20,
+        maxChunks: 2,
+        outputName: 'chunk_notes',
+        instruction: 'Summarize this chunk.'
+      }
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.action, 'map_prompt_chunks');
+  assert.equal(result.result.outputName, 'chunk_notes');
+  assert.equal(result.result.processed, 2);
+  assert.equal(result.environment.scratch.count, 1);
+  assert.equal(result.environment.scratch.values[0].name, 'chunk_notes');
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every((call) => call.options.rlmSubcall === true));
+  assert.ok(calls.every((call) => String(call.messages[1].content).includes('Summarize this chunk.')));
+}
+
+async function testComposeFinalUsesScratchAndSetsFinal() {
+  const calls = [];
+  const { service } = createService({
+    sendMessage: async (_model, messages, options = {}) => {
+      calls.push({ messages, options });
+      return { response: { message: { content: '1. Final outline from scratch summaries.' } } };
+    }
+  });
+  const status = await service.startSession({
+    prompt: 'Create a numbered outline under 500 words.',
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 2,
+      maxPromptSliceChars: 512
+    }
+  });
+  await service.runAction({
+    sessionId: status.sessionId,
+    action: {
+      type: 'set_value',
+      args: {
+        name: 'prompt_chunk_summaries',
+        value: '[{"summary":"The user wants an outline."}]'
+      }
+    }
+  });
+
+  const result = await service.runAction({
+    sessionId: status.sessionId,
+    action: {
+      type: 'compose_final',
+      args: {
+        instruction: 'Return the final outline.',
+        maxTokens: 128
+      }
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.action, 'compose_final');
+  assert.equal(result.environment.final.set, true);
+  assert.equal(result.environment.final.preview, '1. Final outline from scratch summaries.');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].options.rlmSubcall, true);
+  assert.ok(String(calls[0].messages[1].content).includes('Scratch prompt_chunk_summaries'));
+}
+
 function testRootLoopJsonExtraction() {
   assert.deepEqual(
     extractFirstJsonObject('```json\n{"type":"len_prompt","args":{}}\n```'),
@@ -429,6 +519,78 @@ function testRootLoopJsonExtraction() {
     extractFirstJsonObject('Here is the action:\n{"type":"set_final","args":{"value":"done"}}\nThanks'),
     { type: 'set_final', args: { value: 'done' } }
   );
+}
+
+async function testRootLoopEnforcesRequestedChunkMappingBeforeFinal() {
+  const rootSeen = [];
+  const { service } = createService({
+    sendMessage: async (_model, messages, options = {}) => {
+      if (options.rlmSubcall) {
+        return { response: { message: { content: 'This chunk involves persecuted caravans, pirates, and an empire.' } } };
+      }
+      rootSeen.push(JSON.stringify(messages));
+      return { response: { message: { content: '{"type":"set_final","args":{"value":"Chunked final."}}' } } };
+    }
+  });
+  const hiddenTail = 'SECRET_CHUNK_TAIL_ROOT_MUST_NOT_SEE';
+  const result = await service.runLoop({
+    prompt: [
+      'Use the RLM environment to decompose this prompt into chunks and map chunks with sub_lm before answering.',
+      'Create a numbered outline for a short space-opera story about star-caravans, pirates, and empire.',
+      'Middle context. '.repeat(80),
+      hiddenTail
+    ].join('\n'),
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 4,
+      maxSubcalls: 4,
+      maxPromptSliceChars: 512
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'Chunked final.');
+  assert.deepEqual(result.observations.map((entry) => entry.action.type), [
+    'map_prompt_chunks',
+    'set_final'
+  ]);
+  assert.equal(rootSeen.some((text) => text.includes(hiddenTail)), false);
+  assert.equal(result.environment.scratch.count, 1);
+  assert.equal(result.environment.scratch.values[0].name, 'prompt_chunk_summaries');
+}
+
+async function testRootLoopRedirectsRepeatedChunkPromptToChunkMap() {
+  const rootActions = [
+    { type: 'chunk_prompt', args: { chunkSize: 512, overlap: 64, maxChunks: 4 } },
+    { type: 'chunk_prompt', args: { chunkSize: 512, overlap: 64, maxChunks: 4 } },
+    { type: 'chunk_prompt', args: { chunkSize: 512, overlap: 64, maxChunks: 4 } }
+  ];
+  const { service } = createService({
+    sendMessage: async (_model, _messages, options = {}) => {
+      if (options.rlmSubcall) {
+        return { response: { message: { content: 'Recovered after chunk map.' } } };
+      }
+      return { response: { message: { content: JSON.stringify(rootActions.shift()) } } };
+    }
+  });
+
+  const result = await service.runLoop({
+    prompt: 'Use RLM to create an outline from this prompt.',
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 4,
+      maxSubcalls: 4,
+      maxPromptSliceChars: 512
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'Recovered after chunk map.');
+  assert.deepEqual(result.observations.map((entry) => entry.action.type), [
+    'chunk_prompt',
+    'map_prompt_chunks',
+    'compose_final'
+  ]);
 }
 
 async function testRootLoopExecutesStructuredActions() {
@@ -596,6 +758,10 @@ async function testRootLoopBudgetExhaustion() {
   await testStructuredActionsFailClosed();
   await testSubLmActionUsesModelTransportAndBudget();
   await testSubLmActionFailsClosedAtBudgetLimit();
+  await testMapPromptChunksUsesBoundedSubcallsAndScratch();
+  await testComposeFinalUsesScratchAndSetsFinal();
+  await testRootLoopEnforcesRequestedChunkMappingBeforeFinal();
+  await testRootLoopRedirectsRepeatedChunkPromptToChunkMap();
   await testRootLoopExecutesStructuredActions();
   await testRootLoopCanUseSubLmObservation();
   await testRootLoopEnforcesPromptRequestedActionsBeforeFinal();
