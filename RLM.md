@@ -733,7 +733,13 @@ Current implementation status:
 4. `maxSubcalls` is enforced fail-closed before starting a new subcall.
 5. `maxTokensPerSubcall` caps requested subcall output.
 6. Root-loop observations include bounded `sub_lm` results for later root iterations.
-7. Regression coverage verifies successful subcalls, budget exhaustion, and root-loop use of a subcall observation.
+7. Added `map_prompt_chunks` as a structured root-loop action for deterministic chunked decomposition.
+8. `map_prompt_chunks` chunks `Prompt`, runs bounded `sub_lm` calls over selected chunks, and stores the mapped summaries in `Scratch`.
+9. Successful `map_prompt_chunks` satisfies explicit `sub_lm` requirements because it is implemented through bounded subcalls.
+10. Prompt intent detection now recognizes chunk/decomposition requests and can enforce `chunk_prompt -> map_prompt_chunks` before finalization.
+11. Added `compose_final` as a structured action that calls the model once with the user task plus Scratch summaries and writes the result to `Final`.
+12. Repeated prompt-inspection actions after chunk mapping are redirected toward `compose_final` so the root controller does not spin on `chunk_prompt`.
+13. Regression coverage verifies successful subcalls, budget exhaustion, direct chunk mapping, required chunk mapping, final composition, repeated-action recovery, and root-loop use of subcall observations.
 
 Current boundary:
 - `sub_lm` is available to the structured root action loop.
@@ -834,24 +840,39 @@ Code migration targets:
 5. Whether Recursive REPL mode should be available in Core CE by default or hidden behind an advanced toggle.
 6. How much trace detail should be persisted to disk.
 
+## Latest Implemented RLM Slice
+
+The current implementation now includes the first practical chunked decomposition path:
+1. `chunk_prompt` exposes bounded prompt chunk metadata.
+2. `map_prompt_chunks` sends selected chunks through bounded `sub_lm` calls.
+3. Mapped chunk summaries are written into `Scratch` under a named value.
+4. `compose_final` builds the final answer from the user task and Scratch summaries.
+5. The root loop can finalize from bounded observations and Scratch metadata without receiving the full prompt.
+6. Required-action enforcement prevents the root model from skipping explicitly requested environment/subcall work.
+7. Repeated prompt-inspection actions are redirected toward useful mapping or composition instead of looping until budget exhaustion.
+8. PSF Terminal now displays Recursive RLM startup status and live progress messages for BMOC-owned RLM sessions.
+
+This is still a structured action loop, not the full paper-style Python REPL with callable `sub_lm(...)` inside model-authored code. It is useful now because it gives local models a deterministic decomposition rail instead of depending on the model to invent a reliable chunk/map protocol.
+
 ## Near-Term Next Step
 
-Phase 1 plus a small Phase 2 slice is now implemented as the first runtime foundation:
+Implemented runtime foundation:
 1. Added `launcher/modules/rlm-service/` with budget normalization, traces, session records, and a prompt environment.
 2. Registered RLM sessions with BMOC as processless `rlm` sessions.
 3. Created an environment object with `Prompt`, `Scratch`, and `Final` helpers.
 4. Added no-code-exec dry-run mode that returns environment metadata to the root controller shape.
 5. Added IPC/preload hooks for starting, inspecting, dry-running, listing, and stopping RLM sessions.
 6. Added regression coverage proving dry-run mode does not pass the full prompt into root model input.
+7. Added structured root-loop actions for bounded prompt inspection, Scratch, finalization, sandbox validation/execution, `sub_lm`, and chunk mapping.
+8. Added regression coverage for chunked prompt decomposition through bounded subcalls.
 
-This gives the project the correct shape before introducing the security risk of model-authored code execution.
-
-The next engineering step is hardening the sandbox boundary:
+The next engineering step is exposing `sub_lm` to the sandboxed REPL safely:
 1. Add OS-level resource limits where supported.
 2. Add broader adversarial tests for Python object escape attempts.
 3. Add a persistent iteration state design without exposing unsafe Python runtime objects between executions.
-4. Prove blocked IO, blocked network, bounded stdout/stderr, and timeout cleanup across supported platforms.
-5. Keep recursive `sub_lm` and `sub_rlm` disabled until the sandbox is reliable under test.
+4. Bridge REPL calls to BMOC-owned `sub_lm` without exposing network, filesystem, or process APIs to model-authored code.
+5. Prove blocked IO, blocked network, bounded stdout/stderr, timeout cleanup, and subcall budget enforcement across supported platforms.
+6. Keep nested `sub_rlm` disabled until the sandbox and `sub_lm` bridge are reliable under test.
 
 The next RLM orchestration step is UI and policy integration:
 1. Add model behavior controls for `thinking`, `non_thinking`, and `unknown`.

@@ -249,6 +249,7 @@
           getRlmAssisted: ctx.getRlmAssisted,
           getRlmController: ctx.getRlmController,
           getRlmProvider: ctx.getRlmProvider,
+          runRlmStartSession: ctx.runRlmStartSession,
           runRlmTurn: ctx.runRlmTurn,
           runRlmLoop: ctx.runRlmLoop,
           getRlmVerboseTrace: ctx.getRlmVerboseTrace,
@@ -323,6 +324,11 @@
           if (llamaModelPath) ctx.addSystemMessage(`llama.cpp model path: ${llamaModelPath}`);
         }
       }
+      const rlmEnabled = ctx.getRlmAssisted && ctx.getRlmAssisted() === true;
+      const rlmProvider = String(ctx.getRlmProvider ? (ctx.getRlmProvider() || 'legacy') : 'legacy');
+      const rlmProfile = String(ctx.getRlmProfile ? (ctx.getRlmProfile() || 'balanced') : 'balanced');
+      const rlmVerbose = ctx.getRlmVerboseTrace && ctx.getRlmVerboseTrace() === true;
+      ctx.addSystemMessage(`RLM status: ${rlmEnabled ? 'ON' : 'OFF'} provider=${rlmProvider} profile=${rlmProfile} verbose=${rlmVerbose ? 'ON' : 'OFF'}`);
       const sp = ctx.getSystemPrompt();
       if (sp) {
         ctx.addSystemMessage(`📋 System prompt: ${sp.substring(0, 100)}${sp.length > 100 ? '...' : ''}`);
