@@ -42,7 +42,7 @@ function buildSecureAttachmentStore(rawStore, actor = {}) {
 }
 
 function createRlmHandlers() {
-  function postJson(urlValue, payload = {}, headers = {}) {
+  function postJson(urlValue, payload = {}, headers = {}, options = {}) {
     return new Promise((resolve, reject) => {
       let parsed;
       try {
@@ -53,6 +53,12 @@ function createRlmHandlers() {
       }
       const body = JSON.stringify(payload);
       const transport = parsed.protocol === 'https:' ? https : http;
+      let settled = false;
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        fn(value);
+      };
       const req = transport.request({
         hostname: parsed.hostname,
         port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
@@ -72,17 +78,23 @@ function createRlmHandlers() {
           try {
             parsedBody = data ? JSON.parse(data) : {};
           } catch (err) {
-            reject(new Error(`RLM provider returned invalid JSON: ${err.message}`));
+            finish(reject, new Error(`RLM provider returned invalid JSON: ${err.message}`));
             return;
           }
           if (res.statusCode < 200 || res.statusCode >= 300) {
-            reject(new Error(`RLM provider HTTP ${res.statusCode}: ${data.slice(0, 500)}`));
+            finish(reject, new Error(`RLM provider HTTP ${res.statusCode}: ${data.slice(0, 500)}`));
             return;
           }
-          resolve(parsedBody);
+          finish(resolve, parsedBody);
         });
       });
-      req.on('error', reject);
+      const timeoutMs = Number(options.timeoutMs);
+      if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+        req.setTimeout(timeoutMs, () => {
+          try { req.destroy(new Error(`RLM provider request timed out after ${Math.floor(timeoutMs)}ms`)); } catch (_) {}
+        });
+      }
+      req.on('error', (err) => finish(reject, err));
       req.write(body);
       req.end();
     });
@@ -91,25 +103,50 @@ function createRlmHandlers() {
   async function sendRlmModelMessage(ctx, rootPayload = {}, modelName, messages, options = {}) {
     const backend = String(rootPayload?.backend || '').trim().toLowerCase();
     const baseUrl = String(rootPayload?.providerBaseUrl || '').trim().replace(/\/+$/, '');
-    if ((backend === 'llama.cpp' || backend === 'vllm' || backend === 'openai-compatible') && baseUrl) {
+    const isLlamaCpp = backend === 'llama.cpp' || backend === 'llama-cpp' || backend === 'llamacpp';
+    if ((isLlamaCpp || backend === 'vllm' || backend === 'openai-compatible') && baseUrl) {
       const headers = {};
       const apiKey = String(rootPayload?.providerApiKey || '').trim();
       if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-      const response = await postJson(`${baseUrl}/v1/chat/completions`, {
+      const isRootAction = options?.rlmRootAction === true;
+      const isSubcall = options?.rlmSubcall === true;
+      const maxTokens = isRootAction
+        ? Math.min(256, Math.max(64, Number(options?.maxTokens) || 192))
+        : (isSubcall
+          ? Math.min(256, Math.max(64, Number(options?.maxTokens) || 128))
+          : Math.min(2048, Number(options?.maxTokens) || 1024));
+      const requestBody = {
         model: String(rootPayload?.providerModel || modelName || '').trim() || modelName,
         messages,
         stream: false,
-        max_tokens: Math.min(2048, Number(options?.maxTokens) || 1024),
-        temperature: Number.isFinite(Number(options?.temperature)) ? Number(options.temperature) : 0.2
-      }, headers);
+        max_tokens: maxTokens,
+        temperature: (isRootAction || isSubcall) ? 0 : (Number.isFinite(Number(options?.temperature)) ? Number(options.temperature) : 0.2)
+      };
+      if (isLlamaCpp && (isRootAction || isSubcall)) {
+        requestBody.chat_template_kwargs = { enable_thinking: false };
+        requestBody.reasoning_effort = 'none';
+      }
+      const response = await postJson(`${baseUrl}/v1/chat/completions`, requestBody, headers);
       const choice = Array.isArray(response?.choices) ? response.choices[0] : null;
-      const content = String(choice?.message?.content || choice?.text || response?.content || response?.text || '');
+      const message = choice?.message || {};
+      const content = String(message?.content || choice?.text || response?.content || response?.text || '');
+      const reasoning = String(
+        message?.reasoning_content ||
+        message?.reasoning ||
+        message?.thinking ||
+        response?.reasoning_content ||
+        response?.reasoning ||
+        response?.thinking ||
+        ''
+      );
       return {
         success: true,
         response: {
           message: {
             role: 'assistant',
-            content
+            content,
+            reasoning_content: reasoning,
+            thinking: reasoning
           },
           raw: response
         }
@@ -194,6 +231,11 @@ function createRlmHandlers() {
         return { success: false, error: 'RLM loop service is unavailable.' };
       }
       return ctx.sessionManager.runRlmLoop(payload || {}, {
+        onProgress: (progress = {}) => {
+          try {
+            event.sender.send('rlm:progress', progress);
+          } catch (_) {}
+        },
         sendMessage: (modelName, messages, options = {}) =>
           sendRlmModelMessage(ctx, payload || {}, modelName, messages, options)
       });

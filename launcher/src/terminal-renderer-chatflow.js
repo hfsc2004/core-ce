@@ -34,6 +34,7 @@
     const setActiveStream = typeof deps?.setActiveStream === 'function' ? deps.setActiveStream : (() => {});
     const getChatDisplay = typeof deps?.getChatDisplay === 'function' ? deps.getChatDisplay : () => null;
     const finalizeStreamingMessage = typeof deps?.finalizeStreamingMessage === 'function' ? deps.finalizeStreamingMessage : (() => {});
+    const getAttachmentSessionId = typeof deps?.getAttachmentSessionId === 'function' ? deps.getAttachmentSessionId : () => '';
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
     const getElectronAPI = typeof deps?.getElectronAPI === 'function' ? deps.getElectronAPI : () => (window.electronAPI || null);
     const sanitizeQwenSelfDialogue = typeof deps?.sanitizeQwenSelfDialogue === 'function' ? deps.sanitizeQwenSelfDialogue : ((v) => String(v || ''));
@@ -44,6 +45,9 @@
     const getRlmAssisted = typeof deps?.getRlmAssisted === 'function' ? deps.getRlmAssisted : () => false;
     const getRlmController = typeof deps?.getRlmController === 'function' ? deps.getRlmController : () => null;
     const getRlmProvider = typeof deps?.getRlmProvider === 'function' ? deps.getRlmProvider : () => 'legacy';
+    const runRlmStartSession = typeof deps?.runRlmStartSession === 'function'
+      ? deps.runRlmStartSession
+      : (async () => ({ success: false, error: 'rlmStartSession API unavailable' }));
     const runRlmTurn = typeof deps?.runRlmTurn === 'function' ? deps.runRlmTurn : (async () => ({ success: false, handled: false, error: 'rlm engine unavailable' }));
     const runRlmLoop = typeof deps?.runRlmLoop === 'function'
       ? deps.runRlmLoop
@@ -59,6 +63,7 @@
     const getRlmIncludeSharedAttachments = typeof deps?.getRlmIncludeSharedAttachments === 'function'
       ? deps.getRlmIncludeSharedAttachments
       : () => false;
+    const setActiveRlmSessionId = typeof deps?.setActiveRlmSessionId === 'function' ? deps.setActiveRlmSessionId : (() => {});
     const setThinkingStatusText = typeof deps?.setThinkingStatusText === 'function' ? deps.setThinkingStatusText : (() => {});
     const STOP_REASON_MESSAGES = {
       max_runtime_ms: 'Stopped at time limit. Increase profile or enable Advanced budgets.',
@@ -165,7 +170,7 @@
     function buildOpenAIStyleMessages(messages = []) {
       return (Array.isArray(messages) ? messages : []).map((m) => ({
         role: String(m?.role || 'user'),
-        content: String(m?.content || '')
+        content: Array.isArray(m?.content) ? m.content : String(m?.content || '')
       }));
     }
     function extractProviderAnswer(parsed = {}) {
@@ -229,6 +234,54 @@
         active.thinkingDiv = thinkingDiv;
       }
       thinkingDiv.textContent = text;
+    }
+    function summarizeRlmThinking(rlmResult = {}, maxChars = 4000) {
+      const entries = Array.isArray(rlmResult?.thinking) ? rlmResult.thinking : [];
+      const text = entries
+        .map((entry) => String(entry?.text || '').trim())
+        .filter(Boolean)
+        .join('\n\n');
+      if (!text) return '';
+      const limit = Math.max(512, Number(maxChars) || 4000);
+      return text.length <= limit ? text : `${text.slice(0, limit)}...`;
+    }
+    function addRlmAssistantMessage(answer, rlmResult = {}) {
+      const thinking = summarizeRlmThinking(rlmResult);
+      if (!thinking) {
+        addMessage('assistant', answer);
+        return;
+      }
+      const contentDiv = addAssistantShell();
+      if (!contentDiv) {
+        addMessage('assistant', answer);
+        return;
+      }
+      updateProviderThinkingDisplay({ contentDiv }, thinking);
+      finalizeStreamingMessage(contentDiv, answer);
+    }
+    function formatRlmProgress(progress = {}) {
+      const phase = String(progress?.phase || '').trim();
+      const action = String(progress?.action || '').trim();
+      if (phase === 'action-start') return `RLM progress: ${action || 'action'} started`;
+      if (phase === 'action-done') return `RLM progress: ${action || 'action'} ${progress?.success === false ? 'failed' : 'done'}`;
+      if (phase === 'root-model-start') return 'RLM progress: final controller call started';
+      if (phase === 'root-model-done') return 'RLM progress: final controller call done';
+      return '';
+    }
+    function subscribeRlmProgress(sessionId = '') {
+      const wanted = String(sessionId || '').trim();
+      const api = getElectronAPI();
+      if (!wanted || !api || typeof api.onRlmProgress !== 'function') return null;
+      const seen = new Set();
+      return api.onRlmProgress((progress = {}) => {
+        if (String(progress?.sessionId || '').trim() !== wanted) return;
+        const message = formatRlmProgress(progress);
+        if (!message) return;
+        const key = `${progress?.phase || ''}:${progress?.action || ''}:${progress?.iteration || ''}:${progress?.success}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        addSystemMessage(message);
+      });
     }
     function applyLlamaCppChatDefaults(body, options = {}) {
       if (!body || typeof body !== 'object') return body;
@@ -609,14 +662,27 @@
       }
 
       // Trigger only for file/attachment intents.
+      const hasExplicitRlm = /\brlm\b|recursive language model|rlm environment/.test(lower);
       const hasSource = /(attachment|attachments|attached|file|files|document|documents|doc|docs|pdf|markdown|md)\b/i.test(lower);
       const hasAction = /(summari[sz]e|analy[sz]e|review|inspect|read|extract|search|find|quote|compare|list)\b/i.test(lower);
       const directAttachmentAsk = /(from (the )?attached|from attachments?|in (the )?attachment|attached file)/i.test(lower);
-      const provider = String(getRlmProvider() || 'legacy').trim().toLowerCase();
 
-      if (provider === 'engine') return true;
+      if (hasExplicitRlm) return true;
       if ((hasSource && hasAction) || directAttachmentAsk) return true;
       return false;
+    }
+
+    function getCurrentAttachmentSessionId() {
+      return String(getAttachmentSessionId() || '').trim() || `terminal-${getTerminalPort()}`;
+    }
+
+    function hasImageAttachmentIntent(message) {
+      const lower = String(message || '').trim().toLowerCase();
+      if (!lower) return false;
+      return (
+        /\b(image|images|picture|pictures|photo|photos|screenshot|screenshots|vision|diagram|drawing)\b/.test(lower) ||
+        /\b(look at|see this|identify this|describe this|what is this|what's this|what am i looking at)\b/.test(lower)
+      );
     }
 
     async function tryRunRlm(message, localOnly, providerRuntime) {
@@ -627,12 +693,12 @@
       const provider = String(getRlmProvider() || 'legacy').trim().toLowerCase();
       if (provider === 'engine') {
         try {
-          const rlmResult = await runRlmLoop({
+          const rlmPayload = {
             prompt: message,
             messages: getConversationHistory(),
             systemPrompt: getSystemPrompt() || '',
-            parentSessionId: `terminal-${getTerminalPort()}`,
-            attachmentSessionId: `terminal-${getTerminalPort()}`,
+            parentSessionId: getCurrentAttachmentSessionId(),
+            attachmentSessionId: getCurrentAttachmentSessionId(),
             surface: 'terminal',
             mode: 'recursive-repl',
             model: String(providerRuntime?.providerModel || '').trim() || getCurrentModel(),
@@ -648,7 +714,55 @@
             includeSharedAttachments: getRlmIncludeSharedAttachments(),
             sharedAttachmentSessionId: 'terminal-shared',
             budget: buildRecursiveRlmBudget()
-          });
+          };
+          const startResult = await runRlmStartSession(rlmPayload);
+          const rlmSessionId = String(startResult?.sessionId || '').trim();
+          if (!startResult?.success || !rlmSessionId) {
+            const startError = String(startResult?.error || '');
+            if (!/unavailable/i.test(startError)) {
+              addSystemMessage(`RLM engine fallback: ${startError || 'failed to start RLM session'}`);
+              return false;
+            }
+            const legacyResult = await runRlmLoop(rlmPayload);
+            if (legacyResult && legacyResult.handled) {
+              const answer = String(legacyResult.final || legacyResult.answer || '').trim();
+              if (!answer) return false;
+              const rlmAnswer = localOnly ? `{local} ${answer}` : answer;
+              addRlmAssistantMessage(rlmAnswer, legacyResult);
+              appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
+              const traceTools = summarizeRecursiveRlmActions(legacyResult.observations);
+              const exhaustedNote = legacyResult.budgetExhausted ? ' budget_exhausted=true' : '';
+              addSystemMessage(`RLM Trace: actions=${traceTools} source=recursive-loop iterations=${legacyResult.iterations || 0}${exhaustedNote}`);
+              addSystemMessage(`RLM Engine: mode=recursive-repl profile=${normalizeRlmProfile(getRlmProfile())}`);
+              setWaitingState(false);
+              focusInput();
+              return true;
+            }
+            return false;
+          }
+          setActiveRlmSessionId(rlmSessionId);
+          const unsubscribeRlmProgress = subscribeRlmProgress(rlmSessionId);
+          if (getStreamStopRequested()) {
+            setActiveRlmSessionId('');
+            if (typeof unsubscribeRlmProgress === 'function') unsubscribeRlmProgress();
+            return true;
+          }
+          let rlmResult = null;
+          try {
+            rlmResult = await runRlmLoop({
+              ...rlmPayload,
+              sessionId: rlmSessionId
+            });
+          } finally {
+            if (typeof unsubscribeRlmProgress === 'function') unsubscribeRlmProgress();
+            setActiveRlmSessionId('');
+          }
+          if (getStreamStopRequested()) {
+            setStreamStopRequested(false);
+            setWaitingState(false);
+            focusInput();
+            return true;
+          }
           if (rlmResult && rlmResult.handled) {
             const answer = String(rlmResult.final || rlmResult.answer || '').trim();
             if (!answer && rlmResult.budgetExhausted) {
@@ -662,7 +776,7 @@
               return false;
             }
             const rlmAnswer = localOnly ? `{local} ${answer}` : answer;
-            addMessage('assistant', rlmAnswer);
+            addRlmAssistantMessage(rlmAnswer, rlmResult);
             appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
             const traceTools = summarizeRecursiveRlmActions(rlmResult.observations);
             const exhaustedNote = rlmResult.budgetExhausted ? ' budget_exhausted=true' : '';
@@ -684,6 +798,7 @@
             addSystemMessage(`RLM engine fallback: ${rlmResult.error}`);
           }
         } catch (err) {
+          setActiveRlmSessionId('');
           addSystemMessage(`RLM engine fallback: ${err.message || err}`);
         }
         return false;
@@ -775,7 +890,8 @@
       if (systemPrompt) {
         systemParts.push(systemPrompt);
       }
-      const shouldReadAttachmentContext = shouldInjectAttachmentContext(message) || hasKnownAttachments();
+      const attachmentIntent = shouldInjectAttachmentContext(message);
+      const shouldReadAttachmentContext = attachmentIntent;
       if (shouldReadAttachmentContext) {
         setThinkingStatusText('Reading attachments');
         const attachmentsStartedAt = nowMs();
@@ -791,21 +907,33 @@
       messages.push(...getConversationHistory());
       messages.push({ role: 'user', content: message });
 
-      const imageIntent = /\b(image|images|picture|pictures|photo|photos|screenshot|screenshots|vision|look at|see this)\b/i.test(message);
-      const imagePayload = imageIntent ? await buildImagePayloadForUserMessage({
-        api: getElectronAPI(),
-        port: getTerminalPort(),
-        modelName: getCurrentModel(),
-        setThinkingStatusText,
-        addSystemMessage
-      }) : null;
+      const providerRuntime = resolveProviderRuntime();
+      const imagePayload = hasImageAttachmentIntent(message)
+        ? await buildImagePayloadForUserMessage({
+          api: getElectronAPI(),
+          sessionId: getCurrentAttachmentSessionId(),
+          modelName: getCurrentModel(),
+          setThinkingStatusText,
+          addSystemMessage
+        })
+        : null;
       if (imagePayload && imagePayload.images && imagePayload.images.length > 0) {
-        messages[messages.length - 1].images = imagePayload.images;
+        const lastMessage = messages[messages.length - 1];
+        if (normalizeProvider(providerRuntime.provider) === 'llama.cpp') {
+          lastMessage.content = [
+            { type: 'text', text: message },
+            ...imagePayload.images.map((image) => ({
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${image}` }
+            }))
+          ];
+        } else {
+          lastMessage.images = imagePayload.images;
+        }
       }
 
       if (userInput) userInput.value = '';
 
-      const providerRuntime = resolveProviderRuntime();
       const rlmStartedAt = nowMs();
       if (await tryRunRlm(message, localOnly, providerRuntime)) {
         logTiming('rlm handled', rlmStartedAt);
@@ -955,13 +1083,15 @@
       );
     }
 
-    async function buildImagePayloadForUserMessage({ api, port, modelName, setThinkingStatusText, addSystemMessage }) {
+    async function buildImagePayloadForUserMessage({ api, sessionId, modelName, setThinkingStatusText, addSystemMessage }) {
       if (!api || typeof api.terminalAttachmentsList !== 'function' || typeof api.terminalAttachmentsReadBytes !== 'function') {
         return null;
       }
+      const targetSessionId = String(sessionId || '').trim();
+      if (!targetSessionId) return null;
       let list;
       try {
-        list = await api.terminalAttachmentsList({ port });
+        list = await api.terminalAttachmentsList({ sessionId: targetSessionId });
       } catch {
         return null;
       }
@@ -979,7 +1109,7 @@
       for (const item of imageItems) {
         try {
           const read = await api.terminalAttachmentsReadBytes({
-            port,
+            sessionId: targetSessionId,
             attachmentId: item.id,
             maxBytes: 8 * 1024 * 1024
           });

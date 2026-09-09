@@ -376,9 +376,16 @@ async function testSubLmActionUsesModelTransportAndBudget() {
   assert.equal(result.environment.final.set, false);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].model, 'mock-root');
-  assert.deepEqual(calls[0].messages, [{ role: 'user', content: 'Summarize this slice.' }]);
+  assert.deepEqual(calls[0].messages, [
+    {
+      role: 'system',
+      content: 'You are a bounded RLM subcall. Return only the requested answer. Do not include analysis, thinking, markdown, or extra explanation.'
+    },
+    { role: 'user', content: 'Summarize this slice.' }
+  ]);
   assert.equal(calls[0].options.rlmSubcall, true);
   assert.equal(calls[0].options.maxTokens, 80);
+  assert.equal(calls[0].options.temperature, 0);
 }
 
 async function testSubLmActionFailsClosedAtBudgetLimit() {
@@ -494,6 +501,45 @@ async function testRootLoopCanUseSubLmObservation() {
   assert.equal(calls.filter((call) => call.options.rlmSubcall === true).length, 1);
 }
 
+async function testRootLoopEnforcesPromptRequestedActionsBeforeFinal() {
+  let rootCalls = 0;
+  const { service } = createService({
+    sendMessage: async (_model, _messages, options = {}) => {
+      if (options.rlmSubcall) {
+        return { response: { message: { content: 'A persecuted caravan must recover a pardon from pirates before the empire erases them.' } } };
+      }
+      rootCalls += 1;
+      return { response: { message: { content: '{"type":"set_final","args":{"value":"Recovered final."}}' } } };
+    }
+  });
+
+  const result = await service.runLoop({
+    prompt: [
+      'Create a numbered outline.',
+      'Before writing the final outline, use the RLM environment to:',
+      '1. inspect the prompt length,',
+      '2. read a slice of the prompt,',
+      '3. ask a bounded sub_lm call to summarize the central conflict in one sentence,',
+      '4. then produce the final answer.'
+    ].join('\n'),
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 5,
+      maxSubcalls: 2
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'Recovered final.');
+  assert.deepEqual(result.observations.map((entry) => entry.action.type), [
+    'len_prompt',
+    'slice_prompt',
+    'sub_lm',
+    'set_final'
+  ]);
+  assert.equal(rootCalls, 1);
+}
+
 async function testRootLoopRetriesInvalidJsonAction() {
   let callCount = 0;
   const { service } = createService({
@@ -552,6 +598,7 @@ async function testRootLoopBudgetExhaustion() {
   await testSubLmActionFailsClosedAtBudgetLimit();
   await testRootLoopExecutesStructuredActions();
   await testRootLoopCanUseSubLmObservation();
+  await testRootLoopEnforcesPromptRequestedActionsBeforeFinal();
   await testRootLoopRetriesInvalidJsonAction();
   await testRootLoopBudgetExhaustion();
   console.log('rlm-service regression tests passed');

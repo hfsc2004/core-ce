@@ -36,6 +36,7 @@
   let runtimeController = null;
   let initController = null;
   let rlmController = null;
+  let activeRlmSessionId = '';
   let preferenceController = null;
   let rlmAssisted = false;
   let rlmVerboseTrace = false;
@@ -68,6 +69,7 @@
   let voiceBtn = null;
   let voiceModeBtn = null;
   let attachmentsBtn = null;
+  let attachPlusBtn = null;
   let statusText = null;
   let gpuIcon = null;
   let gpuText = null;
@@ -166,6 +168,7 @@
   async function detachAttachment(rawId) { await callAsync(ioController, 'detachAttachment', undefined, rawId); }
   async function clearAttachments() { await callAsync(ioController, 'clearAttachments'); }
   async function openAttachmentManager() { await callAsync(ioController, 'openAttachmentManager'); }
+  async function handleAttachPlusClick() { await callAsync(ioController, 'handleAttachPlusClick'); }
   async function buildAttachmentContext() { return callAsync(ioController, 'buildAttachmentContext', ''); }
   function hasKnownAttachments() { return call(ioController, 'hasKnownAttachments', false); }
   function clearConversation() {
@@ -226,6 +229,9 @@
   function handleInputKeypress(e) {
     if (e && e.key === 'Enter' && !e.shiftKey) clearInterject();
     call(ioController, 'handleInputKeypress', undefined, e);
+  }
+  function handleInputPaste(e) {
+    call(ioController, 'handleInputPaste', undefined, e);
   }
   async function handleStopClick() { await callAsync(ioController, 'handleStopClick'); }
   async function initializeVoiceToText() { await callAsync(ioController, 'initializeVoiceToText'); }
@@ -750,6 +756,8 @@
         getIsWaitingForResponse: () => isWaitingForResponse,
         getActiveStream: () => activeStream,
         setActiveStream: (value) => { activeStream = value; },
+        getActiveRlmSessionId: () => activeRlmSessionId,
+        setActiveRlmSessionId: (value) => { activeRlmSessionId = String(value || '').trim(); },
         setStreamStopRequested: (value) => { streamStopRequested = Boolean(value); },
         getTerminalPort: () => terminalPort,
         setWaitingState,
@@ -863,6 +871,7 @@
       domBindings: {
         chatDisplay: { set: (v) => { chatDisplay = v; }, get: () => chatDisplay },
         userInput: { set: (v) => { userInput = v; }, get: () => userInput },
+        attachPlusBtn: { set: (v) => { attachPlusBtn = v; }, get: () => attachPlusBtn },
         sendBtn: { set: (v) => { sendBtn = v; }, get: () => sendBtn },
         stopBtn: { set: (v) => { stopBtn = v; }, get: () => stopBtn },
         attachmentsBtn: { set: (v) => { attachmentsBtn = v; }, get: () => attachmentsBtn },
@@ -930,6 +939,12 @@
       getStreamStopRequested: () => streamStopRequested,
       getRlmController: () => rlmController,
       getRlmProvider: () => rlmProvider,
+      runRlmStartSession: (payload = {}) => {
+        if (!window.electronAPI || typeof window.electronAPI.rlmStartSession !== 'function') {
+          return Promise.resolve({ success: false, error: 'rlmStartSession API unavailable' });
+        }
+        return window.electronAPI.rlmStartSession(payload);
+      },
       runRlmTurn: (payload = {}) => {
         if (!window.electronAPI || typeof window.electronAPI.rlmRunTurn !== 'function') {
           return Promise.resolve({ success: false, handled: false, error: 'rlmRunTurn API unavailable' });
@@ -954,9 +969,12 @@
         }
       },
       openAttachmentManager,
+      handleAttachPlusClick,
       handleInputKeypress,
+      handleInputPaste,
       loadSessionMemoryPreferences,
       loadInputRecallHistory,
+      setActiveRlmSessionId: (value) => { activeRlmSessionId = String(value || '').trim(); },
       verifyGPUUsage: async () => {
         if (!runtimeController || typeof runtimeController.verifyGPUUsage !== 'function') return;
         await runtimeController.verifyGPUUsage();

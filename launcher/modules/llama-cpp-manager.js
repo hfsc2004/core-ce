@@ -340,6 +340,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
   const {
     port,
     modelPath,
+    projectorPath = null,
     modelName,
     chatTemplate,
     contextSize = 32768,
@@ -369,6 +370,12 @@ async function startLlamaServerOnPort(appDir, options = {}) {
       `llama.cpp model file not found. Configure a valid GGUF path first (received: ${String(modelPath || 'empty')})`
     );
   }
+  const resolvedProjectorPath = projectorPath ? resolveModelPath(appDir, projectorPath) : null;
+  if (projectorPath && (!resolvedProjectorPath || !fs.existsSync(resolvedProjectorPath))) {
+    throw new Error(
+      `llama.cpp multimodal projector file not found (received: ${String(projectorPath || 'empty')})`
+    );
+  }
 
   const args = [
     '--model', resolvedModelPath,
@@ -377,6 +384,9 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     '--ctx-size', String(Math.max(256, Number(contextSize) || 32768)),
     '--parallel', String(Math.max(1, Number(parallel) || 1))
   ];
+  if (resolvedProjectorPath) {
+    args.push('--mmproj', resolvedProjectorPath);
+  }
 
   const templateResolved = inferChatTemplate(appDir, {
     chatTemplate,
@@ -502,6 +512,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     port,
     process: child,
     modelPath: resolvedModelPath,
+    projectorPath: resolvedProjectorPath || null,
     logPath: runtimeLogPath,
     chatTemplate: templateResolved.value || null,
     chatTemplateSource: templateResolved.source || 'none'

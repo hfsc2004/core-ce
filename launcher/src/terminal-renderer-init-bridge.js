@@ -27,6 +27,7 @@
       setDom(dom) {
         bindings.chatDisplay.set(dom.chatDisplay);
         bindings.userInput.set(dom.userInput);
+        if (bindings.attachPlusBtn) bindings.attachPlusBtn.set(dom.attachPlusBtn);
         bindings.sendBtn.set(dom.sendBtn);
         bindings.stopBtn.set(dom.stopBtn);
         bindings.attachmentsBtn.set(dom.attachmentsBtn);
@@ -38,6 +39,7 @@
         return {
           chatDisplay: bindings.chatDisplay.get(),
           userInput: bindings.userInput.get(),
+          attachPlusBtn: bindings.attachPlusBtn ? bindings.attachPlusBtn.get() : null,
           sendBtn: bindings.sendBtn.get(),
           stopBtn: bindings.stopBtn.get(),
           attachmentsBtn: bindings.attachmentsBtn.get(),
@@ -162,7 +164,9 @@
       populateModelDropdown: api.populateModelDropdown,
       handleSendClick: api.handleSendClick,
       openAttachmentManager: api.openAttachmentManager,
+      handleAttachPlusClick: api.handleAttachPlusClick,
       handleInputKeypress: api.handleInputKeypress,
+      handleInputPaste: api.handleInputPaste,
       loadSessionMemoryPreferences: api.loadSessionMemoryPreferences,
       loadInputRecallHistory: api.loadInputRecallHistory,
       verifyGPUUsage: api.verifyGPUUsage

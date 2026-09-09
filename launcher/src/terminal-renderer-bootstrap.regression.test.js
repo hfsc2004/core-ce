@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-function loadBootstrapController() {
+function loadBootstrapController(extraContext = {}) {
   const sourcePath = path.join(__dirname, 'terminal-renderer-bootstrap.js');
   let capturedChatFlowDeps = null;
   const context = {
@@ -15,7 +15,8 @@ function loadBootstrapController() {
         }
       }
     },
-    console
+    console,
+    ...extraContext
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(sourcePath, 'utf8'), context, { filename: sourcePath });
@@ -144,5 +145,57 @@ function testBootstrapPassesRecursiveRlmDepsToChatflow() {
   assert.strictEqual(deps.getRlmProfile, getRlmProfile);
 }
 
+function testBootstrapWiresAttachPlusButton() {
+  let clickHandler = null;
+  let attachClicks = 0;
+  const { createBootstrapController } = loadBootstrapController({
+    document: {
+      getElementById: () => null,
+      addEventListener: () => {}
+    },
+    setTimeout: () => 0,
+    setInterval: () => 0
+  });
+  const ctx = {
+    configureMarkdown: () => {},
+    installDragAndDropAttach: () => {},
+    updateGPUIndicator: () => {},
+    populateModelDropdown: () => {},
+    config: { port: 52454, gpuType: 'cuda' },
+    sendBtn: { addEventListener: () => {} },
+    stopBtn: { addEventListener: () => {}, disabled: false, style: {} },
+    attachPlusBtn: {
+      addEventListener: (eventName, handler) => {
+        if (eventName === 'click') clickHandler = handler;
+      }
+    },
+    attachmentsBtn: null,
+    userInput: { addEventListener: () => {}, focus: () => {} },
+    chatDisplay: { style: {} },
+    contextMenuController: null,
+    streamController: null,
+    handleSendClick: () => {},
+    handleStopClick: () => {},
+    handleAttachPlusClick: () => { attachClicks += 1; },
+    handleInputKeypress: () => {},
+    handleInputPaste: () => {},
+    getProvider: () => 'llama.cpp',
+    getCurrentModel: () => 'model.gguf',
+    getTerminalPort: () => 52454,
+    getProviderBaseUrl: () => '',
+    getLlamaCppModelPath: () => '',
+    addSystemMessage: () => {},
+    getSystemPrompt: () => '',
+    loadSessionMemoryPreferences: async () => {},
+    loadInputRecallHistory: async () => {},
+    verifyGPUUsage: async () => {}
+  };
+  createBootstrapController().runPostInit(ctx);
+  assert.strictEqual(typeof clickHandler, 'function');
+  clickHandler();
+  assert.strictEqual(attachClicks, 1);
+}
+
 testBootstrapPassesRecursiveRlmDepsToChatflow();
+testBootstrapWiresAttachPlusButton();
 console.log('terminal-renderer-bootstrap regression tests passed');

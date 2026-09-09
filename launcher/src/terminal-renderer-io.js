@@ -45,6 +45,33 @@
       await attachmentController.attachFile(rawPath);
     }
 
+    async function handleAttachPlusClick() {
+      const api = window.electronAPI || null;
+      if (!api || typeof api.selectImportFile !== 'function') {
+        addErrorMessage('File picker is not available in this build.');
+        return;
+      }
+      try {
+        const result = await api.selectImportFile({
+          mode: 'attachment',
+          title: 'Attach Image or Text File'
+        });
+        if (!result || result.canceled || result.success === false) return;
+        const filePath = String(result.filePath || '').trim();
+        if (!filePath) return;
+        const attachmentController = getAttachmentController();
+        if (attachmentController && typeof attachmentController.attachFile === 'function') {
+          await attachmentController.attachFile(filePath, { sessionOnly: true });
+        } else {
+          await attachFile(filePath);
+        }
+        const input = getUserInput();
+        if (input) input.focus();
+      } catch (err) {
+        addErrorMessage(`Attach failed: ${err.message || String(err)}`);
+      }
+    }
+
     function installDragAndDropAttach() {
       const attachmentController = getAttachmentController();
       if (!attachmentController || typeof attachmentController.installDragAndDropAttach !== 'function') return;
@@ -111,10 +138,50 @@
       }
     }
 
+    function moveCaretToInputEnd(input) {
+      if (!input) return;
+      input.focus();
+      const end = String(input.value || '').length;
+      try {
+        input.setSelectionRange(end, end);
+      } catch (_) {
+        // Some input types do not support selection ranges.
+      }
+    }
+
+    function isEditablePasteTarget(target) {
+      if (!target || target === document.body || target === document.documentElement) return false;
+      const tag = String(target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+      return target.isContentEditable === true || Boolean(target.closest?.('[contenteditable="true"]'));
+    }
+
+    function handleInputPaste(event) {
+      const input = getUserInput();
+      if (!input) return;
+      if (event?.target === input) {
+        setTimeout(() => moveCaretToInputEnd(input), 0);
+        return;
+      }
+      if (isEditablePasteTarget(event?.target)) return;
+
+      const text = String(event?.clipboardData?.getData?.('text') || '');
+      if (!text) {
+        setTimeout(() => moveCaretToInputEnd(input), 0);
+        return;
+      }
+      event.preventDefault();
+      input.value = `${String(input.value || '')}${text}`;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      moveCaretToInputEnd(input);
+      setTimeout(() => moveCaretToInputEnd(input), 0);
+    }
+
     async function handleStopClick() {
-      if (!ctx.getIsWaitingForResponse?.() || !ctx.getActiveStream?.()) return;
+      if (!ctx.getIsWaitingForResponse?.()) return;
       ctx.setStreamStopRequested?.(true);
       const active = ctx.getActiveStream?.() || null;
+      const activeRlmSessionId = String(ctx.getActiveRlmSessionId?.() || '').trim();
       const ttsStreamId = active?.ttsStreamId ? String(active.ttsStreamId) : '';
       try {
         const vc = getVoiceController();
@@ -124,7 +191,10 @@
         if (active?.abortController && typeof active.abortController.abort === 'function') {
           active.abortController.abort();
         }
-        if (window.electronAPI && typeof window.electronAPI.ollamaStopStream === 'function') {
+        if (activeRlmSessionId && window.electronAPI && typeof window.electronAPI.rlmStopSession === 'function') {
+          await window.electronAPI.rlmStopSession(activeRlmSessionId, 'user-stop');
+          ctx.setActiveRlmSessionId?.('');
+        } else if (window.electronAPI && typeof window.electronAPI.ollamaStopStream === 'function') {
           await window.electronAPI.ollamaStopStream({ port: ctx.getTerminalPort?.() });
         }
         addSystemMessage('⏹️ Generation stopped.');
@@ -138,6 +208,7 @@
           }
         }
         ctx.setActiveStream?.(null);
+        ctx.setActiveRlmSessionId?.('');
         ctx.setWaitingState?.(false);
         const input = getUserInput();
         if (input) input.focus();
@@ -190,6 +261,7 @@
       populateModelDropdown,
       handleCommand,
       attachFile,
+      handleAttachPlusClick,
       installDragAndDropAttach,
       listAttachments,
       detachAttachment,
@@ -199,6 +271,7 @@
       hasKnownAttachments,
       formatBytes,
       handleInputKeypress,
+      handleInputPaste,
       handleStopClick,
       initializeVoiceToText
     };

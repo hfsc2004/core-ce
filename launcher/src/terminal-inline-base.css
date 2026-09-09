@@ -685,6 +685,29 @@ body {
   gap: 8px;
 }
 
+#attach-plus-btn {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--term-bg-primary);
+  border: 1px solid var(--term-border);
+  border-radius: 5px;
+  color: var(--term-text-secondary);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#attach-plus-btn:hover:not(:disabled) {
+  border-color: rgba(88, 166, 255, 0.45);
+  color: var(--term-text-primary);
+  background: rgba(88, 166, 255, 0.08);
+}
+
 #user-input {
   flex: 1;
   background: var(--term-bg-primary);
@@ -763,6 +786,7 @@ body {
 #stop-btn:disabled,
 #voice-btn:disabled,
 #voice-mode-btn:disabled,
+#attach-plus-btn:disabled,
 #user-input:disabled {
   opacity: 0.55;
   cursor: not-allowed;

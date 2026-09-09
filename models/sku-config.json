@@ -5,7 +5,7 @@
   "storage_type": "NVMe SSD (USB-C)",
   "catalog_file": "catalog.json",
   "sku_id": "sku-005",
-  "version": "1.1.7",
+  "version": "1.1.14",
   "price": 449.99,
   "sku_manifest": "sku-manifest.json"
 }

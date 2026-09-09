@@ -13,7 +13,11 @@
       ctx.setConfig(terminalConfig);
       ctx.setCurrentModel((terminalConfig.modelName && terminalConfig.modelName !== 'unknown') ? terminalConfig.modelName : null);
       ctx.setTerminalPort(terminalConfig.port);
-      ctx.setAttachmentSessionId(`terminal-${terminalConfig.port}`);
+      const portPart = Number(terminalConfig.port || 0) > 0 ? String(terminalConfig.port) : 'default';
+      const windowPart = Number(terminalConfig.terminalWindowId || 0) > 0
+        ? String(Number(terminalConfig.terminalWindowId))
+        : Date.now().toString(36);
+      ctx.setAttachmentSessionId(`terminal-${portPart}-window-${windowPart}`);
       ctx.setProvider(terminalConfig.provider || 'ollama');
       ctx.setProviderBaseUrl(terminalConfig.baseUrl || '');
       ctx.setProviderApiKey(terminalConfig.apiKey || '');
@@ -41,6 +45,7 @@
       const dom = {
         chatDisplay: document.getElementById('chat-display'),
         userInput: document.getElementById('user-input'),
+        attachPlusBtn: document.getElementById('attach-plus-btn'),
         sendBtn: document.getElementById('send-btn'),
         stopBtn: document.getElementById('stop-btn'),
         attachmentsBtn: document.getElementById('attachments-btn'),
@@ -99,6 +104,7 @@
         config: ctx.getConfig(),
         chatDisplay: dom.chatDisplay,
         userInput: dom.userInput,
+        attachPlusBtn: dom.attachPlusBtn,
         sendBtn: dom.sendBtn,
         stopBtn: dom.stopBtn,
         attachmentsBtn: dom.attachmentsBtn,
@@ -106,6 +112,7 @@
         gpuIcon: dom.gpuIcon,
         gpuText: dom.gpuText,
         attachmentSessionId: ctx.getAttachmentSessionId(),
+        getAttachmentSessionId: ctx.getAttachmentSessionId,
         addSystemMessage: ctx.addSystemMessage,
         addSystemImagePreview: ctx.addSystemImagePreview,
         addErrorMessage: ctx.addErrorMessage,
@@ -240,6 +247,7 @@
         config: ctx.getConfig(),
         chatDisplay: dom.chatDisplay,
         userInput: dom.userInput,
+        attachPlusBtn: dom.attachPlusBtn,
         sendBtn: dom.sendBtn,
         stopBtn: dom.stopBtn,
         attachmentsBtn: dom.attachmentsBtn,
@@ -252,7 +260,9 @@
         handleSendClick: ctx.handleSendClick,
         handleStopClick: ctx.handleStopClick,
         openAttachmentManager: ctx.openAttachmentManager,
+        handleAttachPlusClick: ctx.handleAttachPlusClick,
         handleInputKeypress: ctx.handleInputKeypress,
+        handleInputPaste: ctx.handleInputPaste,
         addSystemMessage: ctx.addSystemMessage,
         getCurrentModel: ctx.getCurrentModel,
         getTerminalPort: ctx.getTerminalPort,

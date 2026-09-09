@@ -409,6 +409,39 @@ Persistence:
 Deployment rule:
 - RLM mode selection should resolve behavior in this order: user override, catalog metadata, provider capability, observed reasoning fields, `unknown`.
 
+## Attachments, RAG Buckets, And Session Scope
+
+RLM, RAG, and Terminal attachments are related but not interchangeable.
+
+Definitions:
+1. RLM
+- Inference-time prompt/environment scaffold.
+- May inspect prompt text, messages, attachments, workspace handles, scratch values, and sub-call outputs.
+- Is not defined by attachments or RAG.
+
+2. RAG buckets
+- Persistent, named, shareable stores for indexed or reusable context.
+- Intended for durable RAG-like workflows, multi-agent shared context, and explicit cross-session reuse.
+- Must remain listable, removable, clearable, and access-manageable through a dedicated RAG/bucket UI.
+
+3. PSF Terminal scratch attachments
+- Short-lived files attached from the compose-box `+` button.
+- Intended for the current Terminal window/session flow.
+- Must not silently write into the active persistent bucket.
+- Must not leak into a fresh Terminal just because BMOC reused the same llama.cpp port.
+
+Current implementation rule:
+1. The PSF Terminal `+` button attaches to the current per-window scratch attachment session.
+2. The PSF Terminal `RAG` button opens the durable/shared bucket manager.
+3. llama.cpp image payloads read images from the current scratch attachment session, not from a port-derived session.
+4. Image bytes are sent only when the user prompt has image intent.
+5. Plain chat turns should not scan or inject attachment context.
+
+Saved-session requirement:
+1. A saved Terminal session should eventually persist a manifest of scratch attachments used by that session.
+2. Loading a saved session should restore those attachments into a new scratch session or prompt the user when source files are unavailable.
+3. This should be a saved-session feature, not an implicit RAG bucket write.
+
 ## UI/UX Plan
 
 RLM should be explicit and mode-based.

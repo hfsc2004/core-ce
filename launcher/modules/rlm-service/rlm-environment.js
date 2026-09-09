@@ -41,8 +41,28 @@ function estimateBytes(value) {
   return Buffer.byteLength(String(value || ''), 'utf8');
 }
 
+function inferRequestedRlmActions(prompt = '') {
+  const text = String(prompt || '');
+  const lower = text.toLowerCase();
+  const actions = [];
+  const hasRlmDirective = /\brlm\b|recursive language model|environment/.test(lower);
+  if (!hasRlmDirective) return actions;
+
+  if (/inspect[^.\n]{0,80}prompt length|prompt length|\blen_prompt\b/.test(lower)) {
+    actions.push('len_prompt');
+  }
+  if (/read[^.\n]{0,80}slice|slice[^.\n]{0,80}prompt|\bslice_prompt\b/.test(lower)) {
+    actions.push('slice_prompt');
+  }
+  if (/\bsub_lm\b|sub[- ]?lm|bounded sub[_ -]?lm|subcall/.test(lower)) {
+    actions.push('sub_lm');
+  }
+  return actions;
+}
+
 function createRlmEnvironment(options = {}) {
   const prompt = String(options.prompt || '');
+  const requestedRlmActions = inferRequestedRlmActions(prompt);
   const messages = normalizeMessages(options.messages || []);
   const attachments = normalizeAttachments(options.attachments || []);
   const scratch = new Map();
@@ -61,7 +81,8 @@ function createRlmEnvironment(options = {}) {
       prompt: {
         chars: prompt.length,
         bytes: estimateBytes(prompt),
-        preview: previewText(prompt, 240)
+        preview: previewText(prompt, 240),
+        requestedRlmActions
       },
       messages: {
         count: messages.length,
@@ -90,6 +111,7 @@ function createRlmEnvironment(options = {}) {
         'set_value(name, value)',
         'get_value(name, offset, length)',
         'list_values()',
+        'sub_lm(prompt, max_tokens)',
         'set_final(value)'
       ]
     };
