@@ -21,6 +21,7 @@ const createSessionServiceLauncher = require('./session-manager-service-launcher
 const createSessionStateManager = require('./session-manager-state');
 const createSessionManagerDeterministic = require('./session-manager-deterministic');
 const createSessionManagerMoe = require('./session-manager-moe');
+const { createRlmService } = require('./rlm-service/rlm-service');
 const attachments = require('./attachments');
 
 const sessionState = createSessionStateManager({
@@ -45,6 +46,13 @@ const deterministic = createSessionManagerDeterministic();
 const gpuMonitorManager = createSessionGpuMonitor();
 const attachmentStore = attachments.createAttachmentStore({
   baseDir: require('path').join(__dirname, '..', '..', '.psf', 'attachments')
+});
+const rlmService = createRlmService({
+  registerSession: (config) => sessionState.registerSession(config),
+  closeSession: (sessionId) => sessionState.closeSession(sessionId),
+  updateSession: (sessionId, updates) => sessionState.updateSession(sessionId, updates),
+  getSession: (sessionId) => sessionState.getSession(sessionId),
+  attachmentStore
 });
 
 const serviceLauncher = createSessionServiceLauncher({
@@ -229,6 +237,38 @@ function applyDeterministicToolPolicyPreset(presetName) {
   return deterministic.applyDeterministicToolPolicyPreset(presetName);
 }
 
+async function startRlmSession(request = {}) {
+  return rlmService.startSession(request);
+}
+
+async function runRlmDryTurn(request = {}) {
+  return rlmService.runDryTurn(request);
+}
+
+function getRlmSession(sessionId) {
+  return rlmService.getSession(sessionId);
+}
+
+async function stopRlmSession(sessionId, reason = 'stopped') {
+  return rlmService.stopSession(sessionId, reason);
+}
+
+function listRlmSessions() {
+  return rlmService.listSessions();
+}
+
+function validateRlmSandboxCode(request = {}) {
+  return rlmService.validateSandboxCode(request);
+}
+
+async function executeRlmSandboxCode(request = {}) {
+  return rlmService.executeSandboxCode(request);
+}
+
+async function runRlmAction(request = {}) {
+  return rlmService.runAction(request);
+}
+
 function startGpuMonitor(callback) {
   return gpuMonitorManager.startGpuMonitor(callback);
 }
@@ -281,6 +321,14 @@ module.exports = {
   setDeterministicToolPolicy,
   listDeterministicToolPolicyPresets,
   applyDeterministicToolPolicyPreset,
+  startRlmSession,
+  runRlmDryTurn,
+  getRlmSession,
+  stopRlmSession,
+  listRlmSessions,
+  validateRlmSandboxCode,
+  executeRlmSandboxCode,
+  runRlmAction,
   startGpuMonitor,
   stopGpuMonitor,
   isGpuMonitorRunning

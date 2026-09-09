@@ -1,218 +1,154 @@
-# RLM Assisted Mode - PSF Terminal (v1.1.3)
+# Recursive Language Models - PSF Terminal Alignment (v1.1.10)
 
-## Purpose
+## Source Definition
 
-RLM Assisted Mode adds a deterministic tool layer in front of normal chat replies for file/attachment workflows.
+The local reference paper is `RLM_MIT.pdf`, titled `Recursive Language Models`, by Alex L. Zhang, Tim Kraska, and Omar Khattab from MIT CSAIL.
 
-Goal:
-1. Keep responses grounded to attached files.
-2. Reduce model drift/hallucination on document tasks.
-3. Preserve normal chat behavior for non-file prompts.
+Correct acronym:
+- `RLM` = Recursive Language Model
 
-## Scope
+Use `RLM` everywhere in code, docs, UI labels, and release notes.
 
-Current implementation is in `PSF Terminal` renderer flow.
+## What An RLM Is
 
-Primary files:
-1. `launcher/src/terminal-renderer-rlm.js`
-2. `launcher/src/shared-rlm-core.js` (shared orchestration core)
-3. `launcher/src/terminal-renderer-chatflow.js`
-4. `launcher/src/terminal-renderer-commands.js`
-5. `launcher/src/terminal-renderer.js`
-6. `launcher/src/terminal.html`
-7. `launcher/modules/ipc-handlers.js`
-8. `launcher/preload.js`
+A Recursive Language Model is an inference-time scaffold around a base language model. It is designed to process prompts that are too large, too dense, or too structurally complex to place directly into the model context.
 
-Coding Terminal RLM integration (current):
-1. `launcher/src/coding-terminal-renderer-chat.js`
-2. `launcher/src/coding-terminal-renderer-project.js`
-3. `launcher/src/shared-rlm-core.js`
-4. `launcher/main.js` (`select-import-file` now supports mode-aware picker behavior)
-5. `launcher/preload.js` (`selectImportFile(options)`)
+Core idea:
+1. The full user prompt is stored outside the model context as an environment variable.
+2. The model receives compact metadata about that environment, not the whole prompt.
+3. The model writes code in a persistent REPL to inspect, slice, transform, and aggregate the external prompt.
+4. The REPL can expose model-call functions so generated code can recursively call the same model or sub-models on selected prompt slices.
+5. Intermediate values live in the environment, not in the model history.
+6. The loop stops when the environment sets or returns the final answer.
 
-## Reuse Architecture
+An RLM is not defined by attachments. Files, attachments, codebases, pasted text, chat history, and generated intermediate artifacts can all become external prompt objects, but they are data sources inside the environment rather than the definition of RLM itself.
 
-RLM orchestration is now split for reuse:
-1. `shared-rlm-core.js`: common planner/tool orchestration.
-2. `terminal-renderer-rlm.js`: thin surface adapter for PSF Terminal.
+## Required Architecture
 
-This allows Coding Terminal and MoE/IRG Pipeline Chat to import the same core behavior without re-implementing orchestration logic.
+A correct PSF RLM implementation should include these parts.
 
-Current reuse status:
-1. PSF Terminal: fully wired through adapter.
-2. Coding Terminal: wired for attachment/document summarize intents using shared transport (`coding-terminal-renderer-chat.js`) on both `ollama` and `llama-cpp` backends.
-3. MoE/IRG Pipeline Chat: pending adapter wiring.
+1. Prompt Environment
+- Stores the complete prompt and referenced materials as addressable variables.
+- Provides safe read/slice/search helpers.
+- Keeps large intermediate values out of the root model context.
 
-Coding Terminal attachment workflow update:
-1. `RLM Folder -> Attach File` now requests a generic file picker (`mode=attachment`) instead of JSON-only import filtering.
-2. Catalog/model import flow remains JSON-filtered by default.
+2. Persistent REPL
+- Executes model-authored code in a sandbox.
+- Preserves variables between loop iterations.
+- Returns bounded stdout/stderr metadata to the root model.
 
-## Backend-Agnostic Transport Contract
+3. Recursive Model Calls
+- Exposes a bounded `sub_rlm(prompt, options)` function.
+- Allows generated code to call sub-models or sub-RLMs inside loops.
+- Enforces recursion depth, wall-clock time, token, and call-count budgets.
 
-`shared-rlm-core.js` now supports a pluggable inference transport:
+4. Root Loop
+- Calls the base model with environment metadata and recent bounded observations.
+- Executes returned code.
+- Updates environment state.
+- Stops only when a final answer variable/result is set.
 
-1. `deps.sendMessage(modelName, messages, options)`
-- Required for multi-backend reuse.
-- Must return normalized response shape:
-  - `{ success: true, response: { message: { content } } }`
+5. Finalization
+- Returns a final answer from the environment.
+- Avoids relying on a direct autoregressive answer when the answer was built programmatically.
+- Supports long outputs assembled from environment variables.
 
-2. Default fallback (when `deps.sendMessage` is omitted):
-- Uses `window.electronAPI.ollamaSendMessage(...)`.
+## Difference From Current PSF Implementation
 
-Coding Terminal transport endpoint:
-1. IPC channel: `coding-terminal:send-inference-messages`
-2. Preload API: `window.electronAPI.sendCodingInferenceMessages(payload)`
-3. Backend routing:
-- `ollama` or `llama-cpp` selected by Coding Terminal runtime config.
+Current PSF code has an RLM document-assist scaffold. It can plan over attachments, execute deterministic tools, summarize chunks, and run limited verification/repair passes.
 
-## How It Works
+That is useful, but it is not yet a complete MIT-style Recursive Language Model.
 
-For eligible prompts, execution path is:
-1. LLM planner returns strict JSON plan.
-2. Deterministic tools execute the plan steps.
-3. Final answer is produced from deterministic output.
+Current implementation characteristics:
+1. Triggered mostly by document/file/attachment intents.
+2. Uses deterministic tools such as chunking, local search, extraction, and summary accumulation.
+3. Does not yet create a general prompt-as-variable REPL environment.
+4. Does not yet allow model-authored code to recursively invoke sub-RLM calls over arbitrary slices.
+5. Does not yet support unbounded prompt/output handling through environment state.
 
-Supported tool names:
-1. `list_attachments`
-2. `read_attachment`
-3. `search_attachment`
-4. `summarize_text`
-5. `extract_query_terms`
-6. `rank_chunks_by_terms`
-7. `coverage_guard`
+Preferred terminology:
+- `RLM` for the target MIT-style Recursive Language Model architecture.
+- `RLM document-assist scaffold` for the current partial implementation.
+- `deterministic tools` for bounded helper functions used by the scaffold.
+- `attachments` for one possible external data source.
 
-## Planner Model Contract
+Avoid:
+- Defining RLM as file/attachment handling.
+- Using transposed or misspelled acronym forms.
+- Calling the current attachment workflow a complete RLM.
 
-Planner JSON schema (preferred):
+## Interaction With Thinking Models
 
-```json
-{
-  "steps": [
-    { "tool": "list_attachments", "args": {} },
-    { "tool": "summarize_text", "args": { "attachmentId": "..." } }
-  ],
-  "reason": "short"
-}
-```
+Models such as Qwen3.8 and Gemma 4 may already emit reasoning or thinking tokens. That is model-internal reasoning.
 
-Compatibility schema (still accepted):
+RLM is external inference-time recursion:
+1. The model can think internally.
+2. The RLM loop can also make the model act through a REPL.
+3. The REPL can recursively call models over slices of external prompt state.
 
-```json
-{
-  "tool": "summarize_text",
-  "args": { "attachmentId": "..." },
-  "reason": "short"
-}
-```
+These are complementary for hard long-context tasks, but they should not be enabled blindly.
 
-## Multi-Step Planning
+Recommended behavior:
+1. Normal chat: RLM off.
+2. Short creative writing: RLM off.
+3. Long-context analysis: RLM available.
+4. Dense aggregation or pairwise reasoning: RLM useful.
+5. Codebase/document-corpus understanding: RLM useful when implemented with a real prompt environment.
+6. Hardware or filesystem actions: RLM must run inside strict sandbox and policy controls.
 
-Planner can emit multiple tool steps, with preset-based limits:
-1. `Fast`: up to 1 step
-2. `Balanced`: up to 2 steps
-3. `Deep`: up to 4 steps
+## Safe Implementation Plan
 
-This allows useful chaining such as:
-1. `list_attachments -> summarize_text`
-2. `read_attachment -> search_attachment`
+Phase 1: Naming and Documentation
+- Correct all transposed acronym references to `RLM`.
+- Document the current scaffold as partial.
+- Keep the MIT paper local and ignored from git.
 
-## Quality Presets
+Phase 2: Sandbox Design
+- Add a restricted REPL process with CPU, memory, time, filesystem, and network limits.
+- Provide only approved APIs to the REPL.
+- Record every code execution and model sub-call in an audit trace.
 
-`RLM Quality Preset` controls planner depth and summarization coverage.
+Phase 3: Prompt Environment
+- Store the complete user prompt as `Prompt`.
+- Store attachments/codebase/chat history as explicit environment objects.
+- Provide deterministic functions such as `len_prompt()`, `slice_prompt(start, end)`, `search_prompt(pattern)`, and `chunk_prompt(size, overlap)`.
 
-1. `Fast`
-- lowest latency
-- fewer chunks and shorter summaries
+Phase 4: Recursive API
+- Expose `sub_lm(prompt, options)` and later `sub_rlm(prompt, options)`.
+- Enforce `max_recursion_depth`, `max_subcalls`, `max_runtime_ms`, and `max_output_chars`.
+- Support parallel sub-calls only after cancellation and cleanup are reliable.
 
-2. `Balanced`
-- default
-- balanced latency and coverage
+Phase 5: Root Controller
+- Implement the root loop:
+  1. Send bounded environment metadata to the model.
+  2. Execute returned code.
+  3. Return bounded execution observations.
+  4. Continue until `Final` is set or budget is exhausted.
 
-3. `Deep`
-- highest coverage
-- more chunk processing and larger summaries
+Phase 6: UI
+- Make RLM an explicit mode for long-context reasoning, not a default chat path.
+- Show recursion depth, sub-call count, runtime, and finalization state.
+- Keep model thinking output separate from RLM trace output.
 
-## Budget Controls (Current)
+## Budget Controls
 
-RLM now enforces deterministic per-turn safety budgets, with explicit stop reasons reported in trace output.
+RLM budgets should control both deterministic tool execution and recursive model behavior.
 
-Budget keys:
-1. `max_tool_calls`
-2. `max_recursion_depth`
-3. `max_chunks_processed`
-4. `max_runtime_ms`
-5. `max_evidence_hits`
+Required budgets:
+1. `max_runtime_ms`
+2. `max_root_iterations`
+3. `max_recursion_depth`
+4. `max_subcalls`
+5. `max_parallel_subcalls`
+6. `max_stdout_chars_per_iteration`
+7. `max_environment_value_bytes`
+8. `max_final_output_chars`
 
-Default budgets by quality:
-1. `Fast`
-- tool calls: 20
-- recursion depth: 2
-- chunks processed: 24
-- runtime: 20000 ms
-- evidence hits: 16
+Current budget names such as `max_tool_calls`, `max_chunks_processed`, and `max_evidence_hits` belong to the document-assist scaffold. They may remain, but they are not sufficient for a full RLM.
 
-2. `Balanced`
-- tool calls: 40
-- recursion depth: 3
-- chunks processed: 48
-- runtime: 45000 ms
-- evidence hits: 28
+## Existing Commands
 
-3. `Deep`
-- tool calls: 80
-- recursion depth: 5
-- chunks processed: 120
-- runtime: 90000 ms
-- evidence hits: 64
-
-## Verbose Trace Mode
-
-When `RLM Verbose Trace` is ON, terminal prints:
-1. Planner JSON payload.
-2. Per-step execution trace.
-3. Coverage metadata for summarize flow.
-
-Example trace:
-1. `RLM Trace: tool=list_attachments -> summarize_text source=deterministic coverage=100% (3/3 chunks)`
-2. `RLM Plan JSON: {...}`
-3. `RLM Step: #1 list_attachments => ok`
-4. `RLM Step: #2 summarize_text => ok`
-5. `RLM Trace: ... stop=max_runtime_ms` (when a budget limit is reached)
-
-## Attachment Selection Behavior
-
-Selection order:
-1. explicit `attachmentId`
-2. explicit `attachmentName`
-3. filename hint extracted from user prompt
-4. auto-select if exactly one text-extractable attachment exists
-5. deterministic clarification if multiple attachments remain
-
-When ambiguous, user gets attachment IDs and prompt guidance instead of silent fallback.
-
-## Trigger Gating
-
-RLM path runs only when all are true:
-1. `RLM Assisted Mode` enabled.
-2. prompt looks like file/document intent.
-
-Simple chit-chat prompts are excluded, so non-document chat stays normal.
-
-## Settings and Commands
-
-UI settings (Model Configuration):
-1. `RLM Assisted Mode`
-2. `RLM Quality Preset` (`Fast`, `Balanced`, `Deep`)
-3. `RLM Verbose Trace`
-4. `RLM Include Shared Attachments`
-5. `RLM Budgets`:
-- `Max Tool Calls`
-- `Max Recursion Depth`
-- `Max Chunks Processed`
-- `Max Runtime (ms)`
-- `Max Evidence Hits`
-
-Terminal commands:
+Current UI/commands:
 1. `/rlm status`
 2. `/rlm on`
 3. `/rlm off`
@@ -229,82 +165,31 @@ Terminal commands:
 14. `/rlm budget runtime <value>`
 15. `/rlm budget evidence <value>`
 
-## Persistence
+These currently configure the partial document-assist scaffold. When a full RLM is implemented, `/rlm status` should distinguish:
+1. `mode=document-assist`
+2. `mode=recursive-repl`
+3. current model/backend
+4. prompt environment size
+5. recursion depth limit
+6. active sandbox policy
 
-RLM preferences are persisted in browser local storage:
-1. `psf_terminal_rlm_assisted`
-2. `psf_terminal_rlm_verbose_trace`
-3. `psf_terminal_rlm_quality`
-4. `psf_terminal_rlm_include_shared_attachments`
-5. `psf_terminal_rlm_budgets`
+## Validation Checklist
 
-## Deterministic Tools Used
+A full RLM implementation is not complete until all are true:
+1. The root model never receives the entire large prompt by default.
+2. The prompt is accessible as an external variable.
+3. Model-authored code can inspect and transform prompt slices.
+4. Recursive sub-calls can be launched programmatically from the REPL.
+5. Intermediate outputs can be stored in environment variables.
+6. The final answer can be assembled from environment state.
+7. Budgets stop runaway recursion and long loops.
+8. The sandbox prevents unauthorized filesystem, shell, network, and process access.
+9. Logs separate model thinking, RLM code, REPL observations, sub-calls, and final answer.
+10. Simple chat bypasses RLM unless explicitly requested.
 
-The RLM flow relies on deterministic tool runtime via IPC:
-1. `chunk_text`
-2. `find_lines`
-3. `accumulate_summaries`
+## Current Known Limits
 
-Attachment text access IPC:
-1. `terminal:attachments-read-text`
-2. `window.electronAPI.terminalAttachmentsReadText(...)`
-
-## Operational Notes
-
-1. RLM does not replace the base chat path. It is a selective assist layer.
-2. Summarization uses deterministic extraction first, optional LLM rewrite second.
-3. Rewrite is guarded to avoid regressions like asking users to re-upload files.
-4. Budget stops are surfaced in trace with `stop=<reason>` for deterministic observability.
-
-## UX Layer (Current)
-
-Profile-first UX is now implemented:
-1. `RLM Profile` selector:
-- `Fast`
-- `Balanced`
-- `Deep`
-- `Industrial Safe`
-- `Custom`
-2. Raw budget knobs are hidden behind `Advanced RLM Budgets`.
-3. UI labels are user-facing:
-- `Planning Steps Limit`
-- `Reasoning Depth`
-- `Document Coverage Limit`
-- `Time Limit`
-- `Evidence Sampling Limit`
-4. Friendly stop notices are shown when limits are hit.
-5. `/rlm budget ...` remains available for power users and diagnostics.
-
-## Known Limits
-
-1. Non-text binary attachments need extraction support before deterministic text tools can operate.
-2. Very large files are bounded by read/chunk limits and preset caps.
-3. Planner quality still depends on model instruction-following quality.
-
-## Recommended Test Sequence
-
-1. Attach one `.md` file.
-2. Run `/rlm on`.
-3. Run `/rlm quality deep`.
-4. Ask: `Can you summarize the attached file?`
-5. Confirm deterministic trace includes coverage.
-6. Attach a second file and ask same question.
-7. Confirm deterministic attachment selection prompt appears.
-
-## Troubleshooting
-
-1. Symptom: `RLM fallback: summarize_text requires text or attachmentId`
-- Check `/attachments`.
-- Ensure at least one text-extractable attachment exists.
-- Provide explicit `attachmentId`.
-
-2. Symptom: model asks to upload/provide file even when attached
-- Ensure `RLM Assisted Mode` is ON.
-- Use `/rlm status` to confirm quality/verbose state.
-- Re-test with one attached file first.
-
-3. Symptom: summary too short
-- Set `/rlm quality deep`.
-
-4. Symptom: RLM triggers on non-file prompts
-- Verify gating in `terminal-renderer-chatflow.js` was not overridden by custom prompt logic.
+1. Current PSF RLM code is mostly a deterministic document-assist path.
+2. It should not be treated as the finished MIT-style RLM design.
+3. The app needs a sandboxed REPL before allowing general model-authored code execution.
+4. Recursive sub-calls need explicit cleanup and cancellation support through BMOC Session Manager.

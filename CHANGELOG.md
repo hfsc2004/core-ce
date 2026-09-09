@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.10 Core-CE] - 2026-09-08
+
+### Added
+- Added the first BMOC-owned RLM service foundation with processless RLM sessions, prompt-environment dry-run support, behavior-aware budgets, IPC/preload hooks, and regression coverage.
+- Added an RLM sandbox policy gate that validates model-authored Python REPL snippets, blocks dangerous capabilities, stays execution-disabled by default, and is exposed through BMOC-owned IPC/preload hooks.
+- Added a testable short-lived RLM Python worker and Node runner for helper-only snippets with JSON state transfer, timeout handling, bounded output, and sandbox execution disabled in default Core wiring.
+- Added a structured RLM action executor for bounded prompt/environment operations, fail-closed action handling, sandbox validation/execution routing, and future root-loop orchestration.
+- Added global Electron page zoom controls with Ctrl/Cmd plus mouse wheel, Ctrl/Cmd plus `+`/`-`, and Ctrl/Cmd plus `0` reset.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.10`.
+- Corrected RLM documentation to align with the MIT Recursive Language Models paper and clarify that the current PSF implementation is a partial document-assist scaffold, not a complete prompt-as-environment RLM.
+
 ## [v1.1.9 Core-CE] - 2026-09-08
 
 ### Added
@@ -58,15 +71,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [v1.1.5 Core-CE] - 2026-09-07
 
 ### Added
-- Added direct regression coverage for the existing RLM-named attachment tool engine: deterministic attachment summaries, shared attachment opt-in, no-attachment handling, and mocked model-backed code generation.
-- Added terminal chatflow regression coverage proving RLM-named llama.cpp attachment requests route to the tool engine before provider streaming.
+- Added direct regression coverage for the existing RLM document-assist engine: deterministic attachment summaries, shared attachment opt-in, no-attachment handling, and mocked model-backed code generation.
+- Added terminal chatflow regression coverage proving RLM document-assist llama.cpp requests route to the tool engine before provider streaming.
 
 ### Changed
 - Bumped package and active catalog revision metadata to `1.1.5`.
-- Routed the existing RLM-named attachment tool requests before backend streaming so llama.cpp terminals can use the deterministic tool engine.
+- Routed the existing RLM document-assist requests before backend streaming so llama.cpp terminals can use the deterministic tool engine.
 
 ### Fixed
-- Fixed the existing RLM-named attachment assistance mode being bypassed whenever PSF Terminal was using a non-Ollama backend.
+- Fixed the existing RLM document-assist mode being bypassed whenever PSF Terminal was using a non-Ollama backend.
 
 ## [v1.1.4 Core-CE] - 2026-09-07
 

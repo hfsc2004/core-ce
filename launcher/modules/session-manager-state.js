@@ -79,7 +79,7 @@ function createSessionStateManager(deps = {}) {
 
     for (const sessionId of sessionIds) {
       const session = activeSessions[sessionId];
-      const ollamaRunning = await isProcessRunning(session.ollamaPID);
+      const ollamaRunning = session.ollamaPID ? await isProcessRunning(session.ollamaPID) : false;
       const serviceRunning = session.servicePID ? await isProcessRunning(session.servicePID) : false;
 
       if (ollamaRunning || serviceRunning) {
@@ -122,7 +122,9 @@ function createSessionStateManager(deps = {}) {
 
     console.log(`[Session Manager] ✅ Registered session: ${sessionId}`);
     console.log(`[Session Manager]    Type: ${config.type}`);
-    console.log(`[Session Manager]    Ollama: PID ${config.ollamaPID} on port ${config.ollamaPort}`);
+    if (config.ollamaPID || config.ollamaPort) {
+      console.log(`[Session Manager]    Ollama: PID ${config.ollamaPID} on port ${config.ollamaPort}`);
+    }
     if (config.servicePID) {
       console.log(`[Session Manager]    Service: PID ${config.servicePID} on port ${config.servicePort}`);
     }
