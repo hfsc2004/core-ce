@@ -670,6 +670,13 @@ Current implementation status:
 13. Simple greetings bypass Recursive RLM so normal chat stays fast.
 14. Sandbox execution remains disabled by default.
 15. Prior conversation message text is hidden from root metadata by default so current-prompt RLM turns do not drift into older tasks.
+16. Fresh-session PSF Terminal validation passed with a forced environment workflow: `len_prompt -> slice_prompt -> set_final`.
+17. This confirms the root loop, prompt-as-environment access, finalization, and separate trace rendering are working in Terminal.
+
+Current boundary:
+- This is the RLM root-loop and environment foundation.
+- It is not yet recursive in the full MIT sense of model-authored `sub_lm(...)` or `sub_rlm(...)` decomposition.
+- The next major feature is adding bounded recursive sub-calls after sandbox and budget controls are hardened.
 
 Acceptance:
 1. Root model can inspect prompt slices.
