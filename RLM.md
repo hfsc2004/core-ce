@@ -739,7 +739,10 @@ Current implementation status:
 10. Prompt intent detection now recognizes chunk/decomposition requests and can enforce `chunk_prompt -> map_prompt_chunks` before finalization.
 11. Added `compose_final` as a structured action that calls the model once with the user task plus Scratch summaries and writes the result to `Final`.
 12. Repeated prompt-inspection actions after chunk mapping are redirected toward `compose_final` so the root controller does not spin on `chunk_prompt`.
-13. Regression coverage verifies successful subcalls, budget exhaustion, direct chunk mapping, required chunk mapping, final composition, repeated-action recovery, and root-loop use of subcall observations.
+13. Repeated `map_prompt_chunks` actions after Scratch summaries already exist are redirected to `compose_final` to avoid wasting subcall budget.
+14. `compose_final` subcalls are tagged as `final_composition` so provider transports can give final answers a larger output cap than helper/chunk-summary subcalls.
+15. RLM subcall results preserve provider finish reasons when available, making future `length`/`stop` cutoff diagnosis explicit.
+16. Regression coverage verifies successful subcalls, budget exhaustion, direct chunk mapping, required chunk mapping, final composition, repeated-action recovery, and root-loop use of subcall observations.
 
 Current boundary:
 - `sub_lm` is available to the structured root action loop.
@@ -851,6 +854,8 @@ The current implementation now includes the first practical chunked decompositio
 6. Required-action enforcement prevents the root model from skipping explicitly requested environment/subcall work.
 7. Repeated prompt-inspection actions are redirected toward useful mapping or composition instead of looping until budget exhaustion.
 8. PSF Terminal now displays Recursive RLM startup status and live progress messages for BMOC-owned RLM sessions.
+9. Final composition is budgeted separately from helper subcalls; chunk summaries remain small, while final answers can use the larger requested generation budget.
+10. Provider finish reasons are retained in RLM subcall results for cutoff diagnosis.
 
 This is still a structured action loop, not the full paper-style Python REPL with callable `sub_lm(...)` inside model-authored code. It is useful now because it gives local models a deterministic decomposition rail instead of depending on the model to invent a reliable chunk/map protocol.
 

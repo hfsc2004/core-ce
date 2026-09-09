@@ -110,11 +110,14 @@ function createRlmHandlers() {
       if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
       const isRootAction = options?.rlmRootAction === true;
       const isSubcall = options?.rlmSubcall === true;
+      const isFinalComposition = isSubcall && String(options?.rlmSubcallPurpose || '').trim() === 'final_composition';
       const maxTokens = isRootAction
         ? Math.min(256, Math.max(64, Number(options?.maxTokens) || 192))
-        : (isSubcall
+        : (isFinalComposition
+          ? Math.min(4096, Math.max(128, Number(options?.maxTokens) || 1024))
+          : (isSubcall
           ? Math.min(256, Math.max(64, Number(options?.maxTokens) || 128))
-          : Math.min(2048, Number(options?.maxTokens) || 1024));
+          : Math.min(2048, Number(options?.maxTokens) || 1024)));
       const requestBody = {
         model: String(rootPayload?.providerModel || modelName || '').trim() || modelName,
         messages,
@@ -130,6 +133,7 @@ function createRlmHandlers() {
       const choice = Array.isArray(response?.choices) ? response.choices[0] : null;
       const message = choice?.message || {};
       const content = String(message?.content || choice?.text || response?.content || response?.text || '');
+      const finishReason = String(choice?.finish_reason || response?.finish_reason || '');
       const reasoning = String(
         message?.reasoning_content ||
         message?.reasoning ||
@@ -142,6 +146,7 @@ function createRlmHandlers() {
       return {
         success: true,
         response: {
+          finishReason,
           message: {
             role: 'assistant',
             content,

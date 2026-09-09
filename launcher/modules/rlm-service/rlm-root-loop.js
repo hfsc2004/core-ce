@@ -262,6 +262,10 @@ function redirectRepeatedAction(action, session, observations = []) {
   if (!type || type === 'set_final') return action;
   const hasScratch = session?.environment?.getMetadata?.()?.scratch?.count > 0;
 
+  if (type === 'map_prompt_chunks' && hasActionRun(observations, 'map_prompt_chunks') && hasScratch) {
+    return buildRequiredAction('compose_final', session, observations) || action;
+  }
+
   if ((type === 'chunk_prompt' || type === 'slice_prompt' || type === 'search_prompt') && hasActionRun(observations, 'map_prompt_chunks') && hasScratch) {
     return buildRequiredAction('compose_final', session, observations) || action;
   }
