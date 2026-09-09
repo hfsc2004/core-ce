@@ -111,9 +111,10 @@ function createRlmHandlers() {
       const isRootAction = options?.rlmRootAction === true;
       const isSubcall = options?.rlmSubcall === true;
       const isFinalComposition = isSubcall && String(options?.rlmSubcallPurpose || '').trim() === 'final_composition';
+      const isSandboxRepl = isSubcall && String(options?.rlmSubcallPurpose || '').trim() === 'sandbox_repl';
       const maxTokens = isRootAction
         ? Math.min(256, Math.max(64, Number(options?.maxTokens) || 192))
-        : (isFinalComposition
+        : (isFinalComposition || isSandboxRepl
           ? Math.min(4096, Math.max(128, Number(options?.maxTokens) || 1024))
           : (isSubcall
           ? Math.min(256, Math.max(64, Number(options?.maxTokens) || 128))

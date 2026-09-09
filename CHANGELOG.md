@@ -7,6 +7,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.18 Core-CE] - 2026-09-09
+
+### Added
+- Added host-mediated `sub_lm(...)` support inside the sandboxed RLM Python helper path, including request trampolining, cache reuse, budget exhaustion handling, and bounded trace metadata.
+- Added Recursive RLM root-loop guidance and required-action detection for explicit sandbox/REPL prompts so `execute_sandbox_code` runs when the user asks for the sandbox path.
+
+### Fixed
+- Enabled BMOC-owned RLM sandbox execution in PSF Terminal instead of leaving the real Terminal service in disabled sandbox mode.
+- Fixed sandbox-action failure propagation so required sandbox actions fail visibly instead of silently falling back to normal root-controller calls.
+- Fixed llama.cpp RLM sandbox REPL subcalls being capped like short helper calls; sandbox final-draft calls can now use the larger final-composition budget.
+- Fixed Terminal OpenAI-compatible request building so `maxTokens` is honored as `max_tokens` in addition to `num_predict`.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.18`.
+- Updated RLM documentation with implemented sandbox bridge behavior and remaining REPL persistence work.
+
 ## [v1.1.17 Core-CE] - 2026-09-09
 
 ### Fixed

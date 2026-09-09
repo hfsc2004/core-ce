@@ -434,6 +434,7 @@
       if (options.top_p !== undefined) body.top_p = options.top_p;
       if (options.top_k !== undefined) body.top_k = options.top_k;
       if (options.num_predict !== undefined) body.max_tokens = options.num_predict;
+      if (options.maxTokens !== undefined) body.max_tokens = options.maxTokens;
       if (options.repeat_penalty !== undefined) body.repeat_penalty = options.repeat_penalty;
       if (options.stop !== undefined) body.stop = options.stop;
       if (providerRuntime.provider === 'llama.cpp') applyLlamaCppChatDefaults(body, options);
@@ -623,6 +624,7 @@
         if (options.top_p !== undefined) body.top_p = options.top_p;
         if (options.top_k !== undefined) body.top_k = options.top_k;
         if (options.num_predict !== undefined) body.max_tokens = options.num_predict;
+        if (options.maxTokens !== undefined) body.max_tokens = options.maxTokens;
         if (options.repeat_penalty !== undefined) body.repeat_penalty = options.repeat_penalty;
         if (options.stop !== undefined) body.stop = options.stop;
         if (providerRuntime.provider === 'llama.cpp') applyLlamaCppChatDefaults(body, options);

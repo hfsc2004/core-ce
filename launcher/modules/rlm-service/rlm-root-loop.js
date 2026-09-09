@@ -138,6 +138,9 @@ function getRequiredActions(session) {
     ? metadata.prompt.requestedRlmActions
     : [];
   const normalized = actions.map((action) => String(action || '').trim()).filter(Boolean);
+  if (normalized.includes('execute_sandbox_code')) {
+    return ['execute_sandbox_code'];
+  }
   if (normalized.includes('map_prompt_chunks')) {
     return normalized.filter((action) => action !== 'chunk_prompt' && action !== 'sub_lm');
   }
@@ -227,6 +230,23 @@ function buildRequiredAction(actionType, session, observations = []) {
       }
     };
   }
+  if (actionType === 'execute_sandbox_code') {
+    return {
+      type: 'execute_sandbox_code',
+      args: {
+        code: [
+          'prompt_chars = len_prompt()',
+          'piece = slice_prompt(0, min(prompt_chars, 1800))',
+          'answer = sub_lm(',
+          '    "Use this prompt slice to produce the requested final answer. Return only the final answer.\\n\\n" + piece,',
+          '    max_tokens=1024',
+          ')',
+          'set_value("sandbox_final_draft", answer)',
+          'set_final(answer)'
+        ].join('\n')
+      }
+    };
+  }
   return null;
 }
 
@@ -289,6 +309,19 @@ function buildActionObservation(iteration, action, actionResult) {
     result: actionResult.success ? summarizeObservationResult(actionResult.result, 6000) : undefined,
     error: actionResult.success ? undefined : actionResult.error,
     finalSet: actionResult.environment?.final?.set === true
+  };
+}
+
+function buildRequiredActionFailure(session, observations, failedObservation, iterations = 0) {
+  return {
+    success: false,
+    handled: true,
+    sessionId: session.bmocSessionId,
+    final: session.environment.getFinal(),
+    iterations,
+    observations,
+    error: failedObservation?.error || `Required RLM action failed: ${failedObservation?.action?.type || 'unknown'}`,
+    environment: session.environment.getMetadata()
   };
 }
 
@@ -359,6 +392,10 @@ function buildRootMessages(session, observations = []) {
     'Do not ask for the full prompt.',
     'Use sub_lm only for bounded sub-questions over prompt slices or intermediate values.',
     'For long prompts or decomposition tasks, prefer map_prompt_chunks, then compose_final or set_final from the stored Scratch summaries.',
+    'Use execute_sandbox_code only for small deterministic Python helper programs over Prompt and Scratch.',
+    'Sandbox Python helpers include len_prompt, slice_prompt, search_prompt, chunk_prompt, sub_lm, set_value, get_value, list_values, and set_final.',
+    'Sandbox Python may call sub_lm(prompt, max_tokens=...) for bounded host-mediated subcalls; never embed the full Prompt in code.',
+    'If sandbox execution sets Final, stop instead of issuing another action.',
     'Sandbox execution may be unavailable; if execute_sandbox_code is rejected, continue with non-execution actions.'
   ].join('\n');
   const userPayload = {
@@ -395,7 +432,11 @@ async function runRootLoop(options = {}) {
   const observations = [];
   const thinking = [];
   if (getRequiredActions(session).length > 0) {
-    await runMissingRequiredActions(session, runAction, observations, 0, onProgress);
+    const ranRequired = await runMissingRequiredActions(session, runAction, observations, 0, onProgress);
+    const failedRequired = ranRequired.find((entry) => entry.success !== true);
+    if (failedRequired) {
+      return buildRequiredActionFailure(session, observations, failedRequired, 0);
+    }
   }
 
   for (let iteration = 1; iteration <= maxIterations; iteration += 1) {
@@ -461,7 +502,11 @@ async function runRootLoop(options = {}) {
     }
 
     if (action.type === 'set_final') {
-      await runMissingRequiredActions(session, runAction, observations, iteration, onProgress);
+      const ranRequired = await runMissingRequiredActions(session, runAction, observations, iteration, onProgress);
+      const failedRequired = ranRequired.find((entry) => entry.success !== true);
+      if (failedRequired) {
+        return buildRequiredActionFailure(session, observations, failedRequired, iteration);
+      }
     }
     action = enforceRequiredActions(action, session, observations);
     action = redirectRepeatedAction(action, session, observations);
