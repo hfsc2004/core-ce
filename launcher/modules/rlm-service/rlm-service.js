@@ -206,12 +206,22 @@ function createRlmService(deps = {}) {
         allowExecution: true
       },
       budget: session.budget
+    }, {
+      runSubLm: (args = {}) => runSubLm(session, args)
     });
     session.trace.add('sandbox-code-executed', {
       success: result.success === true,
       timeout: result.timeout === true,
       error: String(result.error || ''),
-      finalSet: result.result?.final?.set === true
+      finalSet: result.result?.final?.set === true,
+      subLmCalls: Array.isArray(result.subLmTrace) ? result.subLmTrace.length : 0,
+      subLmTrace: Array.isArray(result.subLmTrace)
+        ? result.subLmTrace.map((entry) => ({
+          promptChars: Number(entry?.promptChars || 0),
+          responseChars: Number(entry?.responseChars || 0),
+          finishReason: String(entry?.finishReason || '')
+        })).slice(0, 20)
+        : []
     });
 
     if (result.success === true && result.result) {

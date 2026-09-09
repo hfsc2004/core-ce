@@ -12,6 +12,10 @@ import sys
 import traceback
 
 
+class _SubLmNeeded(Exception):
+    pass
+
+
 def _clamp_int(value, fallback, minimum, maximum):
     try:
         number = int(value)
@@ -140,6 +144,8 @@ def _run(payload):
     code = str(payload.get("code") or "")
     prompt = str(payload.get("prompt") or "")
     scratch = dict(payload.get("scratch") or {})
+    sub_lm_cache = dict(payload.get("sub_lm_cache") or {})
+    sub_lm_requests = []
     policy = dict(payload.get("policy") or {})
     max_slice_chars = _clamp_int(policy.get("maxPromptSliceChars"), 12000, 512, 200000)
     max_final_chars = _clamp_int(policy.get("maxFinalOutputChars"), 24000, 512, 1000000)
@@ -210,6 +216,22 @@ def _run(payload):
             start = max(start + 1, end - ov)
         return chunks
 
+    def sub_lm(request_prompt, max_tokens=None, model=None, temperature=None):
+        prompt_value = str(request_prompt or "").strip()
+        if not prompt_value:
+            raise ValueError("sub_lm prompt is required.")
+        request = {
+            "prompt": prompt_value,
+            "max_tokens": _clamp_int(max_tokens, 1024, 64, 32768) if max_tokens is not None else None,
+            "model": str(model or "").strip(),
+            "temperature": temperature,
+        }
+        key = json.dumps(request, sort_keys=True, ensure_ascii=True)
+        if key in sub_lm_cache:
+            return str(sub_lm_cache.get(key) or "")
+        sub_lm_requests.append({**request, "key": key})
+        raise _SubLmNeeded("RLM sub_lm request requires host model transport.")
+
     def set_value(name, value):
         key = str(name or "").strip()
         if not key:
@@ -242,6 +264,7 @@ def _run(payload):
         "slice_prompt": slice_prompt,
         "search_prompt": search_prompt,
         "chunk_prompt": chunk_prompt,
+        "sub_lm": sub_lm,
         "set_value": set_value,
         "get_value": get_value,
         "list_values": list_values,
@@ -250,6 +273,17 @@ def _run(payload):
     safe_locals = {}
     try:
         exec(compile(code, "<rlm-repl>", "exec"), safe_globals, safe_locals)
+    except _SubLmNeeded as err:
+        return {
+            "success": False,
+            "needs_sub_lm": True,
+            "error": str(err),
+            "sub_lm_requests": sub_lm_requests,
+            "scratch": scratch,
+            "final": final,
+            "stdout": "".join(captured_stdout),
+            "resource_limits": resource_limits,
+        }
     except Exception as err:
         return {
             "success": False,

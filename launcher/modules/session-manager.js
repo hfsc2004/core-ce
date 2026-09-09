@@ -52,7 +52,8 @@ const rlmService = createRlmService({
   closeSession: (sessionId) => sessionState.closeSession(sessionId),
   updateSession: (sessionId, updates) => sessionState.updateSession(sessionId, updates),
   getSession: (sessionId) => sessionState.getSession(sessionId),
-  attachmentStore
+  attachmentStore,
+  enableSandboxExecution: true
 });
 
 const serviceLauncher = createSessionServiceLauncher({

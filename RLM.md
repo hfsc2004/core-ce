@@ -27,7 +27,7 @@ Required structure:
 
 ## Current Core Status
 
-Core currently has RLM-related components, but they are not yet a full MIT-style RLM.
+Core now has the first working MIT-style Recursive RLM service path, but it is not yet the full paper architecture.
 
 Current implementation:
 1. `launcher/modules/rlm-engine/rlm-engine.js`
@@ -56,26 +56,37 @@ Current implementation:
 
 5. BMOC Session Manager
 - Already manages runtime session ownership and cleanup.
-- Should own RLM service lifecycle, recursive sub-call sessions, cancellation, and port/process isolation.
+- Owns RLM service lifecycle and stop/cleanup for Terminal RLM sessions.
+- Still needs deeper recursive sub-session isolation for future `sub_rlm(...)`.
+
+6. `launcher/modules/rlm-service/*`
+- Stores the active prompt outside root model context.
+- Exposes bounded prompt helpers, Scratch, and Final state.
+- Runs a root controller that emits one structured JSON action at a time.
+- Supports `map_prompt_chunks`, `compose_final`, direct `sub_lm`, and sandboxed Python helper execution.
+- Supports sandboxed Python `sub_lm(...)` through a host-mediated trampoline with caching, budgets, and bounded trace metadata.
+- Does not expose provider credentials, network access, shell access, arbitrary imports, or unrestricted filesystem access to the Python worker.
+- Does not yet provide a persistent multi-turn REPL process or nested `sub_rlm(...)`.
 
 Current conclusion:
-- Core has a useful RLM document-assist scaffold.
-- Core does not yet implement the MIT paper's prompt-as-environment, persistent REPL, model-authored-code, recursive-subcall RLM architecture.
+- Core has a useful legacy RLM document-assist scaffold plus a new BMOC-owned Recursive RLM service.
+- The new service implements the prompt-as-environment foundation, structured root loop, bounded model subcalls, Scratch/Final state, and first sandboxed model-authored helper execution.
+- Remaining paper-alignment work is mostly persistent REPL state, attachment/workspace helpers inside the same environment contract, and nested `sub_rlm(...)`.
 
 ## Gap Analysis
 
 | MIT RLM Requirement | Current Core Status | Gap |
 | --- | --- | --- |
-| Prompt stored externally as variable | Partial for attachments only | Need generic `Prompt` environment object |
-| Root model gets compact metadata | Partial | Need formal metadata contract |
-| Persistent REPL | Missing | Need sandboxed REPL service |
-| Model-authored code execution | Missing | Need code extraction, execution, observation loop |
-| Programmatic recursive model calls | Missing | Need `sub_lm` and `sub_rlm` APIs available inside REPL |
-| Environment-held intermediate state | Partial deterministic state only | Need durable per-turn environment state |
-| `Final` answer contract | Missing | Need final variable/result protocol |
-| Recursive depth/call budgets | Partial | Need model-recursion-specific budgets |
-| Output assembled from environment | Missing | Need finalization from env variables |
-| BMOC lifecycle control | Partial | Need full RLM session registration/cleanup |
+| Prompt stored externally as variable | Implemented for current prompt | Add richer message/attachment handles |
+| Root model gets compact metadata | Implemented | Continue hardening metadata contract |
+| Persistent REPL | Partial | Python helper execution exists; persistent REPL state still needed |
+| Model-authored code execution | Partial | Sandboxed Python helper path exists; needs persistent iteration model |
+| Programmatic recursive model calls | Partial | `sub_lm(...)` exists in actions and sandbox; `sub_rlm(...)` still disabled |
+| Environment-held intermediate state | Partial | Scratch/Final exist; attachment/workspace values need unification |
+| `Final` answer contract | Implemented | Add more finalization forms if needed |
+| Recursive depth/call budgets | Partial | Subcall/root budgets exist; nested recursion budgets still needed |
+| Output assembled from environment | Implemented for Scratch/final flows | Improve long-form composition policies |
+| BMOC lifecycle control | Partial | RLM sessions register/stop through BMOC; nested sessions still planned |
 
 ## Target Architecture
 
@@ -140,6 +151,23 @@ Required safe helpers:
 9. `list_values()`
 10. `set_final(value)`
 
+Implemented sandbox helpers today:
+1. `len_prompt()`
+2. `slice_prompt(start, end)`
+3. `search_prompt(pattern, max_hits)`
+4. `chunk_prompt(chunk_size, overlap)`
+5. `sub_lm(prompt, max_tokens=None, model=None, temperature=None)`
+6. `set_value(name, value)`
+7. `get_value(name, offset=None, length=None)`
+8. `list_values()`
+9. `set_final(value)`
+
+Not yet exposed inside sandbox:
+1. `read_attachment(...)`
+2. `search_attachment(...)`
+3. workspace/codebase helpers
+4. nested `sub_rlm(...)`
+
 ### 3. Sandboxed REPL
 
 The REPL must execute model-authored code safely.
@@ -170,6 +198,16 @@ Observation contract:
 3. Return changed variable metadata, not full large values.
 4. Return budget usage.
 5. Return whether `Final` is set.
+
+Current sandbox behavior:
+1. PSF Terminal enables BMOC-owned sandbox execution for Recursive RLM.
+2. Model-authored Python is validated before execution.
+3. The Python worker receives Prompt, Scratch, policy, and cached subcall results.
+4. When Python calls `sub_lm(...)`, the worker pauses and returns a bounded request to Node.
+5. Node/BMOC performs the provider call, records budget/trace data, caches the response, and reruns the helper code with that cached value.
+6. The sandbox result applies changed Scratch values and Final back into the RLM environment.
+7. Required sandbox failures fail visibly instead of silently falling back to ordinary controller calls.
+8. Sandbox REPL subcalls can use the larger final-composition token budget when the helper is drafting the final answer.
 
 ### 4. Recursive Model APIs
 
@@ -746,7 +784,9 @@ Current implementation status:
 
 Current boundary:
 - `sub_lm` is available to the structured root action loop.
-- `sub_lm` is not yet exposed inside the Python REPL worker.
+- `sub_lm(...)` is available inside sandboxed Python snippets through a host-transport trampoline.
+- The Python worker does not receive provider credentials, network access, or direct model transport; it emits a bounded request and Node/BMOC performs the subcall.
+- The sandbox `sub_lm(...)` trampoline now supports multiple sequential subcalls from one snippet, caches identical requests, fails closed on subcall budget exhaustion, and records bounded subcall trace metadata.
 - `sub_rlm` is not implemented yet.
 - Recursive depth accounting is still pending because there is no nested `sub_rlm` path yet.
 
@@ -857,7 +897,7 @@ The current implementation now includes the first practical chunked decompositio
 9. Final composition is budgeted separately from helper subcalls; chunk summaries remain small, while final answers can use the larger requested generation budget.
 10. Provider finish reasons are retained in RLM subcall results for cutoff diagnosis.
 
-This is still a structured action loop, not the full paper-style Python REPL with callable `sub_lm(...)` inside model-authored code. It is useful now because it gives local models a deterministic decomposition rail instead of depending on the model to invent a reliable chunk/map protocol.
+This is now a structured action loop plus a first sandboxed Python `sub_lm(...)` bridge. It is not yet full recursive `sub_rlm(...)`, but it gives local models a deterministic decomposition rail and a controlled way for model-authored snippets to request bounded model subcalls without exposing provider access inside Python.
 
 ## Near-Term Next Step
 
@@ -871,11 +911,11 @@ Implemented runtime foundation:
 7. Added structured root-loop actions for bounded prompt inspection, Scratch, finalization, sandbox validation/execution, `sub_lm`, and chunk mapping.
 8. Added regression coverage for chunked prompt decomposition through bounded subcalls.
 
-The next engineering step is exposing `sub_lm` to the sandboxed REPL safely:
+The next engineering step is moving from one-shot sandbox snippets toward a persistent REPL iteration model:
 1. Add OS-level resource limits where supported.
 2. Add broader adversarial tests for Python object escape attempts.
 3. Add a persistent iteration state design without exposing unsafe Python runtime objects between executions.
-4. Bridge REPL calls to BMOC-owned `sub_lm` without exposing network, filesystem, or process APIs to model-authored code.
+4. Decide which Scratch values persist between root-loop REPL actions and which local Python variables are intentionally one-shot.
 5. Prove blocked IO, blocked network, bounded stdout/stderr, timeout cleanup, and subcall budget enforcement across supported platforms.
 6. Keep nested `sub_rlm` disabled until the sandbox and `sub_lm` bridge are reliable under test.
 

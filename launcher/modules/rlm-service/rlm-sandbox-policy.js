@@ -11,6 +11,7 @@ const DEFAULT_ALLOWED_HELPERS = [
   'slice_prompt',
   'search_prompt',
   'chunk_prompt',
+  'sub_lm',
   'set_value',
   'get_value',
   'list_values',

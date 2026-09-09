@@ -48,6 +48,9 @@ function inferRequestedRlmActions(prompt = '') {
   const hasRlmDirective = /\brlm\b|recursive language model|environment/.test(lower);
   if (!hasRlmDirective) return actions;
 
+  if (/\bexecute_sandbox_code\b|sandbox(?:ed)?(?: python| code| repl)?|\brepl\b/.test(lower)) {
+    actions.push('execute_sandbox_code');
+  }
   if (/inspect[^.\n]{0,80}prompt length|prompt length|\blen_prompt\b/.test(lower)) {
     actions.push('len_prompt');
   }
@@ -241,5 +244,6 @@ function createRlmEnvironment(options = {}) {
 }
 
 module.exports = {
+  inferRequestedRlmActions,
   createRlmEnvironment
 };

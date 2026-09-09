@@ -29,6 +29,7 @@ function runPythonWorker(payload = {}, options = {}) {
       code: payload.code || '',
       prompt: payload.prompt || '',
       scratch: payload.scratch || {},
+      sub_lm_cache: payload.subLmCache || payload.sub_lm_cache || {},
       policy: {
         ...policy,
         maxPromptSliceChars: options.budget?.maxPromptSliceChars,
@@ -148,18 +149,97 @@ async function executePythonSnippet(request = {}, options = {}) {
       error: 'RLM sandbox policy rejected code before execution.'
     };
   }
-  return runPythonWorker({
+  const runSubLm = typeof options.runSubLm === 'function' ? options.runSubLm : null;
+  const subLmCache = {};
+  const subLmTrace = [];
+  const maxSubcalls = Math.max(0, Math.min(1000, Number(request.budget?.maxSubcalls) || Number(options.budget?.maxSubcalls) || 0));
+  const basePayload = {
     code: request.code || request.source || '',
     prompt: request.prompt || '',
     scratch: request.scratch || {}
-  }, {
+  };
+  const workerOptions = {
     ...options,
     policy: {
       ...policy,
       allowExecution: true
     },
     budget: request.budget || {}
-  });
+  };
+
+  for (let attempt = 0; attempt <= maxSubcalls; attempt += 1) {
+    const result = await runPythonWorker({
+      ...basePayload,
+      subLmCache
+    }, workerOptions);
+    if (!result?.result?.needs_sub_lm) {
+      if (subLmTrace.length > 0 && result && typeof result === 'object') {
+        result.subLmTrace = subLmTrace.slice();
+      }
+      return result;
+    }
+    const requests = Array.isArray(result.result.sub_lm_requests) ? result.result.sub_lm_requests : [];
+    const nextRequest = requests[0] || null;
+    if (!runSubLm) {
+      return {
+        ...result,
+        success: false,
+        handled: true,
+        error: 'RLM sandbox requested sub_lm, but host sub_lm transport is unavailable.',
+        subLmTrace
+      };
+    }
+    if (!nextRequest?.key || !nextRequest?.prompt) {
+      return {
+        ...result,
+        success: false,
+        handled: true,
+        error: 'RLM sandbox returned an invalid sub_lm request.',
+        subLmTrace
+      };
+    }
+    if (subLmTrace.length >= maxSubcalls) {
+      return {
+        ...result,
+        success: false,
+        handled: true,
+        budgetExhausted: true,
+        error: `RLM sandbox sub_lm budget exhausted (${subLmTrace.length}/${maxSubcalls}).`,
+        subLmTrace
+      };
+    }
+    const subResult = await runSubLm({
+      prompt: nextRequest.prompt,
+      max_tokens: nextRequest.max_tokens,
+      model: nextRequest.model,
+      temperature: nextRequest.temperature,
+      purpose: 'sandbox_repl'
+    });
+    if (!subResult || subResult.success !== true) {
+      return {
+        ...result,
+        success: false,
+        handled: true,
+        budgetExhausted: subResult?.budgetExhausted === true,
+        error: subResult?.error || 'RLM sandbox sub_lm call failed.',
+        subLmTrace
+      };
+    }
+    subLmCache[nextRequest.key] = String(subResult.content || '');
+    subLmTrace.push({
+      promptChars: String(nextRequest.prompt || '').length,
+      responseChars: String(subResult.content || '').length,
+      finishReason: String(subResult.finishReason || '')
+    });
+  }
+
+  return {
+    success: false,
+    handled: true,
+    budgetExhausted: true,
+    error: `RLM sandbox sub_lm trampoline exhausted (${subLmTrace.length}/${maxSubcalls}).`,
+    subLmTrace
+  };
 }
 
 module.exports = {

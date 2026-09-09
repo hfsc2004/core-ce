@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { createRlmService } = require('./rlm-service');
+const { inferRequestedRlmActions } = require('./rlm-environment');
 const { executePythonSnippet } = require('./rlm-python-runner');
 const { extractFirstJsonObject } = require('./rlm-root-loop');
 
@@ -62,6 +63,20 @@ function createService(options = {}) {
     sendMessage: options.sendMessage
   });
   return { service, bmoc };
+}
+
+function testRlmSandboxPromptInfersSandboxExecutionOnly() {
+  const actions = inferRequestedRlmActions([
+    'Use the RLM environment and sandbox REPL.',
+    'Before the final answer, execute sandbox code that reads a prompt slice,',
+    'calls sub_lm once, stores that summary in Scratch, and then sets the final answer.'
+  ].join(' '));
+
+  assert.deepEqual(actions, [
+    'execute_sandbox_code',
+    'slice_prompt',
+    'sub_lm'
+  ]);
 }
 
 async function testStartSessionRegistersWithBmoc() {
@@ -211,6 +226,168 @@ async function testSandboxExecutionCanUseEnvironmentHelpersWhenEnabled() {
   assert.equal(result.environment.scratch.count, 1);
   assert.equal(result.environment.final.set, true);
   assert.equal(result.environment.final.preview, 'treaty text.');
+}
+
+async function testSandboxExecutionCanCallSubLmThroughHostBridge() {
+  const calls = [];
+  const { service } = createService({
+    enableSandboxExecution: true,
+    sendMessage: async (_model, messages, options = {}) => {
+      calls.push({ messages, options });
+      return {
+        response: {
+          finishReason: 'stop',
+          message: { content: 'safe harbor summary' }
+        }
+      };
+    }
+  });
+  const status = await service.startSession({
+    prompt: 'Alpha treaty text. Treaty clause seven grants safe harbor.',
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 2,
+      maxTokensPerSubcall: 128,
+      maxReplExecMs: 2000
+    }
+  });
+  const result = await service.executeSandboxCode({
+    sessionId: status.sessionId,
+    code: [
+      'summary = sub_lm("Summarize: " + slice_prompt(0, 32), max_tokens=80)',
+      'set_value("sub_summary", summary)',
+      'set_final(summary)'
+    ].join('\n')
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.executionDisabled, false);
+  assert.equal(result.environment.scratch.count, 1);
+  assert.equal(result.environment.final.set, true);
+  assert.equal(result.environment.final.preview, 'safe harbor summary');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].options.rlmSubcall, true);
+  assert.equal(calls[0].options.rlmSubcallPurpose, 'sandbox_repl');
+  assert.equal(calls[0].options.maxTokens, 80);
+  assert.equal(result.result.result.final.value, 'safe harbor summary');
+  assert.equal(result.result.subLmTrace.length, 1);
+}
+
+async function testSandboxExecutionCanCallMultipleSubLmsThroughHostBridge() {
+  const calls = [];
+  const { service } = createService({
+    enableSandboxExecution: true,
+    sendMessage: async (_model, messages, options = {}) => {
+      calls.push({ messages, options });
+      const prompt = String(messages?.[1]?.content || '');
+      return {
+        response: {
+          finishReason: 'stop',
+          message: { content: prompt.includes('second') ? 'second answer' : 'first answer' }
+        }
+      };
+    }
+  });
+  const status = await service.startSession({
+    prompt: 'Alpha treaty text.',
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 3,
+      maxTokensPerSubcall: 128,
+      maxReplExecMs: 2000
+    }
+  });
+  const result = await service.executeSandboxCode({
+    sessionId: status.sessionId,
+    code: [
+      'first = sub_lm("first question", max_tokens=80)',
+      'second = sub_lm("second question", max_tokens=80)',
+      'set_value("joined", first + " | " + second)',
+      'set_final(get_value("joined"))'
+    ].join('\n')
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.environment.final.preview, 'first answer | second answer');
+  assert.equal(calls.length, 2);
+  assert.equal(result.result.subLmTrace.length, 2);
+}
+
+async function testSandboxSubLmCacheReusesIdenticalRequests() {
+  let callCount = 0;
+  const { service } = createService({
+    enableSandboxExecution: true,
+    sendMessage: async () => {
+      callCount += 1;
+      return {
+        response: {
+          finishReason: 'stop',
+          message: { content: 'cached answer' }
+        }
+      };
+    }
+  });
+  const status = await service.startSession({
+    prompt: 'Alpha treaty text.',
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 2,
+      maxTokensPerSubcall: 128,
+      maxReplExecMs: 2000
+    }
+  });
+  const result = await service.executeSandboxCode({
+    sessionId: status.sessionId,
+    code: [
+      'a = sub_lm("same question", max_tokens=80)',
+      'b = sub_lm("same question", max_tokens=80)',
+      'set_final(a + " / " + b)'
+    ].join('\n')
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.environment.final.preview, 'cached answer / cached answer');
+  assert.equal(callCount, 1);
+  assert.equal(result.result.subLmTrace.length, 1);
+}
+
+async function testSandboxSubLmBudgetExhaustionFailsClosed() {
+  let callCount = 0;
+  const { service } = createService({
+    enableSandboxExecution: true,
+    sendMessage: async () => {
+      callCount += 1;
+      return {
+        response: {
+          finishReason: 'stop',
+          message: { content: `answer ${callCount}` }
+        }
+      };
+    }
+  });
+  const status = await service.startSession({
+    prompt: 'Alpha treaty text.',
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 1,
+      maxTokensPerSubcall: 128,
+      maxReplExecMs: 2000
+    }
+  });
+  const result = await service.executeSandboxCode({
+    sessionId: status.sessionId,
+    code: [
+      'a = sub_lm("first question", max_tokens=80)',
+      'b = sub_lm("second question", max_tokens=80)',
+      'set_final(a + " / " + b)'
+    ].join('\n')
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.result.budgetExhausted, true);
+  assert.match(result.result.error, /budget exhausted/i);
+  assert.equal(callCount, 1);
+  assert.equal(result.result.subLmTrace.length, 1);
 }
 
 async function testSandboxExecutionRejectsUnsafeCodeBeforeWorkerLaunch() {
@@ -706,6 +883,127 @@ async function testRootLoopCanUseSubLmObservation() {
   assert.equal(calls.filter((call) => call.options.rlmSubcall === true).length, 1);
 }
 
+async function testRootLoopExecutesSandboxCodeWithSubLmBridge() {
+  const calls = [];
+  const rootActions = [
+    {
+      type: 'execute_sandbox_code',
+      args: {
+        code: [
+          'piece = slice_prompt(0, 80)',
+          'summary = sub_lm("Summarize central task: " + piece, max_tokens=80)',
+          'set_value("sandbox_summary", summary)',
+          'set_final("Sandbox final: " + summary)'
+        ].join('\n')
+      }
+    }
+  ];
+  const { service } = createService({
+    enableSandboxExecution: true,
+    sendMessage: async (_model, messages, options = {}) => {
+      calls.push({ messages, options });
+      if (options.rlmSubcall) {
+        return { response: { finishReason: 'stop', message: { content: 'recover the pardon' } } };
+      }
+      return { response: { message: { content: JSON.stringify(rootActions.shift()) } } };
+    }
+  });
+
+  const result = await service.runLoop({
+    prompt: 'Use the sandbox REPL to inspect this prompt before answering.',
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 3,
+      maxSubcalls: 2,
+      maxReplExecMs: 2000,
+      maxTokensPerSubcall: 2048
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'Sandbox final: recover the pardon');
+  assert.deepEqual(result.observations.map((entry) => entry.action.type), [
+    'execute_sandbox_code'
+  ]);
+  assert.equal(result.environment.scratch.count, 1);
+  assert.equal(result.environment.scratch.values[0].name, 'sandbox_summary');
+  assert.equal(calls.filter((call) => call.options.rlmSubcall === true).length, 1);
+  assert.equal(result.observations[0].result.result.subLmTrace.length, 1);
+}
+
+async function testRootLoopRunsInferredSandboxDirectiveBeforeRootCall() {
+  const calls = [];
+  const { service } = createService({
+    enableSandboxExecution: true,
+    sendMessage: async (_model, messages, options = {}) => {
+      calls.push({ messages, options });
+      if (options.rlmSubcall) {
+        return { response: { finishReason: 'stop', message: { content: '1. Recover the pardon before erasure.' } } };
+      }
+      return { response: { message: { content: '{"type":"set_final","args":{"value":"root should not be needed"}}' } } };
+    }
+  });
+
+  const result = await service.runLoop({
+    prompt: [
+      'Use the RLM environment and sandbox REPL.',
+      'Write a numbered outline for a short space-opera story where a persecuted star-caravan people recover a stolen legal pardon from flamboyant space pirates before a bureaucratic empire can erase them.',
+      'Before the final answer, execute sandbox code that reads a prompt slice, calls sub_lm once to summarize the central conflict, stores that summary in Scratch, and then sets the final answer.',
+      'Keep the final answer under 500 words.'
+    ].join(' '),
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 3,
+      maxSubcalls: 2,
+      maxReplExecMs: 2000,
+      maxTokensPerSubcall: 2048
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, '1. Recover the pardon before erasure.');
+  assert.equal(result.iterations, 0);
+  assert.deepEqual(result.observations.map((entry) => entry.action.type), [
+    'execute_sandbox_code'
+  ]);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].options.rlmSubcall, true);
+  assert.equal(calls[0].options.rlmSubcallPurpose, 'sandbox_repl');
+  assert.equal(calls[0].options.maxTokens, 1024);
+}
+
+async function testRootLoopFailsRequiredSandboxDirectiveWhenSandboxDisabled() {
+  let rootCalls = 0;
+  const { service } = createService({
+    sendMessage: async () => {
+      rootCalls += 1;
+      return { response: { message: { content: '{"type":"set_final","args":{"value":"should not run"}}' } } };
+    }
+  });
+
+  const result = await service.runLoop({
+    prompt: [
+      'Use the RLM environment and sandbox REPL.',
+      'Before the final answer, execute sandbox code that reads a prompt slice and sets the final answer.'
+    ].join(' '),
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 3,
+      maxSubcalls: 1,
+      maxReplExecMs: 2000
+    }
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.iterations, 0);
+  assert.equal(result.error, 'RLM sandbox execution is disabled.');
+  assert.equal(rootCalls, 0);
+  assert.deepEqual(result.observations.map((entry) => entry.action.type), [
+    'execute_sandbox_code'
+  ]);
+  assert.equal(result.observations[0].success, false);
+}
+
 async function testRootLoopEnforcesPromptRequestedActionsBeforeFinal() {
   let rootCalls = 0;
   const { service } = createService({
@@ -785,6 +1083,7 @@ async function testRootLoopBudgetExhaustion() {
 
 (async () => {
   testRootLoopJsonExtraction();
+  testRlmSandboxPromptInfersSandboxExecutionOnly();
   await testStartSessionRegistersWithBmoc();
   await testDryRunDoesNotSendFullPromptToRootModel();
   await testBehaviorProfilesSelectDifferentBudgets();
@@ -793,6 +1092,10 @@ async function testRootLoopBudgetExhaustion() {
   await testSandboxPolicyBlocksUnsafeCode();
   await testSandboxExecutionDisabledByDefault();
   await testSandboxExecutionCanUseEnvironmentHelpersWhenEnabled();
+  await testSandboxExecutionCanCallSubLmThroughHostBridge();
+  await testSandboxExecutionCanCallMultipleSubLmsThroughHostBridge();
+  await testSandboxSubLmCacheReusesIdenticalRequests();
+  await testSandboxSubLmBudgetExhaustionFailsClosed();
   await testSandboxExecutionRejectsUnsafeCodeBeforeWorkerLaunch();
   await testSandboxExecutionTimeout();
   await testSandboxExecutionCapturesPrintWithoutBreakingJson();
@@ -808,6 +1111,9 @@ async function testRootLoopBudgetExhaustion() {
   await testRootLoopRedirectsRepeatedChunkMapToComposeFinal();
   await testRootLoopExecutesStructuredActions();
   await testRootLoopCanUseSubLmObservation();
+  await testRootLoopExecutesSandboxCodeWithSubLmBridge();
+  await testRootLoopRunsInferredSandboxDirectiveBeforeRootCall();
+  await testRootLoopFailsRequiredSandboxDirectiveWhenSandboxDisabled();
   await testRootLoopEnforcesPromptRequestedActionsBeforeFinal();
   await testRootLoopRetriesInvalidJsonAction();
   await testRootLoopBudgetExhaustion();

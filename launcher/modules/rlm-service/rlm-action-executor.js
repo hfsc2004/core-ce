@@ -250,6 +250,18 @@ function createRlmActionExecutor(options = {}) {
     } else if (type === 'execute_sandbox_code') {
       if (!executeSandboxCode) return { success: false, error: 'RLM sandbox executor is unavailable.' };
       result = await executeSandboxCode({ sessionId: id, code: args.code || action.code || '' });
+      if (!result || result.success !== true) {
+        return {
+          success: false,
+          handled: true,
+          sessionId: id,
+          action: type,
+          error: result?.error || 'RLM sandbox execution failed.',
+          executionDisabled: result?.executionDisabled === true,
+          budgetExhausted: result?.budgetExhausted === true,
+          environment: result?.environment || env.getMetadata()
+        };
+      }
     } else {
       return { success: false, error: `Unsupported RLM action: ${type || '(empty)'}` };
     }
