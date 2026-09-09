@@ -27,6 +27,33 @@ function normalizeScratchName(value, fallback = 'value') {
   return name || fallback;
 }
 
+function extractRequestedWordLimit(text = '') {
+  const prompt = String(text || '');
+  const patterns = [
+    /\b(?:under|below|less than|fewer than|max(?:imum)?|no more than)\s+(\d{1,5})\s+words?\b/i,
+    /\bkeep\b[\s\S]{0,80}?\b(?:under|below|less than|fewer than|max(?:imum)?|no more than)\s+(\d{1,5})\s+words?\b/i
+  ];
+  for (const pattern of patterns) {
+    const match = prompt.match(pattern);
+    const value = Number(match?.[1]);
+    if (Number.isFinite(value) && value > 0) return Math.floor(value);
+  }
+  return 0;
+}
+
+function outputTokensForWordLimit(wordLimit, fallback = 1024) {
+  const words = Number(wordLimit);
+  if (!Number.isFinite(words) || words <= 0) return fallback;
+  return Math.max(128, Math.min(4096, Math.ceil(words * 2.2) + 96));
+}
+
+function looksIncompleteText(text = '') {
+  const value = String(text || '').trim();
+  if (!value) return false;
+  if (/[.!?")\]]$/.test(value)) return false;
+  return /\b(and|or|but|because|with|without|for|from|to|in|on|at|by|of|a|an|the|game|plan|where|when|while)$/i.test(value) || /[,;:]$/.test(value);
+}
+
 function createRlmActionExecutor(options = {}) {
   const getSession = typeof options.getSession === 'function' ? options.getSession : null;
   const validateSandboxCode = typeof options.validateSandboxCode === 'function' ? options.validateSandboxCode : null;
@@ -143,8 +170,16 @@ function createRlmActionExecutor(options = {}) {
     } else if (type === 'compose_final') {
       if (!runSubLm) return { success: false, error: 'RLM sub_lm transport is unavailable.' };
       const promptLimit = clampInt(args.promptChars || args.prompt_chars, Math.min(maxSlice, 4000), 512, maxSlice);
-      const maxTokens = clampInt(args.maxTokens || args.max_tokens, 768, 64, 4096);
-      const instruction = String(args.instruction || args.instructions || 'Produce the final answer for the user. Use the task prompt and Scratch summaries. Return only the final answer.').trim();
+      const promptSlice = env.slicePrompt(0, promptLimit);
+      const requestedWordLimit = extractRequestedWordLimit(promptSlice);
+      const defaultMaxTokens = outputTokensForWordLimit(requestedWordLimit, 1024);
+      const maxTokens = clampInt(args.maxTokens || args.max_tokens, defaultMaxTokens, 128, 4096);
+      const baseInstruction = String(args.instruction || args.instructions || 'Produce the final answer for the user. Use the task prompt and Scratch summaries. Return only the final answer.').trim();
+      const instruction = [
+        baseInstruction,
+        requestedWordLimit > 0 ? `The user requested fewer than ${requestedWordLimit} words. Stay within that limit.` : '',
+        'Finish cleanly with a complete final sentence. Do not end mid-sentence or with a dangling phrase.'
+      ].filter(Boolean).join('\n');
       const names = Array.isArray(args.scratchNames || args.scratch_names)
         ? (args.scratchNames || args.scratch_names)
         : env.listValues();
@@ -157,9 +192,10 @@ function createRlmActionExecutor(options = {}) {
       const subResult = await runSubLm(session, {
         prompt: [
           instruction,
-          `User task:\n${env.slicePrompt(0, promptLimit)}`,
+          `User task:\n${promptSlice}`,
           scratchSections.join('\n\n')
         ].filter(Boolean).join('\n\n'),
+        purpose: 'final_composition',
         max_tokens: maxTokens
       });
       if (!subResult || subResult.success !== true) {
@@ -177,6 +213,9 @@ function createRlmActionExecutor(options = {}) {
       env.setFinal(finalText);
       result = {
         chars: finalText.length,
+        requestedWordLimit,
+        incomplete: looksIncompleteText(finalText),
+        finishReason: subResult.finishReason || '',
         scratchNames: names.map((name) => String(name || '').trim()).filter(Boolean)
       };
     } else if (type === 'set_value') {

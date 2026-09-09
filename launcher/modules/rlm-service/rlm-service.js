@@ -272,14 +272,24 @@ function createRlmService(deps = {}) {
     ], {
       stream: false,
       rlmSubcall: true,
+      rlmSubcallPurpose: String(args.purpose || args.role || '').trim(),
       maxTokens,
       temperature: 0
     });
     const content = extractModelContent(result);
+    const finishReason = String(
+      result?.response?.finishReason ||
+      result?.response?.finish_reason ||
+      result?.finishReason ||
+      result?.finish_reason ||
+      result?.response?.raw?.choices?.[0]?.finish_reason ||
+      ''
+    );
     session.trace.add('sub-lm-call-completed', {
       model,
       responseChars: content.length,
-      subcallsUsed: used
+      subcallsUsed: used,
+      finishReason
     });
     return {
       success: true,
@@ -287,6 +297,7 @@ function createRlmService(deps = {}) {
       promptChars: prompt.length,
       responseChars: content.length,
       content,
+      finishReason,
       usage: {
         subcalls: used,
         maxSubcalls: session.budget.maxSubcalls

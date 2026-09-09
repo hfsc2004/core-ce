@@ -468,7 +468,12 @@ async function testComposeFinalUsesScratchAndSetsFinal() {
   const { service } = createService({
     sendMessage: async (_model, messages, options = {}) => {
       calls.push({ messages, options });
-      return { response: { message: { content: '1. Final outline from scratch summaries.' } } };
+      return {
+        response: {
+          finishReason: 'stop',
+          message: { content: '1. Final outline from scratch summaries.' }
+        }
+      };
     }
   });
   const status = await service.startSession({
@@ -495,8 +500,7 @@ async function testComposeFinalUsesScratchAndSetsFinal() {
     action: {
       type: 'compose_final',
       args: {
-        instruction: 'Return the final outline.',
-        maxTokens: 128
+        instruction: 'Return the final outline.'
       }
     }
   });
@@ -505,8 +509,15 @@ async function testComposeFinalUsesScratchAndSetsFinal() {
   assert.equal(result.action, 'compose_final');
   assert.equal(result.environment.final.set, true);
   assert.equal(result.environment.final.preview, '1. Final outline from scratch summaries.');
+  assert.equal(result.result.requestedWordLimit, 500);
+  assert.equal(result.result.incomplete, false);
+  assert.equal(result.result.finishReason, 'stop');
   assert.equal(calls.length, 1);
   assert.equal(calls[0].options.rlmSubcall, true);
+  assert.equal(calls[0].options.rlmSubcallPurpose, 'final_composition');
+  assert.equal(calls[0].options.maxTokens, 1024);
+  assert.ok(String(calls[0].messages[1].content).includes('fewer than 500 words'));
+  assert.ok(String(calls[0].messages[1].content).includes('Finish cleanly with a complete final sentence'));
   assert.ok(String(calls[0].messages[1].content).includes('Scratch prompt_chunk_summaries'));
 }
 
@@ -588,6 +599,38 @@ async function testRootLoopRedirectsRepeatedChunkPromptToChunkMap() {
   assert.equal(result.final, 'Recovered after chunk map.');
   assert.deepEqual(result.observations.map((entry) => entry.action.type), [
     'chunk_prompt',
+    'map_prompt_chunks',
+    'compose_final'
+  ]);
+}
+
+async function testRootLoopRedirectsRepeatedChunkMapToComposeFinal() {
+  const rootActions = [
+    { type: 'map_prompt_chunks', args: { chunkSize: 512, overlap: 64, maxChunks: 1 } },
+    { type: 'map_prompt_chunks', args: { chunkSize: 512, overlap: 64, maxChunks: 1 } }
+  ];
+  const { service } = createService({
+    sendMessage: async (_model, _messages, options = {}) => {
+      if (options.rlmSubcall) {
+        return { response: { message: { content: 'Final from mapped summaries.' } } };
+      }
+      return { response: { message: { content: JSON.stringify(rootActions.shift()) } } };
+    }
+  });
+
+  const result = await service.runLoop({
+    prompt: 'Use RLM to create an outline from this prompt.',
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 4,
+      maxSubcalls: 4,
+      maxPromptSliceChars: 512
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'Final from mapped summaries.');
+  assert.deepEqual(result.observations.map((entry) => entry.action.type), [
     'map_prompt_chunks',
     'compose_final'
   ]);
@@ -762,6 +805,7 @@ async function testRootLoopBudgetExhaustion() {
   await testComposeFinalUsesScratchAndSetsFinal();
   await testRootLoopEnforcesRequestedChunkMappingBeforeFinal();
   await testRootLoopRedirectsRepeatedChunkPromptToChunkMap();
+  await testRootLoopRedirectsRepeatedChunkMapToComposeFinal();
   await testRootLoopExecutesStructuredActions();
   await testRootLoopCanUseSubLmObservation();
   await testRootLoopEnforcesPromptRequestedActionsBeforeFinal();

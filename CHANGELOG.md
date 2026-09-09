@@ -7,6 +7,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.17 Core-CE] - 2026-09-09
+
+### Fixed
+- Fixed Recursive RLM final composition truncation for llama.cpp by separating final-composition subcalls from short helper subcalls; root JSON actions and chunk summaries stay tightly capped, while `compose_final` can use the larger requested output budget.
+- Fixed repeated `map_prompt_chunks` calls after Scratch summaries already exist by redirecting the second map pass to `compose_final`.
+- Preserved llama.cpp/OpenAI-compatible finish reasons in RLM subcall results and traces so future cutoffs can be diagnosed as `length`, `stop`, or provider-specific completion states.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.17`.
+
 ## [v1.1.16 Core-CE] - 2026-09-09
 
 ### Added
