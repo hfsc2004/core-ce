@@ -264,11 +264,16 @@ function createRlmService(deps = {}) {
       maxSubcalls: session.budget.maxSubcalls
     });
     const result = await sendMessage(model, [
+      {
+        role: 'system',
+        content: 'You are a bounded RLM subcall. Return only the requested answer. Do not include analysis, thinking, markdown, or extra explanation.'
+      },
       { role: 'user', content: prompt }
     ], {
       stream: false,
       rlmSubcall: true,
-      maxTokens
+      maxTokens,
+      temperature: 0
     });
     const content = extractModelContent(result);
     session.trace.add('sub-lm-call-completed', {
@@ -325,7 +330,8 @@ function createRlmService(deps = {}) {
       session,
       model: request.model || request.modelName || session.model,
       runAction: (id, action) => actionExecutor.runAction(id, action),
-      sendMessage: session._rlmSendMessage
+      sendMessage: session._rlmSendMessage,
+      onProgress: options.onProgress
     });
   }
 

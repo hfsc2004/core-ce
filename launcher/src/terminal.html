@@ -62,11 +62,13 @@
         </svg>
         <span>Config</span>
       </button>
-      <button id="attachments-btn" title="Manage attached files">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M4.4 6.1l2.9-2.9a1.6 1.6 0 112.3 2.3L6 9.2a2.7 2.7 0 11-3.8-3.8l3.5-3.5"/>
+      <button id="attachments-btn" title="Manage persistent RAG buckets and shared files">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <ellipse cx="6" cy="2.4" rx="4" ry="1.4"/>
+          <path d="M2 2.4v5.2C2 8.4 3.8 9 6 9s4-.6 4-1.4V2.4"/>
+          <path d="M2 5c0 .8 1.8 1.4 4 1.4S10 5.8 10 5"/>
         </svg>
-        <span>Files</span>
+        <span>RAG</span>
       </button>
     </div>
     <div class="header-buttons">
@@ -225,6 +227,7 @@
     </div>
     
     <div id="input-container">
+      <button id="attach-plus-btn" title="Attach image or text file" aria-label="Attach image or text file">+</button>
       <input 
         type="text" 
         id="user-input" 

@@ -60,6 +60,22 @@ function extractModelContent(result = {}) {
   );
 }
 
+function extractModelThinking(result = {}) {
+  if (typeof result === 'string') return '';
+  return String(
+    result?.response?.message?.reasoning_content ??
+    result?.response?.message?.reasoning ??
+    result?.response?.message?.thinking ??
+    result?.message?.reasoning_content ??
+    result?.message?.reasoning ??
+    result?.message?.thinking ??
+    result?.reasoning_content ??
+    result?.reasoning ??
+    result?.thinking ??
+    ''
+  );
+}
+
 function stripJsonFence(text = '') {
   const raw = String(text || '').trim();
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -114,15 +130,139 @@ function normalizeActionPayload(payload = {}) {
   return { type, args };
 }
 
+function getRequiredActions(session) {
+  const metadata = session?.environment?.getMetadata?.() || {};
+  const actions = Array.isArray(metadata?.prompt?.requestedRlmActions)
+    ? metadata.prompt.requestedRlmActions
+    : [];
+  return actions.map((action) => String(action || '').trim()).filter(Boolean);
+}
+
+function hasActionRun(observations = [], actionType = '') {
+  const wanted = String(actionType || '').trim();
+  if (!wanted) return true;
+  return observations.some((entry) =>
+    entry?.success === true &&
+    String(entry?.action?.type || '').trim() === wanted
+  );
+}
+
+function buildRequiredAction(actionType, session, observations = []) {
+  const promptLength = Number(session?.environment?.lenPrompt?.() || 0);
+  if (actionType === 'len_prompt') {
+    return { type: 'len_prompt', args: {} };
+  }
+  if (actionType === 'slice_prompt') {
+    return {
+      type: 'slice_prompt',
+      args: {
+        start: 0,
+        end: Math.min(Math.max(promptLength, 1), 1200)
+      }
+    };
+  }
+  if (actionType === 'sub_lm') {
+    const sliceObservation = [...observations].reverse().find((entry) =>
+      entry?.success === true &&
+      String(entry?.action?.type || '') === 'slice_prompt' &&
+      typeof entry?.result === 'string'
+    );
+    const promptSlice = String(sliceObservation?.result || '').trim();
+    return {
+      type: 'sub_lm',
+      args: {
+        prompt: [
+          'Return one plain sentence only. No analysis. Summarize the central conflict or main task.',
+          promptSlice ? `Prompt slice:\n${promptSlice}` : ''
+        ].filter(Boolean).join('\n\n'),
+        max_tokens: 96
+      }
+    };
+  }
+  return null;
+}
+
+function enforceRequiredActions(action, session, observations = []) {
+  if (!action || action.type !== 'set_final') return action;
+  const required = getRequiredActions(session);
+  const missing = required.find((actionType) => !hasActionRun(observations, actionType));
+  if (!missing) return action;
+  return buildRequiredAction(missing, session, observations) || action;
+}
+
+function buildActionObservation(iteration, action, actionResult) {
+  return {
+    iteration,
+    action,
+    success: actionResult.success === true,
+    result: actionResult.success ? summarizeObservationResult(actionResult.result, 6000) : undefined,
+    error: actionResult.success ? undefined : actionResult.error,
+    finalSet: actionResult.environment?.final?.set === true
+  };
+}
+
+function emitProgress(onProgress, progress = {}) {
+  if (typeof onProgress !== 'function') return;
+  try {
+    onProgress({
+      sessionId: progress.sessionId || '',
+      ts: new Date().toISOString(),
+      ...progress
+    });
+  } catch (_) {}
+}
+
+async function runActionAndRecord(session, runAction, observations, iteration, action, onProgress = null) {
+  emitProgress(onProgress, {
+    sessionId: session.bmocSessionId,
+    phase: 'action-start',
+    iteration,
+    action: action.type
+  });
+  const actionResult = await runAction(session.bmocSessionId, action);
+  const observation = buildActionObservation(iteration, action, actionResult);
+  observations.push(observation);
+  session.trace?.add?.('root-loop-action-result', {
+    iteration,
+    action: action.type,
+    success: observation.success,
+    finalSet: observation.finalSet
+  });
+  emitProgress(onProgress, {
+    sessionId: session.bmocSessionId,
+    phase: 'action-done',
+    iteration,
+    action: action.type,
+    success: observation.success
+  });
+  return observation;
+}
+
+async function runMissingRequiredActions(session, runAction, observations, iteration, onProgress = null) {
+  const required = getRequiredActions(session);
+  const ran = [];
+  for (const actionType of required) {
+    if (hasActionRun(observations, actionType)) continue;
+    const action = buildRequiredAction(actionType, session, observations);
+    if (!action) continue;
+    const observation = await runActionAndRecord(session, runAction, observations, iteration, action, onProgress);
+    ran.push(observation);
+    if (observation.success !== true) break;
+  }
+  return ran;
+}
+
 function buildRootMessages(session, observations = []) {
   const metadata = session.environment.getMetadata();
   const budget = session.budget || {};
   const system = [
     'You are the root controller of a Recursive Language Model.',
     'The full user prompt is stored externally as Prompt and is not in your context.',
+    'Do not deliberate. Do not write analysis, thinking, markdown, or explanation.',
     'Choose exactly one JSON action per response. Do not include prose outside JSON.',
     'The current Prompt is the task to answer. Do not use prior Messages as task content unless the Prompt explicitly asks for conversation history.',
     'Use bounded prompt/environment actions to inspect, transform, and finish.',
+    'If environment.prompt.requestedRlmActions is non-empty, run those action types successfully before set_final.',
     `Allowed action types are: ${ACTION_SCHEMA.properties.type.enum.join(', ')}.`,
     'Set the final answer with {"type":"set_final","args":{"value":"..."}} when ready.',
     'Do not ask for the full prompt.',
@@ -152,6 +292,7 @@ async function runRootLoop(options = {}) {
   const runAction = options.runAction;
   const sendMessage = options.sendMessage;
   const model = String(options.model || session?.model || '').trim();
+  const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
   if (!session) return { success: false, error: 'RLM session is required.' };
   if (typeof runAction !== 'function') return { success: false, error: 'RLM action executor is unavailable.' };
   if (typeof sendMessage !== 'function') return { success: false, error: 'RLM model transport is unavailable.' };
@@ -160,10 +301,14 @@ async function runRootLoop(options = {}) {
   const budget = session.budget || {};
   const maxIterations = Math.max(1, Math.min(64, Number(budget.maxRootIterations) || 1));
   const observations = [];
+  const thinking = [];
+  if (getRequiredActions(session).length > 0) {
+    await runMissingRequiredActions(session, runAction, observations, 0, onProgress);
+  }
 
   for (let iteration = 1; iteration <= maxIterations; iteration += 1) {
     if (session.isStopped && session.isStopped()) {
-      return { success: false, stopped: true, sessionId: session.bmocSessionId, observations };
+      return { success: false, stopped: true, sessionId: session.bmocSessionId, observations, thinking };
     }
     if (session.environment.isFinalSet()) {
       return {
@@ -173,18 +318,41 @@ async function runRootLoop(options = {}) {
         final: session.environment.getFinal(),
         iterations: iteration - 1,
         observations,
+        thinking,
         environment: session.environment.getMetadata()
       };
     }
 
     const messages = buildRootMessages(session, observations);
     session.trace?.add?.('root-loop-model-call', { iteration, observationCount: observations.length });
+    emitProgress(onProgress, {
+      sessionId: session.bmocSessionId,
+      phase: 'root-model-start',
+      iteration
+    });
     const modelResult = await sendMessage(model, messages, {
       stream: false,
       rlm: true,
-      maxTokens: Math.min(2048, Number(budget.maxTokensPerSubcall) || 1024)
+      rlmRootAction: true,
+      maxTokens: Math.min(256, Number(budget.maxRootActionTokens) || 192)
     });
+    emitProgress(onProgress, {
+      sessionId: session.bmocSessionId,
+      phase: 'root-model-done',
+      iteration
+    });
+    if (session.isStopped && session.isStopped()) {
+      return { success: false, stopped: true, sessionId: session.bmocSessionId, observations, thinking };
+    }
     const content = extractModelContent(modelResult);
+    const modelThinking = extractModelThinking(modelResult).trim();
+    if (modelThinking) {
+      thinking.push({
+        iteration,
+        chars: modelThinking.length,
+        text: modelThinking
+      });
+    }
     let action;
     try {
       action = normalizeActionPayload(extractFirstJsonObject(content));
@@ -200,22 +368,11 @@ async function runRootLoop(options = {}) {
       continue;
     }
 
-    const actionResult = await runAction(session.bmocSessionId, action);
-    const observation = {
-      iteration,
-      action,
-      success: actionResult.success === true,
-      result: actionResult.success ? summarizeObservationResult(actionResult.result, 6000) : undefined,
-      error: actionResult.success ? undefined : actionResult.error,
-      finalSet: actionResult.environment?.final?.set === true
-    };
-    observations.push(observation);
-    session.trace?.add?.('root-loop-action-result', {
-      iteration,
-      action: action.type,
-      success: observation.success,
-      finalSet: observation.finalSet
-    });
+    if (action.type === 'set_final') {
+      await runMissingRequiredActions(session, runAction, observations, iteration, onProgress);
+    }
+    action = enforceRequiredActions(action, session, observations);
+    await runActionAndRecord(session, runAction, observations, iteration, action, onProgress);
   }
 
   return {
@@ -226,6 +383,7 @@ async function runRootLoop(options = {}) {
     iterations: maxIterations,
     budgetExhausted: !session.environment.isFinalSet(),
     observations,
+    thinking,
     environment: session.environment.getMetadata()
   };
 }
@@ -235,6 +393,8 @@ module.exports = {
   buildRootMessages,
   extractFirstJsonObject,
   extractModelContent,
+  extractModelThinking,
+  emitProgress,
   normalizeActionPayload,
   summarizeObservationResult,
   runRootLoop

@@ -50,6 +50,10 @@
       return { sessionId: getSessionId() };
     }
 
+    function getSessionAttachmentTarget() {
+      return { sessionId: getSessionId() };
+    }
+
     function getAttachmentBucketId() {
       ensureBucketLoaded();
       return activeBucketId;
@@ -132,7 +136,7 @@
       }
     }
 
-    async function attachFile(rawPath) {
+    async function attachFile(rawPath, options = {}) {
       const sourcePath = normalizeAttachmentArg(rawPath);
       if (!sourcePath) {
         addSystemMessage('Usage: /attach <file-path>');
@@ -144,17 +148,18 @@
         return;
       }
       try {
-        await attachFilePath(sourcePath);
+        await attachFilePath(sourcePath, options);
       } catch (err) {
         addErrorMessage(`Attach failed: ${err.message || err}`);
       }
     }
 
-    async function attachFilePath(sourcePath) {
+    async function attachFilePath(sourcePath, options = {}) {
       const api = getElectronAPI();
+      const target = options?.sessionOnly === true ? getSessionAttachmentTarget() : getAttachmentTarget();
       try {
         const result = await api.terminalAttachmentsAttachFile({
-          ...getAttachmentTarget(),
+          ...target,
           sourcePath
         });
         if (!result || result.success === false) {
@@ -359,6 +364,7 @@
       openAttachmentManager,
       buildAttachmentContext,
       hasKnownAttachments,
+      getSessionAttachmentTarget,
       getAttachmentTarget,
       getAttachmentBucketId,
       setAttachmentBucketId

@@ -236,6 +236,7 @@
           buildOllamaOptions: ctx.buildOllamaOptions,
           addAssistantShell: ctx.addAssistantShell,
           setActiveStream: ctx.setActiveStream,
+          getAttachmentSessionId: ctx.getAttachmentSessionId,
           getTerminalPort: ctx.getTerminalPort,
           setTerminalPort: ctx.setTerminalPort,
           setProviderBaseUrl: ctx.setProviderBaseUrl,
@@ -293,7 +294,14 @@
       if (ctx.attachmentsBtn) {
         ctx.attachmentsBtn.addEventListener('click', ctx.openAttachmentManager);
       }
+      if (ctx.attachPlusBtn && typeof ctx.handleAttachPlusClick === 'function') {
+        ctx.attachPlusBtn.addEventListener('click', ctx.handleAttachPlusClick);
+      }
       ctx.userInput.addEventListener('keydown', ctx.handleInputKeypress);
+      if (typeof ctx.handleInputPaste === 'function') {
+        ctx.userInput.addEventListener('paste', ctx.handleInputPaste);
+        document.addEventListener('paste', ctx.handleInputPaste);
+      }
 
       if (ctx.streamController && typeof ctx.streamController.installStreamListener === 'function') {
         ctx.streamController.installStreamListener();

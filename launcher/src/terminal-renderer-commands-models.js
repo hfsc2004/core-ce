@@ -12,11 +12,15 @@
     const getTerminalPort = typeof deps?.getTerminalPort === 'function' ? deps.getTerminalPort : () => 0;
     const getCurrentModel = typeof deps?.getCurrentModel === 'function' ? deps.getCurrentModel : () => null;
     const setCurrentModel = typeof deps?.setCurrentModel === 'function' ? deps.setCurrentModel : (() => {});
+    const setProviderModelId = typeof deps?.setProviderModelId === 'function' ? deps.setProviderModelId : (() => {});
     const getLlamaCppModelPath = typeof deps?.getLlamaCppModelPath === 'function' ? deps.getLlamaCppModelPath : () => '';
     const setLlamaCppModelPath = typeof deps?.setLlamaCppModelPath === 'function' ? deps.setLlamaCppModelPath : (() => {});
     const addSystemMessage = typeof deps?.addSystemMessage === 'function' ? deps.addSystemMessage : (() => {});
     const addErrorMessage = typeof deps?.addErrorMessage === 'function' ? deps.addErrorMessage : (() => {});
     const clearConversationHistory = typeof deps?.clearConversationHistory === 'function' ? deps.clearConversationHistory : (() => {});
+    const persistTerminalModelConfig = typeof deps?.persistTerminalModelConfig === 'function'
+      ? deps.persistTerminalModelConfig
+      : (() => {});
     const formatBytes = typeof deps?.formatBytes === 'function' ? deps.formatBytes : ((v) => `${v || 0} B`);
 
     const LAST_MODEL_KEY = 'psf_terminal_last_model';
@@ -203,6 +207,7 @@
               option.value = modelName;
               option.textContent = String(model.pathRel || model.filename || modelName);
               option.dataset.llamaPath = modelPath;
+              option.dataset.projectorPath = String(model?.projectorPathAbs || '').trim();
               if (
                 (currentPath && modelPath === currentPath) ||
                 (currentModel && modelName === currentModel) ||
@@ -280,9 +285,17 @@
         const optionEl = event?.target?.selectedOptions?.[0];
         const newPath = String(optionEl?.dataset?.llamaPath || '').trim();
         if (newPath) setLlamaCppModelPath(newPath);
+        const newProjectorPath = String(optionEl?.dataset?.projectorPath || '').trim();
+        if (newProjectorPath) {
+          try {
+            window.localStorage?.setItem?.('psf_terminal_last_projector_path_llama.cpp', newProjectorPath);
+          } catch (_) {}
+        }
+        setProviderModelId(newModel);
       }
       setCurrentModel(newModel);
       persistSelectedModel(newModel);
+      persistTerminalModelConfig();
       if (provider === 'llama.cpp') {
         addSystemMessage(`🔄 Selected GGUF model: ${newModel}`);
         if (String(getLlamaCppModelPath() || '').trim()) {

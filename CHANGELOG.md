@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.14 Core-CE] - 2026-09-09
+
+### Added
+- Added a PSF Terminal `RAG` header button for persistent/shared bucket management, keeping durable context separate from one-turn compose attachments.
+- Added regression coverage for per-window image attachment scoping and llama.cpp vision message payloads.
+
+### Fixed
+- Fixed stale Terminal image attachments leaking into fresh chats when BMOC reused the same llama.cpp port.
+- Fixed the compose-box `+` attachment action so it attaches to the current Terminal scratch session instead of silently using an active persistent bucket.
+- Fixed ordinary chat prompts so image bytes are not sent unless the prompt has image intent.
+
+### Changed
+- Bumped package, installer, and active catalog revision metadata to `1.1.14`.
+- Clarified PSF Terminal attachment semantics: compose-box `+` is session scratch context; RAG/buckets remain persistent/shared context for multi-agent workflows.
+
 ## [v1.1.13 Core-CE] - 2026-09-09
 
 ### Added

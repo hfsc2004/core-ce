@@ -137,6 +137,7 @@ async function launchInOllama(collection, filename, projectorFilename = '', cata
             provider: 'llama.cpp',
             modelPath: result.modelPath || modelPath,
             llamaCppModelPath: result.llamaCppModelPath || result.modelPath || modelPath,
+            projectorPath,
             modelName,
             forceCpu: result.forceCpu === true || forceCpu === true
           }

@@ -1,5 +1,5 @@
 {
-  "version": "1.1.13",
+  "version": "1.1.14",
   "last_updated": "2026-09-09",
   "collections": {
     "starter-fast": {
@@ -2669,11 +2669,11 @@
       "models": [
         {
           "id": "gemma-3-4b-it-mm",
-          "name": "Gemma 3:4B-IT-MM",
+          "name": "Gemma 3:4B-IT-MM-unsloth",
           "model_family": "Gemma",
           "organization": "Google",
           "version": "3",
-          "description": "Gemma 3:4B-IT-Multimodal Image Recognition",
+          "description": "Gemma 3:4B-IT-Multimodal Image Recognition - Unsloth version {Only ~2,687MB to run this model, but flat personality}",
           "url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF",
           "download_url": "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf?download=true",
           "filename": "gemma-3-4b-it-mm.gguf",
@@ -2760,7 +2760,13 @@
               "performance": 0.2,
               "reliability": 0.15
             }
-          }
+          },
+          "supports_stt": false,
+          "supports_tts": false,
+          "checksums": {
+            "main": "04a43a22e8d2003deda5acc262f68ec1005fa76c735a9962a8c77042a74a7d19"
+          },
+          "projector_sha256": null
         },
         {
           "id": "gemma-3-4b-it-abliterated-gguf",

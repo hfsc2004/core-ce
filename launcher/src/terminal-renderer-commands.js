@@ -129,11 +129,13 @@
           getTerminalPort,
           getCurrentModel,
           setCurrentModel,
+          setProviderModelId,
           getLlamaCppModelPath,
           setLlamaCppModelPath,
           addSystemMessage,
           addErrorMessage,
           clearConversationHistory,
+          persistTerminalModelConfig,
           formatBytes: deps?.formatBytes
         })
       : null;

@@ -27,7 +27,7 @@ function loadChatFlowController(fetchImpl) {
 
 async function testRecursiveRlmRunsBeforeLlamaCppProvider() {
   const createChatFlowController = loadChatFlowController();
-  const userInput = { value: 'outline a story about ants' };
+  const userInput = { value: 'Use the RLM environment to outline a story about ants' };
   const assistantMessages = [];
   const systemMessages = [];
   let runRlmLoopCalled = false;
@@ -63,6 +63,7 @@ async function testRecursiveRlmRunsBeforeLlamaCppProvider() {
     },
     setActiveStream: () => {},
     finalizeStreamingMessage: () => {},
+    getAttachmentSessionId: () => 'terminal-52454-window-7',
     getTerminalPort: () => 52454,
     getElectronAPI: () => ({
       ensureTerminalLlamaCppSession: async () => {
@@ -84,7 +85,7 @@ async function testRecursiveRlmRunsBeforeLlamaCppProvider() {
     },
     runRlmLoop: async (payload = {}) => {
       runRlmLoopCalled = true;
-      assert.strictEqual(payload.prompt, 'outline a story about ants');
+      assert.strictEqual(payload.prompt, 'Use the RLM environment to outline a story about ants');
       assert.strictEqual(payload.backend, 'llama.cpp');
       assert.strictEqual(payload.mode, 'recursive-repl');
       return {
@@ -167,7 +168,7 @@ function createLlamaCppControllerForSse(sse, hooks = {}) {
     shouldInjectAttachmentContext: () => false,
     getConversationHistory: () => hooks.conversationHistory || [],
     appendConversationPair: hooks.appendConversationPair || (() => {}),
-    getCurrentModel: () => 'Qwen3.8-4B-Q8_0.gguf',
+    getCurrentModel: () => hooks.modelName || 'Qwen3.8-4B-Q8_0.gguf',
     buildOllamaOptions: () => hooks.ollamaOptions || ({ num_ctx: 4096, num_gpu: 34 }),
     getProvider: () => 'llama.cpp',
     getProviderBaseUrl: () => '',
@@ -181,6 +182,7 @@ function createLlamaCppControllerForSse(sse, hooks = {}) {
     setActiveStream: (value) => { activeStream = value; },
     getChatDisplay: () => ({ scrollTop: 0, scrollHeight: 0 }),
     finalizeStreamingMessage: (contentDiv, message) => { contentDiv.textContent = message; },
+    getAttachmentSessionId: () => hooks.attachmentSessionId || 'terminal-52454-window-7',
     getTerminalPort: () => 52454,
     getElectronAPI: () => ({
       ensureTerminalLlamaCppSession: async () => ({
@@ -188,7 +190,8 @@ function createLlamaCppControllerForSse(sse, hooks = {}) {
         reused: true,
         port: 52454,
         baseUrl: 'http://127.0.0.1:52454'
-      })
+      }),
+      ...(hooks.electronApi || {})
     }),
     sanitizeQwenSelfDialogue: (value) => String(value || ''),
     addErrorMessage: hooks.addErrorMessage || ((message) => {
@@ -375,6 +378,7 @@ async function testOrdinaryChatSkipsAttachmentContext() {
     setActiveStream: (value) => { activeStream = value; },
     getChatDisplay: () => ({ scrollTop: 0, scrollHeight: 0 }),
     finalizeStreamingMessage: () => {},
+    getAttachmentSessionId: () => 'terminal-52454-window-7',
     getTerminalPort: () => 52454,
     getElectronAPI: () => ({
       ensureTerminalLlamaCppSession: async () => ({ success: true, reused: true, port: 52454 })
@@ -402,6 +406,86 @@ async function testOrdinaryChatSkipsAttachmentContext() {
   assert.strictEqual(attachmentContextCalled, false);
 }
 
+async function testLlamaCppSkipsStaleImagesForOrdinaryGreeting() {
+  const sse = [
+    'data: {"choices":[{"delta":{"content":"Hello!"}}]}',
+    'data: [DONE]',
+    ''
+  ].join('\n');
+  let requestBody = null;
+  let listCalled = false;
+  const { controller } = createLlamaCppControllerForSse(sse, {
+    userMessage: 'Hello!',
+    onFetch: (request) => { requestBody = JSON.parse(String(request?.body || '{}')); },
+    electronApi: {
+      terminalAttachmentsList: async () => {
+        listCalled = true;
+        return {
+          success: true,
+          attachments: [
+            { id: 'old-image', displayName: 'eiffel.jpg', mimeType: 'image/jpeg', sizeBytes: 1234 }
+          ]
+        };
+      },
+      terminalAttachmentsReadBytes: async () => ({
+        success: true,
+        bytesBase64: 'stale-image'
+      })
+    }
+  });
+
+  await controller.sendMessage();
+
+  assert.strictEqual(listCalled, false);
+  assert.ok(requestBody);
+  const last = requestBody.messages[requestBody.messages.length - 1];
+  assert.strictEqual(last.content, 'Hello!');
+}
+
+async function testLlamaCppUsesCurrentSessionImageForVisionIntent() {
+  const sse = [
+    'data: {"choices":[{"delta":{"content":"That is the Eiffel Tower."}}]}',
+    'data: [DONE]',
+    ''
+  ].join('\n');
+  let requestBody = null;
+  let listTarget = null;
+  let readTarget = null;
+  const { controller } = createLlamaCppControllerForSse(sse, {
+    userMessage: 'What is this?',
+    modelName: 'gemma-3-4b-it-mm.gguf',
+    attachmentSessionId: 'terminal-52454-window-9',
+    onFetch: (request) => { requestBody = JSON.parse(String(request?.body || '{}')); },
+    electronApi: {
+      terminalAttachmentsList: async (target) => {
+        listTarget = target;
+        return {
+          success: true,
+          attachments: [
+            { id: 'current-image', displayName: 'tower.jpg', mimeType: 'image/jpeg', sizeBytes: 1234 }
+          ]
+        };
+      },
+      terminalAttachmentsReadBytes: async (target) => {
+        readTarget = target;
+        return { success: true, bytesBase64: 'current-image-base64' };
+      }
+    }
+  });
+
+  await controller.sendMessage();
+
+  assert.strictEqual(listTarget.sessionId, 'terminal-52454-window-9');
+  assert.strictEqual(readTarget.sessionId, 'terminal-52454-window-9');
+  assert.strictEqual(readTarget.attachmentId, 'current-image');
+  assert.strictEqual(readTarget.maxBytes, 8 * 1024 * 1024);
+  const last = requestBody.messages[requestBody.messages.length - 1];
+  assert.ok(Array.isArray(last.content));
+  assert.deepStrictEqual(last.content[0], { type: 'text', text: 'What is this?' });
+  assert.strictEqual(last.content[1].type, 'image_url');
+  assert.strictEqual(last.content[1].image_url.url, 'data:image/jpeg;base64,current-image-base64');
+}
+
 async function run() {
   await testRecursiveRlmRunsBeforeLlamaCppProvider();
   await testLlamaCppThinkingAndAnswerStaySeparate();
@@ -409,6 +493,8 @@ async function run() {
   await testLlamaCppDropsOldHistoryWhenContextIsTight();
   await testLlamaCppRejectsOversizedCurrentPrompt();
   await testOrdinaryChatSkipsAttachmentContext();
+  await testLlamaCppSkipsStaleImagesForOrdinaryGreeting();
+  await testLlamaCppUsesCurrentSessionImageForVisionIntent();
   console.log('terminal-renderer-chatflow regression tests passed');
 }
 

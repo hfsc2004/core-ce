@@ -194,7 +194,7 @@
         panel.innerHTML = `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.15);background:#0f172a;">
             <div style="display:grid;gap:6px;">
-              <strong style="color:#e5e7eb;font-size:13px;">Attached Files (${attachments.length})</strong>
+              <strong style="color:#e5e7eb;font-size:13px;">RAG / Shared Files (${attachments.length})</strong>
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <span style="color:#9ca3af;font-size:11px;">Bucket:</span>
                 <select id="terminal-attachments-bucket-select"

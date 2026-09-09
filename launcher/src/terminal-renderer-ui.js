@@ -366,12 +366,14 @@
     function setWaitingState(waiting) {
       const userInput = getUserInput();
       const sendBtn = getSendBtn();
+      const attachPlusBtn = document.getElementById('attach-plus-btn');
       const stopBtn = getStopBtn();
       const statusText = getStatusText();
       const inlineThinking = document.getElementById('inline-thinking');
 
       if (userInput) userInput.disabled = waiting;
       if (sendBtn) sendBtn.disabled = waiting;
+      if (attachPlusBtn) attachPlusBtn.disabled = waiting;
 
       if (waiting) {
         if (sendBtn) sendBtn.innerHTML = '<span class="spinner"></span>';

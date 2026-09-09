@@ -71,14 +71,19 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         continue;
       }
       const entries = [];
-      if (Array.isArray(parsed?.models)) entries.push(...parsed.models);
+      if (Array.isArray(parsed?.models)) {
+        parsed.models.forEach((entry) => entries.push({ entry, collectionKey: '' }));
+      }
       const collections = parsed?.collections;
       if (collections && typeof collections === 'object') {
-        Object.values(collections).forEach((collection) => {
-          if (Array.isArray(collection?.models)) entries.push(...collection.models);
+        Object.entries(collections).forEach(([collectionKey, collection]) => {
+          if (Array.isArray(collection?.models)) {
+            collection.models.forEach((entry) => entries.push({ entry, collectionKey }));
+          }
         });
       }
-      for (const entry of entries) {
+      for (const row of entries) {
+        const entry = row?.entry || {};
         const names = [
           entry?.id,
           entry?.name,
@@ -87,9 +92,15 @@ function registerOpsHandlers(ipcMain, deps = {}) {
           ...(Array.isArray(entry?.artifacts) ? entry.artifacts.map((artifact) => artifact?.filename) : [])
         ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
         if ((wantedBase && names.includes(wantedBase)) || (wantedName && names.includes(wantedName))) {
+          const projectorFilename = String(entry?.projector_filename || entry?.projectorFilename || '').trim();
+          const projectorPath = projectorFilename && row.collectionKey
+            ? path.join('models', row.collectionKey, projectorFilename)
+            : '';
           return {
             forceCpu: entry?.force_cpu === true,
-            gpuLayers: Number.isFinite(Number(entry?.gpu_layers)) ? Number(entry.gpu_layers) : null
+            gpuLayers: Number.isFinite(Number(entry?.gpu_layers)) ? Number(entry.gpu_layers) : null,
+            projectorFilename,
+            projectorPath
           };
         }
       }
@@ -105,6 +116,39 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const raw = String(modelPath || '').trim();
     if (!raw) return '';
     return path.isAbsolute(raw) ? raw : path.resolve(path.join(appDir, '..'), raw);
+  }
+
+  function inferSiblingProjectorPath(modelPath) {
+    const resolvedModelPath = normalizeLlamaCppModelPathForCompare(modelPath);
+    if (!resolvedModelPath) return '';
+    const dirPath = path.dirname(resolvedModelPath);
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    } catch (_) {
+      return '';
+    }
+    const match = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((name) => {
+        const lower = String(name || '').toLowerCase();
+        return lower.endsWith('.gguf') && (
+          lower.startsWith('mmproj') ||
+          lower.includes('mmproj') ||
+          lower.includes('projector') ||
+          lower.includes('clip-vit')
+        );
+      })
+      .sort((a, b) => {
+        const score = (name) => String(name || '').toLowerCase().startsWith('mmproj') ? 0 : 1;
+        return score(a) - score(b) || String(a || '').localeCompare(String(b || ''));
+      })[0];
+    const modelFiles = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((name) => /\.gguf$/i.test(String(name || '')) && !/mmproj|projector|clip-vit/i.test(String(name || '')));
+    return match && modelFiles.length === 1 ? path.join(dirPath, match) : '';
   }
 
   async function isOllamaResponsive(port) {
@@ -248,6 +292,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const ownerWindow = event && event.sender ? BrowserWindow.fromWebContents(event.sender) : null;
     const ownerWindowId = Number(ownerWindow?.id || 0) || null;
     let modelPath = String(payload?.modelPath || '').trim();
+    let projectorPath = String(payload?.projectorPath || payload?.mmprojPath || '').trim();
     let modelName = String(payload?.modelName || '').trim();
     const chatTemplate = String(payload?.chatTemplate || '').trim();
     const gpuInfo = getGpuInfo() || null;
@@ -255,6 +300,9 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const requestedGpuLayersRaw = Number(payload?.gpuLayers);
     const requestedContextSize = Math.max(256, Number(payload?.contextSize) || 32768);
     const catalogRuntime = catalogRuntimeConfigForModel(modelPath, modelName);
+    if (!projectorPath && catalogRuntime?.projectorPath) {
+      projectorPath = String(catalogRuntime.projectorPath || '').trim();
+    }
     const catalogGpuLayers = Number(catalogRuntime?.gpuLayers);
     const forceCpu = payload?.forceCpu === true || catalogRuntime?.forceCpu === true;
     const effectiveGpuLayers = forceCpu
@@ -267,6 +315,12 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const requireGpuSession = !forceCpu && nvidiaDetected && Number(effectiveGpuLayers) > 0;
     if (modelPath) {
       modelPath = normalizeLlamaCppModelPathForCompare(modelPath);
+    }
+    if (!projectorPath && modelPath) {
+      projectorPath = inferSiblingProjectorPath(modelPath);
+    }
+    if (projectorPath) {
+      projectorPath = normalizeLlamaCppModelPathForCompare(projectorPath);
     }
     const existingSessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
     if (Array.isArray(existingSessions)) {
@@ -285,6 +339,11 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         const sessionModelPath = normalizeLlamaCppModelPathForCompare(session?.metadata?.modelPath || '');
         if (modelPath && sessionModelPath && sessionModelPath !== modelPath) {
           console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: modelPath mismatch session="${sessionModelPath}" requested="${modelPath}"`);
+          continue;
+        }
+        const sessionProjectorPath = normalizeLlamaCppModelPathForCompare(session?.metadata?.projectorPath || '');
+        if (projectorPath && sessionProjectorPath !== projectorPath) {
+          console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: projectorPath mismatch session="${sessionProjectorPath}" requested="${projectorPath}"`);
           continue;
         }
         const sessionModelName = String(session?.metadata?.modelName || '').trim().toLowerCase();
@@ -348,6 +407,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
           sessionId: session?.sessionId || null,
           reused: true,
           modelPath: sessionModelPath || null,
+          projectorPath: sessionProjectorPath || null,
           chatTemplate: String(session?.metadata?.chatTemplate || '').trim() || null,
           baseUrl: `http://127.0.0.1:${port}`,
           warming: !responsive
@@ -368,6 +428,8 @@ function registerOpsHandlers(ipcMain, deps = {}) {
           });
           const matchedPath = String(matched?.pathAbs || '').trim();
           if (matchedPath) modelPath = matchedPath;
+          const matchedProjectorPath = String(matched?.projectorPathAbs || '').trim();
+          if (!projectorPath && matchedProjectorPath) projectorPath = matchedProjectorPath;
         } catch (_) {
           // Fall through to explicit error below.
         }
@@ -388,6 +450,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const startResult = await sessionManager.startLlamaCppForService('terminal', appDir, {
       ownerWindowId,
       modelPath,
+      projectorPath: projectorPath || null,
       modelName: modelName || null,
       chatTemplate: chatTemplate || null,
       contextSize: requestedContextSize,
@@ -421,6 +484,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       sessionId: startResult.sessionId || null,
       reused: false,
       modelPath,
+      projectorPath: projectorPath || null,
       modelName: modelName || null,
       forceCpu,
       chatTemplate: String(startResult?.chatTemplate || chatTemplate || '').trim() || null,
@@ -449,6 +513,42 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       );
     }
 
+    function findSiblingProjector(dirPath, relDir = '') {
+      let entries = [];
+      try {
+        entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      } catch (_) {
+        return null;
+      }
+      const modelFiles = entries
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name)
+        .filter((name) => /\.gguf$/i.test(String(name || '')) && !isLikelyProjectorFile(name));
+      if (modelFiles.length !== 1) return null;
+      const projectors = entries
+        .filter((entry) => entry.isFile() && isLikelyProjectorFile(entry.name))
+        .map((entry) => {
+          const absPath = path.join(dirPath, entry.name);
+          let sizeBytes = 0;
+          try {
+            sizeBytes = Number(fs.statSync(absPath).size || 0);
+          } catch (_) {
+            sizeBytes = 0;
+          }
+          return {
+            filename: entry.name,
+            pathAbs: absPath,
+            pathRel: relDir ? path.join(relDir, entry.name) : entry.name,
+            sizeBytes
+          };
+        })
+        .sort((a, b) => {
+          const score = (item) => String(item.filename || '').toLowerCase().startsWith('mmproj') ? 0 : 1;
+          return score(a) - score(b) || String(a.filename || '').localeCompare(String(b.filename || ''));
+        });
+      return projectors[0] || null;
+    }
+
     function walk(dirPath, relDir = '') {
       let entries = [];
       try {
@@ -475,12 +575,17 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         } catch (_) {
           statSize = 0;
         }
+        const siblingProjector = findSiblingProjector(dirPath, relDir);
         models.push({
           name: entryName.replace(/\.gguf$/i, ''),
           filename: entryName,
           pathAbs: absPath,
           pathRel: relPath,
-          sizeBytes: statSize
+          sizeBytes: statSize,
+          projectorPathAbs: siblingProjector?.pathAbs || '',
+          projectorPathRel: siblingProjector?.pathRel || '',
+          projectorFilename: siblingProjector?.filename || '',
+          projectorSizeBytes: Number(siblingProjector?.sizeBytes || 0)
         });
       }
     }
@@ -683,12 +788,14 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       if (preferredProvider === 'llama.cpp') {
         await closeWindowOwnedTerminalSessions(ownerWindowId, 'ollama');
         const explicitLlamaCppModelPath = String(options.modelPath || options.llamaCppModelPath || '').trim();
+        const explicitProjectorPath = String(options.projectorPath || options.mmprojPath || '').trim();
         const explicitLlamaCppModelName = String(options.modelName || modelName || '').trim();
         if (explicitLlamaCppModelPath || explicitLlamaCppModelName) {
           startResult = await ensureTerminalLlamaCppSession({
             ...options,
             modelName: explicitLlamaCppModelName,
             modelPath: explicitLlamaCppModelPath,
+            projectorPath: explicitProjectorPath,
             llamaCppModelPath: String(options.llamaCppModelPath || options.modelPath || '').trim(),
             contextSize: Number.isFinite(Number(options.contextSize))
               ? Number(options.contextSize)
@@ -765,6 +872,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
             : String(options.baseUrl || '').trim(),
           providerModel: String(options.providerModel || options.modelName || modelName || '').trim(),
           llamaCppModelPath: String(startResult?.modelPath || options.llamaCppModelPath || options.modelPath || '').trim(),
+          projectorPath: String(startResult?.projectorPath || options.projectorPath || '').trim(),
           llamaCppForceCpu: options.forceCpu === true || startResult?.forceCpu === true || catalogForceCpuForModel(
             startResult?.modelPath || options.llamaCppModelPath || options.modelPath || '',
             options.modelName || modelName || ''

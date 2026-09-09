@@ -10,6 +10,17 @@
     const getUserInput = typeof deps?.getUserInput === 'function' ? deps.getUserInput : () => null;
     const getChatDisplay = typeof deps?.getChatDisplay === 'function' ? deps.getChatDisplay : () => null;
 
+    function focusInputEnd(input) {
+      if (!input) return;
+      input.focus();
+      const end = String(input.value || '').length;
+      try {
+        input.setSelectionRange(end, end);
+      } catch (_) {
+        // Some editable controls do not support selection ranges.
+      }
+    }
+
     function installContextMenu() {
       const userInput = getUserInput();
       const chatDisplay = getChatDisplay();
@@ -62,6 +73,9 @@
               } else {
                 e.target.value += text;
               }
+              e.target.dispatchEvent(new Event('input', { bubbles: true }));
+              focusInputEnd(e.target);
+              setTimeout(() => focusInputEnd(e.target), 0);
             });
             menu.remove();
           };

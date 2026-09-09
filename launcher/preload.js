@@ -121,6 +121,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   rlmExecuteSandboxCode: (payload = {}) => ipcRenderer.invoke('rlm:execute-sandbox-code', payload),
   rlmRunAction: (payload = {}) => ipcRenderer.invoke('rlm:run-action', payload),
   rlmRunLoop: (payload = {}) => ipcRenderer.invoke('rlm:run-loop', payload),
+  onRlmProgress: (callback) => subscribeIpc('rlm:progress', callback),
   appZoomDelta: (delta = 0) => ipcRenderer.invoke('app-zoom:delta', delta),
   appZoomReset: () => ipcRenderer.invoke('app-zoom:reset'),
   appZoomGet: () => ipcRenderer.invoke('app-zoom:get'),
