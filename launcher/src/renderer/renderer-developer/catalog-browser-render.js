@@ -206,11 +206,15 @@ function renderCatalogBrowserRow(model, index) {
   const status = downloadStatus[model.id] || {};
   const isDownloaded = status.downloaded || false;
   const isWrapped = status.wrapped || false;
+  const runtimes = Array.isArray(model.runtimes) ? model.runtimes.map((value) => String(value || '').trim().toLowerCase()) : [];
+  const supportsLlamaCpp = runtimes.includes('llama.cpp') || /\.gguf$/i.test(String(model.filename || ''));
+  const isReady = isDownloaded && (isWrapped || supportsLlamaCpp);
   
   // Status indicator
   let statusIndicator = '';
-  if (isDownloaded && isWrapped) {
-    statusIndicator = '<span title="Downloaded & Ready" style="color: #00ff88;">●</span>';
+  if (isReady) {
+    const readyTitle = supportsLlamaCpp && !isWrapped ? 'Downloaded & Ready for llama.cpp' : 'Downloaded & Ready';
+    statusIndicator = `<span title="${readyTitle}" style="color: #00ff88;">●</span>`;
   } else if (isDownloaded) {
     statusIndicator = '<span title="Downloaded (needs Launch)" style="color: #ffd400;">●</span>';
   } else {
@@ -305,7 +309,7 @@ function renderCatalogBrowserExpanded(model, isDownloaded) {
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">STATUS</div>
           <div style="color: ${isDownloaded ? '#00ff88' : '#888'};">
             ${isDownloaded ? '✓ Downloaded' : '○ Not downloaded'}
-            ${status.wrapped ? ' · Wrapped' : ''}
+            ${status.wrapped ? ' · Wrapped' : (supportsLlamaCpp ? ' · llama.cpp ready' : '')}
           </div>
         </div>
       </div>

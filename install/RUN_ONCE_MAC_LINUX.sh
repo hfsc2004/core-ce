@@ -1,5 +1,5 @@
 #!/bin/bash
-# @version 1.1.14 - September 9, 2026
+# @version 1.1.15 - September 9, 2026
 # @copyright 2026 Pseudo SF
 echo "============================================================"
 echo "PSF Core Community Edition - Core-CE"
