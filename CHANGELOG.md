@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.13 Core-CE] - 2026-09-09
+
+### Added
+- Added first-pass bounded `sub_lm` support to the RLM action executor and root loop, including model-transport routing, subcall usage accounting, budget exhaustion handling, and regression coverage.
+
+### Fixed
+- Fixed duplicate llama.cpp PSF Terminal sessions by normalizing BMOC backend metadata (`llama.cpp`, `llama-cpp`, and `llamacpp`) before reuse checks.
+- Fixed Catalog-launched llama.cpp terminals so model config runtime parameters are loaded before the initial BMOC server start, preventing first-message context/GPU mismatches from starting a second server.
+- Fixed PSF Terminal launcher behavior on fresh installs so llama.cpp terminals no longer require Ollama to be installed.
+- Fixed fresh install scripts so they resolve the launcher path relative to the install script location instead of the caller's current directory.
+- Disabled the Ollama-only `/api/ps` GPU verifier inside llama.cpp Terminal windows.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.13`.
+
 ## [v1.1.12 Core-CE] - 2026-09-08
 
 ### Changed

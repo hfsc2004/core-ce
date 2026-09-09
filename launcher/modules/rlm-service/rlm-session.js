@@ -17,6 +17,9 @@ function createRlmSession(options = {}) {
   });
   const trace = createRlmTrace();
   const startedAt = new Date().toISOString();
+  const usage = {
+    subcalls: 0
+  };
   let stopped = false;
 
   trace.add('session-created', {
@@ -39,6 +42,7 @@ function createRlmSession(options = {}) {
     budget,
     environment,
     trace,
+    usage,
     startedAt,
     stop(reason = 'stopped') {
       stopped = true;
@@ -46,6 +50,13 @@ function createRlmSession(options = {}) {
     },
     isStopped() {
       return stopped;
+    },
+    canRunSubcall() {
+      return usage.subcalls < Number(budget.maxSubcalls || 0);
+    },
+    recordSubcall() {
+      usage.subcalls += 1;
+      return usage.subcalls;
     },
     getStatus() {
       return {
@@ -60,6 +71,7 @@ function createRlmSession(options = {}) {
         behaviorSource: this.behaviorSource,
         profile: this.profile,
         budget: { ...this.budget },
+        usage: { ...usage },
         startedAt: this.startedAt,
         stopped,
         environment: this.environment.getMetadata(),

@@ -1,5 +1,5 @@
 #!/bin/bash
-# @version 1.1.3 - March 5, 2026
+# @version 1.1.13 - September 9, 2026
 # @copyright 2026 Pseudo SF
 echo "============================================================"
 echo "PSF Core Community Edition - Core-CE"
@@ -7,7 +7,7 @@ echo "First Run Setup"
 echo "============================================================"
 echo
 
-cd launcher
+cd "$(dirname "$0")/../launcher" || exit 1
 
 if [ -d "node_modules" ]; then
     echo "[OK] Node modules already installed."

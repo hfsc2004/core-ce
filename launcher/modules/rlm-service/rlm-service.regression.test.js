@@ -341,6 +341,78 @@ async function testStructuredActionsFailClosed() {
   assert.match(result.error, /Unsupported RLM action/);
 }
 
+async function testSubLmActionUsesModelTransportAndBudget() {
+  const calls = [];
+  const { service } = createService({
+    sendMessage: async (model, messages, options = {}) => {
+      calls.push({ model, messages, options });
+      return { response: { message: { content: 'sub answer' } } };
+    }
+  });
+  const status = await service.startSession({
+    prompt: 'Root prompt',
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 2,
+      maxTokensPerSubcall: 128
+    }
+  });
+
+  const result = await service.runAction({
+    sessionId: status.sessionId,
+    action: {
+      type: 'sub_lm',
+      args: {
+        prompt: 'Summarize this slice.',
+        maxTokens: 80
+      }
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.action, 'sub_lm');
+  assert.equal(result.result.content, 'sub answer');
+  assert.equal(result.result.usage.subcalls, 1);
+  assert.equal(result.environment.final.set, false);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].model, 'mock-root');
+  assert.deepEqual(calls[0].messages, [{ role: 'user', content: 'Summarize this slice.' }]);
+  assert.equal(calls[0].options.rlmSubcall, true);
+  assert.equal(calls[0].options.maxTokens, 80);
+}
+
+async function testSubLmActionFailsClosedAtBudgetLimit() {
+  let callCount = 0;
+  const { service } = createService({
+    sendMessage: async () => {
+      callCount += 1;
+      return { response: { message: { content: 'sub answer' } } };
+    }
+  });
+  const status = await service.startSession({
+    prompt: 'Root prompt',
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 1
+    }
+  });
+
+  const first = await service.runAction({
+    sessionId: status.sessionId,
+    action: { type: 'sub_lm', args: { prompt: 'first' } }
+  });
+  const second = await service.runAction({
+    sessionId: status.sessionId,
+    action: { type: 'sub_lm', args: { prompt: 'second' } }
+  });
+
+  assert.equal(first.success, true);
+  assert.equal(second.success, false);
+  assert.equal(second.budgetExhausted, true);
+  assert.match(second.error, /subcall budget exhausted/i);
+  assert.equal(callCount, 1);
+}
+
 function testRootLoopJsonExtraction() {
   assert.deepEqual(
     extractFirstJsonObject('```json\n{"type":"len_prompt","args":{}}\n```'),
@@ -389,6 +461,37 @@ async function testRootLoopExecutesStructuredActions() {
   assert.equal(seenMessages.some((text) => text.includes(hiddenMessage)), false);
   assert.ok(result.observations.some((item) => item.action.type === 'search_prompt'));
   assert.ok(result.observations.some((item) => item.action.type === 'slice_prompt'));
+}
+
+async function testRootLoopCanUseSubLmObservation() {
+  const calls = [];
+  const rootActions = [
+    { type: 'sub_lm', args: { prompt: 'Extract the key point.', maxTokens: 96 } },
+    { type: 'set_final', args: { value: 'Final from subcall observation.' } }
+  ];
+  const { service } = createService();
+  const result = await service.runLoop({
+    prompt: 'Long task',
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 3,
+      maxSubcalls: 2
+    }
+  }, {
+    sendMessage: async (model, messages, options = {}) => {
+      calls.push({ model, messages, options });
+      if (options.rlmSubcall) {
+        return { response: { message: { content: 'key point' } } };
+      }
+      return { response: { message: { content: JSON.stringify(rootActions.shift()) } } };
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'Final from subcall observation.');
+  assert.ok(result.observations.some((item) => item.action.type === 'sub_lm'));
+  assert.ok(result.observations.some((item) => item.result?.content === 'key point'));
+  assert.equal(calls.filter((call) => call.options.rlmSubcall === true).length, 1);
 }
 
 async function testRootLoopRetriesInvalidJsonAction() {
@@ -445,7 +548,10 @@ async function testRootLoopBudgetExhaustion() {
   await testSandboxWorkerBlocksAstEscapes();
   await testStructuredActionsOperateOnEnvironment();
   await testStructuredActionsFailClosed();
+  await testSubLmActionUsesModelTransportAndBudget();
+  await testSubLmActionFailsClosedAtBudgetLimit();
   await testRootLoopExecutesStructuredActions();
+  await testRootLoopCanUseSubLmObservation();
   await testRootLoopRetriesInvalidJsonAction();
   await testRootLoopBudgetExhaustion();
   console.log('rlm-service regression tests passed');

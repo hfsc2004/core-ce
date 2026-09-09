@@ -50,19 +50,12 @@ async function launchInterface(type) {
       })();
       const provider = String(launchOptions?.provider || '').trim().toLowerCase();
 
-      if (provider === 'llama.cpp' || provider === 'llama-cpp' || provider === 'llamacpp') {
-        const terminalResult = await window.electronAPI.openOllamaTerminal('', 0, null, '', '', launchOptions);
-        if (!terminalResult?.success) {
-          await copyThenAlert(`Failed to start llama.cpp terminal session:\n${terminalResult?.message || 'Unknown error'}`);
-        }
-      } else {
-        // Launch PSF Terminal through existing Ollama path.
-        const ollamaResult = await window.electronAPI.launchModelInOllama('', '', 'default', false);
-        if (ollamaResult.success) {
-          await window.electronAPI.openOllamaTerminal('', 0, ollamaResult.port, '', '', launchOptions);
-        } else {
-          alert(`Failed to start Ollama:\n${ollamaResult.message}`);
-        }
+      const terminalResult = await window.electronAPI.openOllamaTerminal('', 0, null, '', '', launchOptions);
+      if (!terminalResult?.success) {
+        const label = (provider === 'llama.cpp' || provider === 'llama-cpp' || provider === 'llamacpp')
+          ? 'llama.cpp terminal session'
+          : 'PSF Terminal';
+        await copyThenAlert(`Failed to start ${label}:\n${terminalResult?.message || 'Unknown error'}`);
       }
       
     } else if (type === 'openwebui') {

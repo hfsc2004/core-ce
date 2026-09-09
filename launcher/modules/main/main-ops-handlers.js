@@ -46,6 +46,12 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     return 'ollama';
   }
 
+  function normalizeSessionBackend(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'llamacpp' || raw === 'llama.cpp' || raw === 'llama-cpp') return 'llama-cpp';
+    return raw || 'ollama';
+  }
+
   function catalogRuntimeConfigForModel(modelPath, modelName) {
     const modelsDir = path.join(appDir, '..', 'models');
     const wantedPath = String(modelPath || '').trim();
@@ -145,6 +151,17 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     });
   }
 
+  function isProcessAlive(pid) {
+    const candidatePid = Number(pid || 0);
+    if (!Number.isFinite(candidatePid) || candidatePid <= 0) return false;
+    try {
+      process.kill(candidatePid, 0);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function cleanupTerminalSessions() {
     const sessions = sessionManager?.getActiveSessionsForService?.('terminal') || [];
     if (!Array.isArray(sessions) || sessions.length === 0) return;
@@ -210,7 +227,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       if (!sessionId) continue;
       const owner = Number(session?.metadata?.ownerWindowId || 0);
       if (!owner || owner !== ownerWindowId) continue;
-      const backend = String(session?.metadata?.backend || 'ollama').trim().toLowerCase() || 'ollama';
+      const backend = normalizeSessionBackend(session?.metadata?.backend || 'ollama');
       if (normalizedFilter !== 'all' && backend !== normalizedFilter) continue;
       try {
         await sessionManager.closeSession(sessionId, { ollama: PortPool });
@@ -254,30 +271,66 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     const existingSessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
     if (Array.isArray(existingSessions)) {
       for (const session of existingSessions) {
-        const backend = String(session?.metadata?.backend || '').toLowerCase();
-        if (backend !== 'llama-cpp') continue;
+        const sessionId = String(session?.sessionId || '').trim() || '(unknown)';
+        const backend = normalizeSessionBackend(session?.metadata?.backend || '');
+        if (backend !== 'llama-cpp') {
+          console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: backend=${backend || '(empty)'}`);
+          continue;
+        }
         const sessionOwnerWindowId = Number(session?.metadata?.ownerWindowId || 0) || null;
-        if (ownerWindowId && sessionOwnerWindowId && sessionOwnerWindowId !== ownerWindowId) continue;
+        if (ownerWindowId && sessionOwnerWindowId && sessionOwnerWindowId !== ownerWindowId) {
+          console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: owner ${sessionOwnerWindowId} != ${ownerWindowId}`);
+          continue;
+        }
         const sessionModelPath = normalizeLlamaCppModelPathForCompare(session?.metadata?.modelPath || '');
-        if (modelPath && sessionModelPath && sessionModelPath !== modelPath) continue;
+        if (modelPath && sessionModelPath && sessionModelPath !== modelPath) {
+          console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: modelPath mismatch session="${sessionModelPath}" requested="${modelPath}"`);
+          continue;
+        }
         const sessionModelName = String(session?.metadata?.modelName || '').trim().toLowerCase();
-        if (modelName && sessionModelName && sessionModelName !== modelName.toLowerCase()) continue;
+        if (modelName && sessionModelName && sessionModelName !== modelName.toLowerCase()) {
+          console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: modelName mismatch session="${sessionModelName}" requested="${modelName.toLowerCase()}"`);
+          continue;
+        }
         const sessionTemplate = String(session?.metadata?.chatTemplate || '').trim();
-        if (chatTemplate && sessionTemplate && sessionTemplate !== chatTemplate) continue;
+        if (chatTemplate && sessionTemplate && sessionTemplate !== chatTemplate) {
+          console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: chatTemplate mismatch`);
+          continue;
+        }
         const sessionContextSize = Number(session?.metadata?.contextSize || 0);
         if (Number.isFinite(requestedContextSize) && requestedContextSize > 0) {
-          if (!Number.isFinite(sessionContextSize) || sessionContextSize <= 0) continue;
-          if (sessionContextSize < requestedContextSize) continue;
+          if (!Number.isFinite(sessionContextSize) || sessionContextSize <= 0) {
+            console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: missing session context size`);
+            continue;
+          }
+          if (sessionContextSize < requestedContextSize) {
+            console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: context ${sessionContextSize} < ${requestedContextSize}`);
+            continue;
+          }
         }
         if (requireGpuSession) {
           const sessionForceCpu = session?.metadata?.forceCpu === true;
           const sessionGpuLayers = Number(session?.metadata?.gpuLayers);
-          if (sessionForceCpu) continue;
-          if (!Number.isFinite(sessionGpuLayers) || sessionGpuLayers <= 0) continue;
+          if (sessionForceCpu) {
+            console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: existing session is CPU-forced`);
+            continue;
+          }
+          if (!Number.isFinite(sessionGpuLayers) || sessionGpuLayers <= 0) {
+            console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: existing session has no GPU layers`);
+            continue;
+          }
         }
         const port = Number(session?.ollamaPort || 0);
-        if (port <= 0) continue;
-        if (!(await isLlamaCppResponsive(port))) continue;
+        if (port <= 0) {
+          console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: missing port`);
+          continue;
+        }
+        const responsive = await isLlamaCppResponsive(port);
+        const alive = responsive || isProcessAlive(session?.ollamaPID);
+        if (!alive) {
+          console.warn(`[main-ops] Skipping stale llama.cpp terminal session ${sessionId} on port ${port}`);
+          continue;
+        }
         if (ownerWindowId && session?.sessionId && sessionOwnerWindowId !== ownerWindowId) {
           try {
             sessionManager.updateSession(session.sessionId, {
@@ -287,6 +340,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
             // best effort
           }
         }
+        console.log(`[main-ops] Reusing BMOC llama.cpp terminal session ${sessionId} on port ${port}${responsive ? '' : ' (process alive, still warming)'}`);
         return {
           success: true,
           port,
@@ -295,7 +349,8 @@ function registerOpsHandlers(ipcMain, deps = {}) {
           reused: true,
           modelPath: sessionModelPath || null,
           chatTemplate: String(session?.metadata?.chatTemplate || '').trim() || null,
-          baseUrl: `http://127.0.0.1:${port}`
+          baseUrl: `http://127.0.0.1:${port}`,
+          warming: !responsive
         };
       }
     }
@@ -618,6 +673,12 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       let terminalPort = Number(ollamaPort || 0);
       const ownerWindow = event && event.sender ? BrowserWindow.fromWebContents(event.sender) : null;
       const ownerWindowId = Number(ownerWindow?.id || 0) || null;
+      let modelConfig = null;
+      if (collection && modelId) {
+        const configResult = modelConfigManager.getModelConfig(appDir, collection, modelId);
+        if (configResult.success) modelConfig = configResult;
+      }
+      const modelParams = (modelConfig?.params && typeof modelConfig.params === 'object') ? modelConfig.params : {};
 
       if (preferredProvider === 'llama.cpp') {
         await closeWindowOwnedTerminalSessions(ownerWindowId, 'ollama');
@@ -628,7 +689,13 @@ function registerOpsHandlers(ipcMain, deps = {}) {
             ...options,
             modelName: explicitLlamaCppModelName,
             modelPath: explicitLlamaCppModelPath,
-            llamaCppModelPath: String(options.llamaCppModelPath || options.modelPath || '').trim()
+            llamaCppModelPath: String(options.llamaCppModelPath || options.modelPath || '').trim(),
+            contextSize: Number.isFinite(Number(options.contextSize))
+              ? Number(options.contextSize)
+              : (Number.isFinite(Number(modelParams.num_ctx)) ? Number(modelParams.num_ctx) : undefined),
+            gpuLayers: Number.isFinite(Number(options.gpuLayers))
+              ? Number(options.gpuLayers)
+              : (Number.isFinite(Number(modelParams.num_gpu)) ? Number(modelParams.num_gpu) : undefined)
           }, event);
           if (!startResult?.success) {
             return { success: false, message: startResult?.message || 'Failed to start BMOC llama.cpp terminal session.' };
@@ -681,12 +748,6 @@ function registerOpsHandlers(ipcMain, deps = {}) {
           startResult = { ...(startResult || {}), sessionId: matchedSession.sessionId };
         }
       }
-
-      let modelConfig = null;
-      if (collection && modelId) {
-        const configResult = modelConfigManager.getModelConfig(appDir, collection, modelId);
-        if (configResult.success) modelConfig = configResult;
-      }
       const openResult = await ollamaManager.openOllamaTerminal(
         appDir,
         modelName,
@@ -718,7 +779,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
         sessionManager.updateSession?.(openedSessionId, {
           metadata: {
             ...existingMeta,
-            backend: preferredProvider,
+            backend: normalizeSessionBackend(preferredProvider),
             ownerWindowId: openedWindowId,
             serviceType: 'terminal',
             startedVia: existingMeta.startedVia || 'open-ollama-terminal'

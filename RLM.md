@@ -693,6 +693,21 @@ Tasks:
 4. Add depth tracking.
 5. Add `sub_rlm(prompt, options)` after `sub_lm` is stable.
 
+Current implementation status:
+1. Added first-pass `sub_lm` as a structured root-loop action.
+2. `sub_lm` routes through the active RLM model transport, so llama.cpp/OpenAI-compatible Terminal sessions use the same root-loop transport path.
+3. Each `sub_lm` call increments per-session subcall usage.
+4. `maxSubcalls` is enforced fail-closed before starting a new subcall.
+5. `maxTokensPerSubcall` caps requested subcall output.
+6. Root-loop observations include bounded `sub_lm` results for later root iterations.
+7. Regression coverage verifies successful subcalls, budget exhaustion, and root-loop use of a subcall observation.
+
+Current boundary:
+- `sub_lm` is available to the structured root action loop.
+- `sub_lm` is not yet exposed inside the Python REPL worker.
+- `sub_rlm` is not implemented yet.
+- Recursive depth accounting is still pending because there is no nested `sub_rlm` path yet.
+
 Acceptance:
 1. Model-authored loops can call `sub_lm` over prompt chunks.
 2. Sub-call count and depth are enforced.

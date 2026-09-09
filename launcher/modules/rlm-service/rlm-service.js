@@ -10,7 +10,7 @@ const { normalizeModelBehavior, normalizeProfile } = require('./rlm-budget');
 const { validatePythonSource, normalizeSandboxPolicy } = require('./rlm-sandbox-policy');
 const { executePythonSnippet } = require('./rlm-python-runner');
 const { createRlmActionExecutor } = require('./rlm-action-executor');
-const { runRootLoop } = require('./rlm-root-loop');
+const { extractModelContent, runRootLoop } = require('./rlm-root-loop');
 
 function createRlmService(deps = {}) {
   const registerSession = typeof deps.registerSession === 'function' ? deps.registerSession : null;
@@ -24,7 +24,8 @@ function createRlmService(deps = {}) {
   const actionExecutor = createRlmActionExecutor({
     getSession: (sessionId) => sessions.get(sessionId),
     validateSandboxCode,
-    executeSandboxCode
+    executeSandboxCode,
+    runSubLm
   });
 
   async function listAttachmentMetadata(sessionId) {
@@ -227,6 +228,67 @@ function createRlmService(deps = {}) {
     };
   }
 
+  async function runSubLm(session, args = {}) {
+    const sendMessage = session?._rlmSendMessage || defaultSendMessage;
+    if (typeof sendMessage !== 'function') {
+      return { success: false, error: 'RLM model transport is unavailable.' };
+    }
+    if (!session || session.isStopped()) {
+      return { success: false, error: 'RLM session is stopped.' };
+    }
+    if (!session.canRunSubcall()) {
+      return {
+        success: false,
+        budgetExhausted: true,
+        error: `RLM subcall budget exhausted (${session.usage.subcalls}/${session.budget.maxSubcalls}).`
+      };
+    }
+
+    const prompt = String(args.prompt || args.input || '').trim();
+    if (!prompt) {
+      return { success: false, error: 'sub_lm prompt is required.' };
+    }
+    const model = String(args.model || session.model || '').trim();
+    if (!model) {
+      return { success: false, error: 'sub_lm model is required.' };
+    }
+    const maxTokens = Math.max(64, Math.min(
+      Number(session.budget.maxTokensPerSubcall) || 1024,
+      Number(args.max_tokens || args.maxTokens) || Number(session.budget.maxTokensPerSubcall) || 1024
+    ));
+    const used = session.recordSubcall();
+    session.trace.add('sub-lm-call-started', {
+      model,
+      promptChars: prompt.length,
+      subcallsUsed: used,
+      maxSubcalls: session.budget.maxSubcalls
+    });
+    const result = await sendMessage(model, [
+      { role: 'user', content: prompt }
+    ], {
+      stream: false,
+      rlmSubcall: true,
+      maxTokens
+    });
+    const content = extractModelContent(result);
+    session.trace.add('sub-lm-call-completed', {
+      model,
+      responseChars: content.length,
+      subcallsUsed: used
+    });
+    return {
+      success: true,
+      model,
+      promptChars: prompt.length,
+      responseChars: content.length,
+      content,
+      usage: {
+        subcalls: used,
+        maxSubcalls: session.budget.maxSubcalls
+      }
+    };
+  }
+
   async function stopSession(sessionId, reason = 'stopped') {
     const id = String(sessionId || '').trim();
     const session = sessions.get(id);
@@ -258,11 +320,12 @@ function createRlmService(deps = {}) {
     if (session.isStopped()) {
       return { success: false, error: `RLM session is stopped: ${sessionId}` };
     }
+    session._rlmSendMessage = options.sendMessage || request.sendMessage || defaultSendMessage;
     return runRootLoop({
       session,
       model: request.model || request.modelName || session.model,
       runAction: (id, action) => actionExecutor.runAction(id, action),
-      sendMessage: options.sendMessage || request.sendMessage || defaultSendMessage
+      sendMessage: session._rlmSendMessage
     });
   }
 
