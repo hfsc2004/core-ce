@@ -112,6 +112,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sessionMemorySessions: (options = {}) => ipcRenderer.invoke('session-memory:sessions', options),
   sessionMemoryClear: (options = {}) => ipcRenderer.invoke('session-memory:clear', options),
   rlmRunTurn: (payload = {}) => ipcRenderer.invoke('rlm:run-turn', payload),
+  rlmStartSession: (payload = {}) => ipcRenderer.invoke('rlm:start-session', payload),
+  rlmRunDryTurn: (payload = {}) => ipcRenderer.invoke('rlm:run-dry-turn', payload),
+  rlmGetSession: (sessionId = '') => ipcRenderer.invoke('rlm:get-session', sessionId),
+  rlmStopSession: (sessionId = '', reason = 'stopped') => ipcRenderer.invoke('rlm:stop-session', sessionId, reason),
+  rlmListSessions: () => ipcRenderer.invoke('rlm:list-sessions'),
+  rlmValidateSandboxCode: (payload = {}) => ipcRenderer.invoke('rlm:validate-sandbox-code', payload),
+  rlmExecuteSandboxCode: (payload = {}) => ipcRenderer.invoke('rlm:execute-sandbox-code', payload),
+  rlmRunAction: (payload = {}) => ipcRenderer.invoke('rlm:run-action', payload),
+  appZoomDelta: (delta = 0) => ipcRenderer.invoke('app-zoom:delta', delta),
+  appZoomReset: () => ipcRenderer.invoke('app-zoom:reset'),
+  appZoomGet: () => ipcRenderer.invoke('app-zoom:get'),
   terminalAttachmentsList: (options = {}) => ipcRenderer.invoke('terminal:attachments-list', options),
   terminalAttachmentsAttachFile: (payload = {}) => ipcRenderer.invoke('terminal:attachments-attach-file', payload),
   terminalAttachmentsAttachText: (payload = {}) => ipcRenderer.invoke('terminal:attachments-attach-text', payload),
@@ -365,3 +376,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Dialog APIs (Proper GTK integration to avoid signal handler errors on Linux)
   showConfirmDialog: (options) => ipcRenderer.invoke('show-confirm-dialog', options)
 });
+
+let psfZoomWheelAccumulator = 0;
+
+window.addEventListener('wheel', (event) => {
+  if (!event.ctrlKey && !event.metaKey) return;
+  event.preventDefault();
+  psfZoomWheelAccumulator += Number(event.deltaY) || 0;
+  if (Math.abs(psfZoomWheelAccumulator) < 48) return;
+  const delta = psfZoomWheelAccumulator < 0 ? 1 : -1;
+  psfZoomWheelAccumulator = 0;
+  ipcRenderer.invoke('app-zoom:delta', delta).catch(() => {});
+}, { passive: false });
+
+window.addEventListener('keydown', (event) => {
+  if (!event.ctrlKey && !event.metaKey) return;
+  const key = String(event.key || '').toLowerCase();
+  if (key !== '+' && key !== '=' && key !== '-' && key !== '0') return;
+  event.preventDefault();
+  if (key === '0') {
+    ipcRenderer.invoke('app-zoom:reset').catch(() => {});
+  } else {
+    ipcRenderer.invoke('app-zoom:delta', key === '-' ? -1 : 1).catch(() => {});
+  }
+}, { capture: true });

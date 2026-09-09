@@ -66,6 +66,7 @@ const mainDialogSystem = require('./modules/main/main-dialog-system');
 const mainRuntimeHandlers = require('./modules/main/main-runtime-handlers');
 const mainOpsHandlers = require('./modules/main/main-ops-handlers');
 const mainMoeChatWindow = require('./modules/main/main-moe-chat-window');
+const mainWindowZoom = require('./modules/main/main-window-zoom');
 const { getSafeWindowBounds } = require('./modules/window-bounds');
 const createCanaryMonitor = require('./modules/canary-monitor');
 
@@ -147,6 +148,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'src', 'index-developer.html'));
+  mainWindowZoom.attachZoomHandlers(mainWindow);
 
   // On Linux/Windows we want "close main window" to mean "quit app",
   // even if auxiliary windows were left open (e.g. undocked coding terminal).
@@ -303,6 +305,8 @@ app.whenReady().then(async () => {
   context.modRootDir = path.join(__dirname, '..', '.psf', 'mods');
   await context.modLoader.initialize();
   
+  mainWindowZoom.registerZoomIpc(ipcMain);
+
   // Register all simple IPC handlers
   ipcHandlers.registerAll(ipcMain, context);
   

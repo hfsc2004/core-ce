@@ -53,6 +53,62 @@ function createRlmHandlers() {
           ctx.ollamaManager.sendMessage(modelName, messages, options)
       });
       return engine.runTurn(payload || {});
+    },
+
+    'rlm:start-session': async (ctx, event, payload = {}) => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.startRlmSession !== 'function') {
+        return { success: false, error: 'RLM service is unavailable.' };
+      }
+      return ctx.sessionManager.startRlmSession(payload || {});
+    },
+
+    'rlm:run-dry-turn': async (ctx, event, payload = {}) => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.runRlmDryTurn !== 'function') {
+        return { success: false, error: 'RLM service is unavailable.' };
+      }
+      return ctx.sessionManager.runRlmDryTurn(payload || {});
+    },
+
+    'rlm:get-session': async (ctx, event, sessionId = '') => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.getRlmSession !== 'function') {
+        return { success: false, error: 'RLM service is unavailable.' };
+      }
+      return ctx.sessionManager.getRlmSession(sessionId);
+    },
+
+    'rlm:stop-session': async (ctx, event, sessionId = '', reason = 'stopped') => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.stopRlmSession !== 'function') {
+        return { success: false, error: 'RLM service is unavailable.' };
+      }
+      return ctx.sessionManager.stopRlmSession(sessionId, reason);
+    },
+
+    'rlm:list-sessions': async (ctx) => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.listRlmSessions !== 'function') {
+        return { success: false, error: 'RLM service is unavailable.' };
+      }
+      return ctx.sessionManager.listRlmSessions();
+    },
+
+    'rlm:validate-sandbox-code': async (ctx, event, payload = {}) => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.validateRlmSandboxCode !== 'function') {
+        return { success: false, error: 'RLM sandbox service is unavailable.' };
+      }
+      return ctx.sessionManager.validateRlmSandboxCode(payload || {});
+    },
+
+    'rlm:execute-sandbox-code': async (ctx, event, payload = {}) => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.executeRlmSandboxCode !== 'function') {
+        return { success: false, error: 'RLM sandbox service is unavailable.' };
+      }
+      return ctx.sessionManager.executeRlmSandboxCode(payload || {});
+    },
+
+    'rlm:run-action': async (ctx, event, payload = {}) => {
+      if (!ctx.sessionManager || typeof ctx.sessionManager.runRlmAction !== 'function') {
+        return { success: false, error: 'RLM action service is unavailable.' };
+      }
+      return ctx.sessionManager.runRlmAction(payload || {});
     }
   };
 }

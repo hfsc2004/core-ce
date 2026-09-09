@@ -12,12 +12,14 @@ This keeps model behavior flexible while moving safety-critical implementation i
 
 ## RLM Positioning
 
-This layer is explicitly designed to support Recursive Language Model (RLM) workflows, but it is not limited to RLM.
+This layer can support Recursive Language Model (RLM) workflows, but deterministic tools are not themselves an RLM.
+
+Per the MIT CSAIL paper `Recursive Language Models`, an RLM treats the user prompt as an external environment object, exposes that object through a persistent REPL, and lets the model write code that inspects prompt slices and recursively invokes model calls. Attachments and document tools are only possible environment data sources.
 
 Detailed PSF Terminal RLM behavior and operations are documented in:
 - `RLM_Assisted_PSF_Terminal_1_1_2.md`
 
-RLM-relevant deterministic capabilities in the default pack:
+RLM-relevant deterministic capabilities in the default pack include:
 
 1. deterministic chunking (`chunk_text`)
 2. deterministic local retrieval (`find_lines`)
@@ -28,6 +30,11 @@ RLM-relevant deterministic capabilities in the default pack:
 RLM policy preset:
 - preset name: `rlm`
 - allows only the RLM-safe tool subset for known surfaces/roles
+- does not grant unrestricted shell, filesystem, network, or process access
+
+Current status:
+- the existing PSF implementation is a partial RLM document-assist scaffold
+- a full MIT-style RLM still requires a sandboxed persistent REPL, prompt-as-variable environment, recursive sub-call API, and root loop/finalization controller
 
 ## Core Components
 

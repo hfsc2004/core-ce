@@ -29,7 +29,7 @@ This release focuses on PSF Terminal provider response handling and llama.cpp co
 
 1. Syntax checks passed for changed JavaScript modules using `node --check`.
 2. Terminal chatflow regression tests passed.
-3. Existing RLM-named attachment engine regression tests passed.
+3. Existing RLM document-assist engine regression tests passed.
 4. Deterministic tools, attachments, and bucket-security regression tests passed.
 5. `git diff --check` passed before commit.
 

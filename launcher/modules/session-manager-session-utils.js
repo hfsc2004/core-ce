@@ -18,6 +18,9 @@ function normalizeServiceType(serviceType) {
     terminal: 'terminal',
     'ollama-terminal': 'terminal',
     ollama_terminal: 'terminal',
+    rlm: 'rlm',
+    'recursive-language-model': 'rlm',
+    recursive_language_model: 'rlm',
     'moe-agent': 'moe-agent',
     moe_agent: 'moe-agent',
     agent: 'moe-agent'
@@ -81,7 +84,8 @@ function getSessionStats(activeSessions) {
     total: 0,
     openwebui: 0,
     anythingllm: 0,
-    terminal: 0
+    terminal: 0,
+    rlm: 0
   };
 
   Object.values(activeSessions || {}).forEach((session) => {
@@ -104,6 +108,7 @@ function getSessionSummary(activeSessions) {
     `║    WebUI:        ${String(stats.openwebui).padEnd(4)}                                          ║`,
     `║    AnythingLLM:  ${String(stats.anythingllm).padEnd(4)}                                          ║`,
     `║    Terminal:     ${String(stats.terminal).padEnd(4)}                                          ║`,
+    `║    RLM:          ${String(stats.rlm).padEnd(4)}                                          ║`,
     '╠══════════════════════════════════════════════════════════════════╣'
   ];
 
@@ -111,7 +116,9 @@ function getSessionSummary(activeSessions) {
     summary.push('║  Active Sessions:                                                 ║');
     for (const [sessionId, session] of sessions) {
       const shortId = sessionId.substring(0, 25);
-      summary.push(`║    ${shortId.padEnd(26)} Port: ${String(session.ollamaPort).padEnd(5)} PID: ${String(session.ollamaPID).padEnd(7)}║`);
+      const port = session.ollamaPort || session.servicePort || '-';
+      const pid = session.ollamaPID || session.servicePID || '-';
+      summary.push(`║    ${shortId.padEnd(26)} Port: ${String(port).padEnd(5)} PID: ${String(pid).padEnd(7)}║`);
     }
   } else {
     summary.push('║  No active sessions                                               ║');
