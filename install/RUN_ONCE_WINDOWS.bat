@@ -1,4 +1,4 @@
-REM @version 1.1.3 - March 5, 2026
+REM @version 1.1.13 - September 9, 2026
 REM @copyright 2026 Pseudo SF
 @echo off
 echo ============================================================
@@ -7,7 +7,7 @@ echo First Run Setup
 echo ============================================================
 echo.
 
-cd launcher
+cd /d "%~dp0..\launcher" || exit /b 1
 
 if exist node_modules (
     echo [OK] Node modules already installed.

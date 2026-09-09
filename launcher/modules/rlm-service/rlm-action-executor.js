@@ -26,6 +26,7 @@ function createRlmActionExecutor(options = {}) {
   const getSession = typeof options.getSession === 'function' ? options.getSession : null;
   const validateSandboxCode = typeof options.validateSandboxCode === 'function' ? options.validateSandboxCode : null;
   const executeSandboxCode = typeof options.executeSandboxCode === 'function' ? options.executeSandboxCode : null;
+  const runSubLm = typeof options.runSubLm === 'function' ? options.runSubLm : null;
 
   async function runAction(sessionId, action = {}) {
     const id = String(sessionId || '').trim();
@@ -86,6 +87,20 @@ function createRlmActionExecutor(options = {}) {
       result = env.listValues();
     } else if (type === 'set_final') {
       result = env.setFinal(args.value || action.value || '');
+    } else if (type === 'sub_lm') {
+      if (!runSubLm) return { success: false, error: 'RLM sub_lm transport is unavailable.' };
+      result = await runSubLm(session, args);
+      if (!result || result.success !== true) {
+        return {
+          success: false,
+          handled: true,
+          sessionId: id,
+          action: type,
+          error: result?.error || 'RLM sub_lm failed.',
+          budgetExhausted: result?.budgetExhausted === true,
+          environment: env.getMetadata()
+        };
+      }
     } else if (type === 'validate_sandbox_code') {
       if (!validateSandboxCode) return { success: false, error: 'RLM sandbox validator is unavailable.' };
       result = validateSandboxCode({ sessionId: id, code: args.code || action.code || '' });

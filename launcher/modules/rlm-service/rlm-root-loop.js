@@ -21,6 +21,7 @@ const ACTION_SCHEMA = {
         'get_value',
         'list_values',
         'set_final',
+        'sub_lm',
         'validate_sandbox_code',
         'execute_sandbox_code'
       ]
@@ -125,6 +126,7 @@ function buildRootMessages(session, observations = []) {
     `Allowed action types are: ${ACTION_SCHEMA.properties.type.enum.join(', ')}.`,
     'Set the final answer with {"type":"set_final","args":{"value":"..."}} when ready.',
     'Do not ask for the full prompt.',
+    'Use sub_lm only for bounded sub-questions over prompt slices or intermediate values.',
     'Sandbox execution may be unavailable; if execute_sandbox_code is rejected, continue with non-execution actions.'
   ].join('\n');
   const userPayload = {

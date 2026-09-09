@@ -323,8 +323,10 @@
       ctx.addSystemMessage('Commands: /help, /clear, /models, /system, /temp, /local, /room, /token, /save, /load, /switch, /show, /port, /attach, /attachments, /detach, /clearattachments');
 
       ctx.loadSessionMemoryPreferences().then(() => ctx.loadInputRecallHistory());
-      setTimeout(() => ctx.verifyGPUUsage(), 3000);
-      setInterval(() => ctx.verifyGPUUsage(), 30000);
+      if (provider === 'ollama') {
+        setTimeout(() => ctx.verifyGPUUsage(), 3000);
+        setInterval(() => ctx.verifyGPUUsage(), 30000);
+      }
       ctx.userInput.focus();
     }
 
