@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.12 Core-CE] - 2026-09-08
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.12`.
+- Updated RLM documentation to record fresh-session PSF Terminal validation and clarify that the current implementation is the root-loop/prompt-environment foundation, with recursive `sub_lm`/`sub_rlm` calls still pending.
+
 ## [v1.1.11 Core-CE] - 2026-09-08
 
 ### Added
