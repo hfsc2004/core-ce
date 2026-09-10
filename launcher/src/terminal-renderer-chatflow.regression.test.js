@@ -117,6 +117,92 @@ async function testRecursiveRlmRunsBeforeLlamaCppProvider() {
   assert.ok(systemMessages.some((message) => message.includes('RLM Engine: mode=recursive-repl')));
 }
 
+async function testRecursiveRlmHandledFailureDoesNotFallBackToProvider() {
+  const createChatFlowController = loadChatFlowController();
+  const userInput = { value: 'Use the RLM environment and sandbox REPL.' };
+  const assistantMessages = [];
+  const systemMessages = [];
+  let pairAppended = false;
+
+  const controller = createChatFlowController({
+    getUserInput: () => userInput,
+    addInputRecallEntry: () => {},
+    handleCommand: async () => {},
+    getActiveStream: () => null,
+    setWaitingState: () => {},
+    addSystemMessage: (message) => systemMessages.push(String(message || '')),
+    addMessage: (role, message) => {
+      if (role === 'assistant') assistantMessages.push(String(message || ''));
+    },
+    getSystemPrompt: () => '',
+    buildAttachmentContext: async () => '',
+    shouldInjectAttachmentContext: () => false,
+    getConversationHistory: () => [],
+    appendConversationPair: () => { pairAppended = true; },
+    getCurrentModel: () => 'Qwen3.8-4B-Q8_0.gguf',
+    buildOllamaOptions: () => ({ num_ctx: 4096, num_gpu: 34 }),
+    getProvider: () => 'llama.cpp',
+    getProviderBaseUrl: () => '',
+    getProviderApiKey: () => '',
+    getProviderModelId: () => '',
+    getLlamaCppModelPath: () => '/tmp/Qwen3.8-4B-Q8_0.gguf',
+    getLlamaCppForceCpu: () => false,
+    setTerminalPort: () => {},
+    setProviderBaseUrl: () => {},
+    addAssistantShell: () => {
+      throw new Error('provider stream shell should not be created after handled RLM failure');
+    },
+    setActiveStream: () => {},
+    finalizeStreamingMessage: () => {},
+    getAttachmentSessionId: () => 'terminal-52454-window-7',
+    getTerminalPort: () => 52454,
+    getElectronAPI: () => ({
+      ensureTerminalLlamaCppSession: async () => {
+        throw new Error('llama.cpp provider startup should not run after handled RLM failure');
+      }
+    }),
+    sanitizeQwenSelfDialogue: (value) => String(value || ''),
+    addErrorMessage: (message) => {
+      throw new Error(message);
+    },
+    focusInput: () => {},
+    setStreamStopRequested: () => {},
+    getStreamStopRequested: () => false,
+    getRlmAssisted: () => true,
+    getRlmController: () => null,
+    getRlmProvider: () => 'engine',
+    runRlmTurn: async () => {
+      throw new Error('legacy RLM should not run');
+    },
+    runRlmLoop: async () => ({
+      success: false,
+      handled: true,
+      error: 'RLM sandbox execution failed.',
+      iterations: 0,
+      observations: [
+        {
+          action: { type: 'execute_sandbox_code' },
+          success: false,
+          error: 'RLM sandbox sub_lm call failed.'
+        }
+      ]
+    }),
+    getRlmVerboseTrace: () => false,
+    getRlmQuality: () => 'balanced',
+    getRlmBudgets: () => ({ maxToolCalls: 40, maxRuntimeMs: 45000 }),
+    getRlmIncludeSharedAttachments: () => false,
+    setThinkingStatusText: () => {}
+  });
+
+  await controller.sendMessage();
+
+  assert.deepStrictEqual(assistantMessages, []);
+  assert.strictEqual(pairAppended, false);
+  assert.strictEqual(userInput.value, '');
+  assert.ok(systemMessages.some((message) => message.includes('RLM engine error: RLM sandbox execution failed.')));
+  assert.ok(systemMessages.some((message) => message.includes('RLM Trace: actions=execute_sandbox_code')));
+}
+
 function createLlamaCppControllerForSse(sse, hooks = {}) {
   const defaultFetch = async (_url, request = {}) => {
     if (typeof hooks.onFetch === 'function') hooks.onFetch(request);
@@ -488,6 +574,7 @@ async function testLlamaCppUsesCurrentSessionImageForVisionIntent() {
 
 async function run() {
   await testRecursiveRlmRunsBeforeLlamaCppProvider();
+  await testRecursiveRlmHandledFailureDoesNotFallBackToProvider();
   await testLlamaCppThinkingAndAnswerStaySeparate();
   await testLlamaCppThinkingOnlyStreamIsNotAnswer();
   await testLlamaCppDropsOldHistoryWhenContextIsTight();

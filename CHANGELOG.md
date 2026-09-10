@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.19 Core-CE] - 2026-09-10
+
+### Added
+- Added grounded Recursive RLM attachment summarization through `summarize_attachment`, including matching text-extractable attachments, reading extracted PDF/text content, chapter isolation, chunk summaries, and final composition from excerpt notes.
+- Added Recursive RLM actions for attachment metadata and text access: `list_attachments`, `read_attachment`, `search_attachment`, and `summarize_attachment`.
+- Added regression coverage for chapter-summary trigger detection, grounded attachment chapter reads, and root-loop routing that summarizes attachments before any root-model guesswork.
+
+### Fixed
+- Fixed normal file/chapter prompts routed to Recursive RLM so they no longer stop at `inspect_environment_metadata -> set_final` with an ungrounded model guess.
+- Fixed handled Recursive RLM failures in PSF Terminal so they show an RLM error/trace instead of falling through to ordinary provider chat.
+
+### Changed
+- Bumped package and active catalog revision metadata to `1.1.19`.
+- Updated RLM documentation with user-facing trigger instructions and grounded attachment-summary behavior.
+
 ## [v1.1.18 Core-CE] - 2026-09-09
 
 ### Added

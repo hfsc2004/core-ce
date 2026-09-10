@@ -64,6 +64,7 @@ Current implementation:
 - Exposes bounded prompt helpers, Scratch, and Final state.
 - Runs a root controller that emits one structured JSON action at a time.
 - Supports `map_prompt_chunks`, `compose_final`, direct `sub_lm`, and sandboxed Python helper execution.
+- Supports grounded attachment summaries for text-extractable files through `summarize_attachment`.
 - Supports sandboxed Python `sub_lm(...)` through a host-mediated trampoline with caching, budgets, and bounded trace metadata.
 - Does not expose provider credentials, network access, shell access, arbitrary imports, or unrestricted filesystem access to the Python worker.
 - Does not yet provide a persistent multi-turn REPL process or nested `sub_rlm(...)`.
@@ -167,6 +168,21 @@ Not yet exposed inside sandbox:
 2. `search_attachment(...)`
 3. workspace/codebase helpers
 4. nested `sub_rlm(...)`
+
+Implemented grounded attachment actions:
+1. `list_attachments`
+2. `read_attachment`
+3. `search_attachment`
+4. `summarize_attachment`
+
+`summarize_attachment` behavior:
+1. Selects the best matching text-extractable attachment from the active Terminal/RAG attachment target.
+2. Reads extracted text through the attachment store.
+3. Detects chapter requests such as `chapter 3` or `chapter four`.
+4. Attempts to isolate that chapter using extracted-text headings.
+5. Summarizes bounded chunks with `sub_lm`.
+6. Composes Final from the chunk summaries.
+7. If the requested chapter heading is not found, the final-composition prompt requires the model to say so instead of pretending the exact chapter was located.
 
 ### 3. Sandboxed REPL
 
@@ -814,6 +830,49 @@ Current implementation status:
 6. Recursive RLM output is rendered as the assistant answer, with compact root action trace lines rendered separately as system messages.
 7. Verbose trace mode renders bounded root-loop observations as separate `RLM Step` system messages.
 8. Full dedicated trace panels, behavior-profile controls, and user warnings are still pending.
+
+Current PSF Terminal usage:
+1. Open PSF Terminal settings.
+2. Enable `RLM Mode`.
+3. Set `RLM Engine` to `Recursive RLM`.
+4. Use an explicit RLM prompt when you want the recursive engine, such as `Use the RLM environment...`.
+5. Use explicit sandbox wording when you want the sandboxed Python helper path, such as `Use the RLM environment and sandbox REPL...` or `execute sandbox code before the final answer...`.
+
+Current deterministic trigger behavior:
+1. Simple chat does not run RLM automatically.
+2. Prompts containing `RLM`, `recursive language model`, or `RLM environment` route through the Recursive RLM engine when that provider is selected.
+3. Prompts mentioning document/file/attachment analysis can route through RLM document-assist behavior.
+4. Prompts mentioning `sandbox`, `sandbox REPL`, `execute sandbox code`, or `REPL` require `execute_sandbox_code`.
+5. If the user does not use those cues, the model should not be expected to choose the sandbox path automatically yet.
+6. A future UI mode should replace this wording dependency with an explicit `Off / Document Assist / Recursive RLM / Sandbox REPL / Auto` control.
+
+Example grounded PDF/chapter prompt:
+
+```text
+please summarize chapter 4 of College ESL Writers_ Applied Grammar and Composing Strategies for.pdf
+```
+
+Expected trace shape:
+
+```text
+RLM progress: summarize_attachment started
+RLM progress: summarize_attachment done
+RLM Trace: actions=summarize_attachment source=recursive-loop iterations=0
+```
+
+Example sandbox REPL prompt:
+
+```text
+Use the RLM environment and sandbox REPL. Write a numbered outline for a short space-opera story where a persecuted star-caravan people recover a stolen legal pardon from flamboyant space pirates before a bureaucratic empire can erase them. Before the final answer, execute sandbox code that reads a prompt slice, calls sub_lm once to summarize the central conflict, stores that summary in Scratch, and then sets the final answer. Keep the final answer under 500 words.
+```
+
+Expected trace shape:
+
+```text
+RLM progress: execute_sandbox_code started
+RLM progress: execute_sandbox_code done
+RLM Trace: actions=execute_sandbox_code source=recursive-loop iterations=0
+```
 
 Acceptance:
 1. Normal chat defaults to Off.

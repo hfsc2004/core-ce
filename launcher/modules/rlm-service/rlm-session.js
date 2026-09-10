@@ -32,6 +32,7 @@ function createRlmSession(options = {}) {
   return {
     bmocSessionId: String(options.bmocSessionId || ''),
     parentSessionId: String(options.parentSessionId || ''),
+    attachmentSessionId: String(options.attachmentSessionId || options.parentSessionId || ''),
     surface: String(options.surface || 'terminal'),
     mode: String(options.mode || 'recursive-repl-dry-run'),
     model: String(options.model || ''),

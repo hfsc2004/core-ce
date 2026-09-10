@@ -21,8 +21,9 @@ function createRlmService(deps = {}) {
   const sandboxExecutionEnabled = deps.enableSandboxExecution === true;
   const defaultSendMessage = typeof deps.sendMessage === 'function' ? deps.sendMessage : null;
   const sessions = new Map();
-  const actionExecutor = createRlmActionExecutor({
+    const actionExecutor = createRlmActionExecutor({
     getSession: (sessionId) => sessions.get(sessionId),
+    readAttachmentText,
     validateSandboxCode,
     executeSandboxCode,
     runSubLm
@@ -76,6 +77,7 @@ function createRlmService(deps = {}) {
     const session = createRlmSession({
       bmocSessionId,
       parentSessionId,
+      attachmentSessionId,
       surface: request.surface,
       mode,
       model: request.model || request.modelName,
@@ -101,6 +103,26 @@ function createRlmService(deps = {}) {
     }
 
     return session.getStatus();
+  }
+
+  async function readAttachmentText(session, args = {}) {
+    if (!attachmentStore || typeof attachmentStore.readAttachmentText !== 'function') {
+      return { success: false, error: 'RLM attachment store is unavailable.' };
+    }
+    const sessionId = String(args.sessionId || session?.attachmentSessionId || session?.parentSessionId || '').trim();
+    const attachmentId = String(args.attachmentId || args.id || '').trim();
+    if (!sessionId) return { success: false, error: 'RLM attachment session is unavailable.' };
+    if (!attachmentId) return { success: false, error: 'attachmentId is required.' };
+    try {
+      const read = await attachmentStore.readAttachmentText({
+        sessionId,
+        attachmentId,
+        maxBytes: Math.max(1024, Number(args.maxBytes) || 5 * 1024 * 1024)
+      });
+      return { success: true, sessionId, attachmentId, ...read };
+    } catch (err) {
+      return { success: false, error: err?.message || String(err) };
+    }
   }
 
   function getSessionStatus(sessionId) {

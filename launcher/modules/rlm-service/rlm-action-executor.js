@@ -54,8 +54,109 @@ function looksIncompleteText(text = '') {
   return /\b(and|or|but|because|with|without|for|from|to|in|on|at|by|of|a|an|the|game|plan|where|when|while)$/i.test(value) || /[,;:]$/.test(value);
 }
 
+function scoreAttachmentForPrompt(attachment = {}, prompt = '') {
+  const haystack = String(prompt || '').toLowerCase();
+  const name = String(attachment.displayName || attachment.originalName || '').toLowerCase();
+  const id = String(attachment.id || '').toLowerCase();
+  let score = 0;
+  if (id && haystack.includes(id)) score += 100;
+  if (name && haystack.includes(name)) score += 100;
+  const words = name.split(/[^a-z0-9]+/).filter((word) => word.length >= 3);
+  for (const word of words) {
+    if (haystack.includes(word)) score += 4;
+  }
+  return score;
+}
+
+function pickAttachment(attachments = [], prompt = '') {
+  const textAttachments = attachments.filter((item) => item && item.textExtractable === true);
+  if (textAttachments.length <= 1) return textAttachments[0] || null;
+  return textAttachments
+    .map((item) => ({ item, score: scoreAttachmentForPrompt(item, prompt) }))
+    .sort((a, b) => b.score - a.score)[0]?.item || textAttachments[0] || null;
+}
+
+function extractChapterNumber(text = '') {
+  const match = String(text || '').match(/\bchapter\s+([0-9]{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i);
+  const raw = String(match?.[1] || '').toLowerCase();
+  const words = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+    eleven: 11,
+    twelve: 12
+  };
+  const value = words[raw] || Number(raw);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function extractChapterText(text = '', chapterNumber = 0) {
+  const source = String(text || '');
+  const chapter = Number(chapterNumber) || 0;
+  if (!source || chapter <= 0) return { text: source, found: false, start: 0, end: source.length };
+  const wordNames = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+  const label = wordNames[chapter] ? `(?:${chapter}|${wordNames[chapter]})` : `${chapter}`;
+  const startRegex = new RegExp(`(?:^|\\n)\\s*(?:chapter|ch\\.?)[\\s\\-_:]+${label}\\b`, 'i');
+  const startMatch = startRegex.exec(source);
+  if (!startMatch) return { text: source, found: false, start: 0, end: source.length };
+  const start = Math.max(0, startMatch.index);
+  const nextRegex = /(?:^|\n)\s*(?:chapter|ch\.?)[\s\-_:]+(?:[0-9]{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/ig;
+  nextRegex.lastIndex = start + Math.max(1, startMatch[0].length);
+  let next = null;
+  while ((next = nextRegex.exec(source))) {
+    if (next.index > start + 20) break;
+  }
+  const end = next ? next.index : source.length;
+  return { text: source.slice(start, end), found: true, start, end };
+}
+
+function chunkText(text = '', chunkSize = 2400, overlap = 200, maxChunks = 8) {
+  const source = String(text || '');
+  const size = clampInt(chunkSize, 2400, 256, 20000);
+  const ov = clampInt(overlap, 200, 0, Math.max(0, size - 1));
+  const limit = clampInt(maxChunks, 8, 1, 64);
+  const chunks = [];
+  let start = 0;
+  while (start < source.length && chunks.length < limit) {
+    const end = Math.min(source.length, start + size);
+    chunks.push({ index: chunks.length, start, end, text: source.slice(start, end) });
+    if (end >= source.length) break;
+    start = Math.max(start + 1, end - ov);
+  }
+  return chunks;
+}
+
+function searchText(text = '', pattern = '', maxHits = 20) {
+  const source = String(text || '');
+  const query = String(pattern || '').trim();
+  if (!source || !query) return [];
+  const limit = clampInt(maxHits, 20, 1, 200);
+  const lowerSource = source.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const hits = [];
+  let index = 0;
+  while (hits.length < limit) {
+    const found = lowerSource.indexOf(lowerQuery, index);
+    if (found < 0) break;
+    hits.push({
+      index: found,
+      preview: truncateText(source.slice(Math.max(0, found - 180), Math.min(source.length, found + query.length + 360)), 700)
+    });
+    index = found + Math.max(1, query.length);
+  }
+  return hits;
+}
+
 function createRlmActionExecutor(options = {}) {
   const getSession = typeof options.getSession === 'function' ? options.getSession : null;
+  const readAttachmentText = typeof options.readAttachmentText === 'function' ? options.readAttachmentText : null;
   const validateSandboxCode = typeof options.validateSandboxCode === 'function' ? options.validateSandboxCode : null;
   const executeSandboxCode = typeof options.executeSandboxCode === 'function' ? options.executeSandboxCode : null;
   const runSubLm = typeof options.runSubLm === 'function' ? options.runSubLm : null;
@@ -217,6 +318,117 @@ function createRlmActionExecutor(options = {}) {
         incomplete: looksIncompleteText(finalText),
         finishReason: subResult.finishReason || '',
         scratchNames: names.map((name) => String(name || '').trim()).filter(Boolean)
+      };
+    } else if (type === 'list_attachments') {
+      result = env.getMetadata().attachments;
+    } else if (type === 'read_attachment') {
+      if (!readAttachmentText) return { success: false, error: 'RLM attachment reader is unavailable.' };
+      const metadata = env.getMetadata();
+      const target = args.attachmentId || args.id
+        ? metadata.attachments.items.find((item) => String(item.id) === String(args.attachmentId || args.id))
+        : pickAttachment(metadata.attachments.items, env.slicePrompt(0, Math.min(env.lenPrompt(), maxSlice)));
+      if (!target) return { success: false, error: 'No text-extractable attachment is available.' };
+      const read = await readAttachmentText(session, {
+        attachmentId: target.id,
+        maxBytes: args.maxBytes || args.max_bytes || maxValue
+      });
+      if (!read || read.success !== true) {
+        return { success: false, handled: true, sessionId: id, action: type, error: read?.error || 'RLM attachment read failed.', environment: env.getMetadata() };
+      }
+      const offset = clampInt(args.offset, 0, 0, String(read.text || '').length);
+      const length = clampInt(args.length, Math.min(maxSlice, 12000), 0, maxSlice);
+      result = {
+        attachmentId: target.id,
+        displayName: target.displayName,
+        offset,
+        text: length > 0 ? String(read.text || '').slice(offset, offset + length) : String(read.text || '').slice(offset),
+        fullLength: String(read.text || '').length,
+        truncated: read.truncated === true
+      };
+    } else if (type === 'search_attachment') {
+      if (!readAttachmentText) return { success: false, error: 'RLM attachment reader is unavailable.' };
+      const metadata = env.getMetadata();
+      const target = args.attachmentId || args.id
+        ? metadata.attachments.items.find((item) => String(item.id) === String(args.attachmentId || args.id))
+        : pickAttachment(metadata.attachments.items, env.slicePrompt(0, Math.min(env.lenPrompt(), maxSlice)));
+      if (!target) return { success: false, error: 'No text-extractable attachment is available.' };
+      const read = await readAttachmentText(session, {
+        attachmentId: target.id,
+        maxBytes: args.maxBytes || args.max_bytes || maxValue
+      });
+      if (!read || read.success !== true) {
+        return { success: false, handled: true, sessionId: id, action: type, error: read?.error || 'RLM attachment search failed.', environment: env.getMetadata() };
+      }
+      result = searchText(String(read.text || ''), args.pattern || args.query || '', args.maxHits || args.max_hits || 20);
+    } else if (type === 'summarize_attachment') {
+      if (!readAttachmentText) return { success: false, error: 'RLM attachment reader is unavailable.' };
+      if (!runSubLm) return { success: false, error: 'RLM sub_lm transport is unavailable.' };
+      const task = env.slicePrompt(0, Math.min(env.lenPrompt(), maxSlice));
+      const metadata = env.getMetadata();
+      const target = pickAttachment(metadata.attachments.items, task);
+      if (!target) return { success: false, error: 'No text-extractable attachment is available.' };
+      const read = await readAttachmentText(session, {
+        attachmentId: target.id,
+        maxBytes: args.maxBytes || args.max_bytes || Math.min(maxValue, 5 * 1024 * 1024)
+      });
+      if (!read || read.success !== true) {
+        return { success: false, handled: true, sessionId: id, action: type, error: read?.error || 'RLM attachment summary read failed.', environment: env.getMetadata() };
+      }
+      const chapterNumber = extractChapterNumber(task);
+      const selected = extractChapterText(read.text, chapterNumber);
+      const selectedText = selected.text || read.text || '';
+      const chunks = chunkText(selectedText, args.chunkSize || args.chunk_size || 2400, args.overlap || 220, args.maxChunks || args.max_chunks || 8);
+      const summaries = [];
+      for (const chunk of chunks) {
+        const subResult = await runSubLm(session, {
+          prompt: [
+            'Summarize this attachment excerpt for the user request. Return factual bullet notes only from the excerpt. Do not invent missing content.',
+            `User request:\n${task}`,
+            `Attachment: ${target.displayName}`,
+            chapterNumber > 0 ? `Requested chapter: ${chapterNumber}; chapter heading found: ${selected.found ? 'yes' : 'no'}` : '',
+            `Excerpt ${chunk.index + 1}/${chunks.length}:\n${chunk.text}`
+          ].filter(Boolean).join('\n\n'),
+          max_tokens: 256
+        });
+        if (!subResult || subResult.success !== true) {
+          return {
+            success: false,
+            handled: true,
+            sessionId: id,
+            action: type,
+            error: subResult?.error || 'RLM attachment summary sub_lm failed.',
+            budgetExhausted: subResult?.budgetExhausted === true,
+            environment: env.getMetadata()
+          };
+        }
+        summaries.push({ index: chunk.index, start: chunk.start, end: chunk.end, summary: subResult.content });
+      }
+      env.setValue('attachment_summary_notes', JSON.stringify(summaries, null, 2));
+      const finalResult = await runSubLm(session, {
+        prompt: [
+          'Write the final answer for the user from these excerpt summaries only. If the requested chapter heading was not found, say that clearly before summarizing the closest available extracted text.',
+          `User request:\n${task}`,
+          `Attachment: ${target.displayName}`,
+          chapterNumber > 0 ? `Requested chapter: ${chapterNumber}; chapter heading found: ${selected.found ? 'yes' : 'no'}` : '',
+          `Excerpt summaries:\n${JSON.stringify(summaries, null, 2)}`
+        ].filter(Boolean).join('\n\n'),
+        purpose: 'final_composition',
+        max_tokens: outputTokensForWordLimit(extractRequestedWordLimit(task), 1024)
+      });
+      if (!finalResult || finalResult.success !== true) {
+        return { success: false, handled: true, sessionId: id, action: type, error: finalResult?.error || 'RLM attachment final summary failed.', budgetExhausted: finalResult?.budgetExhausted === true, environment: env.getMetadata() };
+      }
+      const finalText = truncateText(finalResult.content, clampInt(budget.maxFinalOutputChars, 24000, 512, 1000000));
+      env.setFinal(finalText);
+      result = {
+        attachmentId: target.id,
+        displayName: target.displayName,
+        chapterNumber,
+        chapterFound: selected.found,
+        selectedChars: selectedText.length,
+        chunks: chunks.length,
+        summaryChars: finalText.length,
+        finishReason: finalResult.finishReason || ''
       };
     } else if (type === 'set_value') {
       const value = truncateText(args.value, maxValue);

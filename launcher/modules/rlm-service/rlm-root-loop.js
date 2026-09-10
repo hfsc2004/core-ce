@@ -19,6 +19,10 @@ const ACTION_SCHEMA = {
         'chunk_prompt',
         'map_prompt_chunks',
         'compose_final',
+        'list_attachments',
+        'read_attachment',
+        'search_attachment',
+        'summarize_attachment',
         'set_value',
         'get_value',
         'list_values',
@@ -141,6 +145,9 @@ function getRequiredActions(session) {
   if (normalized.includes('execute_sandbox_code')) {
     return ['execute_sandbox_code'];
   }
+  if (normalized.includes('summarize_attachment')) {
+    return ['summarize_attachment'];
+  }
   if (normalized.includes('map_prompt_chunks')) {
     return normalized.filter((action) => action !== 'chunk_prompt' && action !== 'sub_lm');
   }
@@ -244,6 +251,16 @@ function buildRequiredAction(actionType, session, observations = []) {
           'set_value("sandbox_final_draft", answer)',
           'set_final(answer)'
         ].join('\n')
+      }
+    };
+  }
+  if (actionType === 'summarize_attachment') {
+    return {
+      type: 'summarize_attachment',
+      args: {
+        maxChunks: 8,
+        chunkSize: 2400,
+        overlap: 220
       }
     };
   }
@@ -396,6 +413,7 @@ function buildRootMessages(session, observations = []) {
     'Sandbox Python helpers include len_prompt, slice_prompt, search_prompt, chunk_prompt, sub_lm, set_value, get_value, list_values, and set_final.',
     'Sandbox Python may call sub_lm(prompt, max_tokens=...) for bounded host-mediated subcalls; never embed the full Prompt in code.',
     'If sandbox execution sets Final, stop instead of issuing another action.',
+    'For file, PDF, attachment, or chapter summary requests, use summarize_attachment before set_final.',
     'Sandbox execution may be unavailable; if execute_sandbox_code is rejected, continue with non-execution actions.'
   ].join('\n');
   const userPayload = {
