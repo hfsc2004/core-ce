@@ -241,12 +241,13 @@ function registerOpsHandlers(ipcMain, deps = {}) {
     }
 
     const existingSessions = sessionManager.getActiveSessionsForService?.('terminal') || [];
+    const aiDevicePolicyKey = require('../ai-device-policy').fingerprint(require('../ai-device-policy').read(appDir));
     const existingPort = Number(sessionManager.getOllamaPortForService?.('terminal') || 0);
     if (existingPort > 0 && await isOllamaResponsive(existingPort)) {
       const matchedSession = Array.isArray(existingSessions)
         ? existingSessions.find((session) => Number(session?.ollamaPort || 0) === existingPort)
         : null;
-      return {
+      if (matchedSession?.metadata?.aiDevicePolicyKey === aiDevicePolicyKey) return {
         success: true,
         ollamaPort: existingPort,
         sessionId: matchedSession?.sessionId || null,
@@ -304,7 +305,9 @@ function registerOpsHandlers(ipcMain, deps = {}) {
       projectorPath = String(catalogRuntime.projectorPath || '').trim();
     }
     const catalogGpuLayers = Number(catalogRuntime?.gpuLayers);
-    const forceCpu = payload?.forceCpu === true || catalogRuntime?.forceCpu === true;
+    const devicePolicy = require('../ai-device-policy');
+    const aiDevicePolicyKey = devicePolicy.fingerprint(devicePolicy.read(appDir));
+    const forceCpu = payload?.forceCpu === true || catalogRuntime?.forceCpu === true || devicePolicy.read(appDir).mode === 'cpu';
     const effectiveGpuLayers = forceCpu
       ? 0
       : (Number.isFinite(requestedGpuLayersRaw) && requestedGpuLayersRaw > 0
@@ -352,6 +355,7 @@ function registerOpsHandlers(ipcMain, deps = {}) {
           continue;
         }
         const sessionTemplate = String(session?.metadata?.chatTemplate || '').trim();
+        if (session?.metadata?.aiDevicePolicyKey !== aiDevicePolicyKey) continue;
         if (chatTemplate && sessionTemplate && sessionTemplate !== chatTemplate) {
           console.log(`[main-ops] llama.cpp reuse skip ${sessionId}: chatTemplate mismatch`);
           continue;

@@ -99,6 +99,7 @@ async function startOllamaServerOnPort(appPath, gpuInfo, port) {
     OLLAMA_MODELS: path.join(appPath, '..', 'models')
   };
   
+  Object.assign(ollamaEnv, await require('../ai-device-policy').ollamaEnv(appPath, ollamaEnv));
   const ollamaProcess = spawn(ollamaPath, ['serve'], {
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -172,6 +173,7 @@ async function startOllamaServer(appPath, gpuInfo, serviceType = 'terminal') {
     console.log(`[macOS Intel] Using CPU inference`);
   }
   
+  Object.assign(ollamaEnv, await require('../ai-device-policy').ollamaEnv(appPath, ollamaEnv));
   psfOllamaProcess = spawn(ollamaPath, ['serve'], {
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],

@@ -112,6 +112,7 @@ async function startOllamaServerOnPort(appPath, gpuInfo, port) {
   }
   
   // Spawn process with detached:true for process group management
+  Object.assign(ollamaEnv, await require('../ai-device-policy').ollamaEnv(appPath, ollamaEnv));
   const ollamaProcess = spawn(ollamaPath, ['serve'], {
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -204,6 +205,7 @@ async function startOllamaServer(appPath, gpuInfo, serviceType = 'terminal') {
   }
   
   // Spawn process with detached:true to create new process group
+  Object.assign(ollamaEnv, await require('../ai-device-policy').ollamaEnv(appPath, ollamaEnv));
   psfOllamaProcess = spawn(ollamaPath, ['serve'], {
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],

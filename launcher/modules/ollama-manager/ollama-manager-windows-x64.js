@@ -106,6 +106,7 @@ async function startOllamaServerOnPort(appPath, gpuInfo, port) {
     }
   }
   
+  Object.assign(ollamaEnv, await require('../ai-device-policy').ollamaEnv(appPath, ollamaEnv));
   const ollamaProcess = spawn(ollamaPath, ['serve'], {
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -183,6 +184,7 @@ async function startOllamaServer(appPath, gpuInfo, serviceType = 'terminal') {
     }
   }
   
+  Object.assign(ollamaEnv, await require('../ai-device-policy').ollamaEnv(appPath, ollamaEnv));
   psfOllamaProcess = spawn(ollamaPath, ['serve'], {
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],

@@ -284,12 +284,12 @@ function detectLlamaCppBuildProfile() {
   };
 }
 
-function runLlamaCppBuildPreflight(fromPath = null) {
+function runLlamaCppBuildPreflight(fromPath = null, profileOverride = null) {
   const platform = process.platform;
   const arch = process.arch;
   const platformKey = getCurrentPlatformKey();
   const caps = detectLlamaCppAcceleratorCapabilities();
-  const profile = detectLlamaCppBuildProfile();
+  const profile = profileOverride || detectLlamaCppBuildProfile();
 
   const toolchain = runBuildToolchainPreflight();
   const cuda = runCudaPreflight();

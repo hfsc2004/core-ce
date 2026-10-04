@@ -337,6 +337,16 @@ async function terminateChildProcessGroup(child, isExited = () => false) {
 }
 
 async function startLlamaServerOnPort(appDir, options = {}) {
+  const devicePolicy = require('./ai-device-policy');
+  const aiPolicy = options.forceCpu === true
+    ? { ...devicePolicy.resolve({ mode: 'cpu' }, []), key: devicePolicy.fingerprint(devicePolicy.read(appDir)) }
+    : await devicePolicy.runtimePolicy(appDir, 'llama.cpp');
+  if (aiPolicy.mode !== 'auto') {
+    options = { ...options, forceCpu: options.forceCpu === true || aiPolicy.forceCpu,
+      gpuLayers: options.gpuLayers == null && !aiPolicy.forceCpu ? 999 : options.gpuLayers,
+      splitMode: aiPolicy.splitMode || null, mainGpuIndex: aiPolicy.mainGpuIndex ?? null,
+      cudaVisibleDevices: aiPolicy.env.CUDA_VISIBLE_DEVICES };
+  }
   const {
     port,
     modelPath,
@@ -387,6 +397,8 @@ async function startLlamaServerOnPort(appDir, options = {}) {
   if (resolvedProjectorPath) {
     args.push('--mmproj', resolvedProjectorPath);
   }
+  if (aiPolicy.runtimeNames?.length) args.push('--device', aiPolicy.runtimeNames.join(','));
+  if (forceCpu) args.push('--device', 'none');
 
   const templateResolved = inferChatTemplate(appDir, {
     chatTemplate,
@@ -432,6 +444,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
   }
 
   const childEnv = { ...process.env };
+  Object.assign(childEnv, aiPolicy.env);
   const serverDir = path.dirname(availability.serverPath);
   let runtimeLogPath = null;
   let runtimeLogStream = null;
@@ -515,7 +528,10 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     projectorPath: resolvedProjectorPath || null,
     logPath: runtimeLogPath,
     chatTemplate: templateResolved.value || null,
-    chatTemplateSource: templateResolved.source || 'none'
+    chatTemplateSource: templateResolved.source || 'none',
+    aiDevicePolicyKey: aiPolicy.key,
+    forceCpu, gpuLayers: forceCpu ? 0 : gpuLayers,
+    splitMode, mainGpuIndex, cudaVisibleDevices
   };
 }
 

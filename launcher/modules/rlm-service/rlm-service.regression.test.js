@@ -42,23 +42,40 @@ function createFakeBmoc() {
 
 function createService(options = {}) {
   const bmoc = createFakeBmoc();
+  const attachmentStore = options.attachmentStore || {
+    async listAttachments(sessionId) {
+      if (sessionId !== 'terminal-1') return [];
+      return [{
+        id: 'att-1',
+        displayName: 'notes.md',
+        sizeBytes: 123,
+        textExtractable: true,
+        mimeType: 'text/markdown'
+      }];
+    },
+    async readAttachmentText({ sessionId, attachmentId }) {
+      if (sessionId !== 'terminal-1' || attachmentId !== 'att-1') {
+        throw new Error(`Attachment not found: ${attachmentId}`);
+      }
+      return {
+        text: 'Chapter 3\nDrafting paragraphs.\n\nChapter 4\nRevision strategies include peer review and sentence combining.',
+        truncated: false,
+        bytesRead: 102,
+        totalBytes: 102,
+        attachment: {
+          id: 'att-1',
+          displayName: 'notes.md',
+          textExtractable: true
+        }
+      };
+    }
+  };
   const service = createRlmService({
     registerSession: (config) => bmoc.registerSession(config),
     updateSession: (sessionId, updates) => bmoc.updateSession(sessionId, updates),
     getSession: (sessionId) => bmoc.getSession(sessionId),
     closeSession: (sessionId) => bmoc.closeSession(sessionId),
-    attachmentStore: {
-      async listAttachments(sessionId) {
-        if (sessionId !== 'terminal-1') return [];
-        return [{
-          id: 'att-1',
-          displayName: 'notes.md',
-          sizeBytes: 123,
-          textExtractable: true,
-          mimeType: 'text/markdown'
-        }];
-      }
-    },
+    attachmentStore,
     enableSandboxExecution: options.enableSandboxExecution === true,
     sendMessage: options.sendMessage
   });
@@ -77,6 +94,11 @@ function testRlmSandboxPromptInfersSandboxExecutionOnly() {
     'slice_prompt',
     'sub_lm'
   ]);
+}
+
+function testRlmChapterSummaryPromptInfersAttachmentSummary() {
+  const actions = inferRequestedRlmActions('Please summarize chapter 4 of College ESL Writers.pdf');
+  assert.deepEqual(actions, ['summarize_attachment']);
 }
 
 async function testStartSessionRegistersWithBmoc() {
@@ -640,6 +662,88 @@ async function testMapPromptChunksUsesBoundedSubcallsAndScratch() {
   assert.ok(calls.every((call) => String(call.messages[1].content).includes('Summarize this chunk.')));
 }
 
+async function testSummarizeAttachmentReadsRequestedChapterAndSetsFinal() {
+  const calls = [];
+  const { service } = createService({
+    sendMessage: async (_model, messages, options = {}) => {
+      calls.push({ messages, options });
+      const prompt = String(messages?.[1]?.content || '');
+      if (options.rlmSubcallPurpose === 'final_composition') {
+        assert.ok(prompt.includes('Requested chapter: 4; chapter heading found: yes'));
+        assert.ok(prompt.includes('Revision strategies include peer review'));
+        return { response: { finishReason: 'stop', message: { content: 'Chapter 4 focuses on revision strategies, including peer review and sentence combining.' } } };
+      }
+      assert.ok(prompt.includes('Attachment: notes.md'));
+      assert.ok(prompt.includes('Revision strategies include peer review'));
+      assert.ok(!prompt.includes('Drafting paragraphs'));
+      return { response: { finishReason: 'stop', message: { content: '- Revision strategies include peer review and sentence combining.' } } };
+    }
+  });
+  const status = await service.startSession({
+    prompt: 'Please summarize chapter 4 of notes.md',
+    parentSessionId: 'terminal-1',
+    attachmentSessionId: 'terminal-1',
+    model: 'mock-root',
+    budget: {
+      maxSubcalls: 4,
+      maxPromptSliceChars: 512
+    }
+  });
+
+  const result = await service.runAction({
+    sessionId: status.sessionId,
+    action: { type: 'summarize_attachment', args: { maxChunks: 2, chunkSize: 300, overlap: 20 } }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.action, 'summarize_attachment');
+  assert.equal(result.environment.final.set, true);
+  assert.equal(result.environment.final.preview, 'Chapter 4 focuses on revision strategies, including peer review and sentence combining.');
+  assert.equal(result.result.displayName, 'notes.md');
+  assert.equal(result.result.chapterNumber, 4);
+  assert.equal(result.result.chapterFound, true);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].options.rlmSubcall, true);
+  assert.equal(calls[1].options.rlmSubcallPurpose, 'final_composition');
+}
+
+async function testRootLoopRunsInferredAttachmentSummaryBeforeRootCall() {
+  const calls = [];
+  const { service } = createService({
+    sendMessage: async (_model, messages, options = {}) => {
+      calls.push({ messages, options });
+      if (options.rlmSubcallPurpose === 'final_composition') {
+        return { response: { finishReason: 'stop', message: { content: 'Chapter 4 focuses on revision strategies.' } } };
+      }
+      if (options.rlmSubcall) {
+        return { response: { finishReason: 'stop', message: { content: '- Chapter 4 discusses revision strategies.' } } };
+      }
+      throw new Error('root controller should not run before required attachment summary');
+    }
+  });
+
+  const result = await service.runLoop({
+    prompt: 'Please summarize chapter 4 of notes.md',
+    parentSessionId: 'terminal-1',
+    attachmentSessionId: 'terminal-1',
+    model: 'mock-root',
+    budget: {
+      maxRootIterations: 4,
+      maxSubcalls: 4,
+      maxPromptSliceChars: 512
+    }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.final, 'Chapter 4 focuses on revision strategies.');
+  assert.equal(result.iterations, 0);
+  assert.deepEqual(result.observations.map((entry) => entry.action.type), [
+    'summarize_attachment'
+  ]);
+  assert.equal(calls.length, 2);
+  assert.equal(calls.every((call) => call.options.rlmSubcall === true), true);
+}
+
 async function testComposeFinalUsesScratchAndSetsFinal() {
   const calls = [];
   const { service } = createService({
@@ -1084,6 +1188,7 @@ async function testRootLoopBudgetExhaustion() {
 (async () => {
   testRootLoopJsonExtraction();
   testRlmSandboxPromptInfersSandboxExecutionOnly();
+  testRlmChapterSummaryPromptInfersAttachmentSummary();
   await testStartSessionRegistersWithBmoc();
   await testDryRunDoesNotSendFullPromptToRootModel();
   await testBehaviorProfilesSelectDifferentBudgets();
@@ -1105,6 +1210,8 @@ async function testRootLoopBudgetExhaustion() {
   await testSubLmActionUsesModelTransportAndBudget();
   await testSubLmActionFailsClosedAtBudgetLimit();
   await testMapPromptChunksUsesBoundedSubcallsAndScratch();
+  await testSummarizeAttachmentReadsRequestedChapterAndSetsFinal();
+  await testRootLoopRunsInferredAttachmentSummaryBeforeRootCall();
   await testComposeFinalUsesScratchAndSetsFinal();
   await testRootLoopEnforcesRequestedChunkMappingBeforeFinal();
   await testRootLoopRedirectsRepeatedChunkPromptToChunkMap();

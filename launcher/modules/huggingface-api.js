@@ -133,7 +133,8 @@ async function fetchConfig(modelUrl, hfToken = null) {
       if (response.statusCode === 404) {
         return {
           success: false,
-          error: 'config.json not found. For GGUF repos, try providing the Base Model URL instead.'
+          notFound: true,
+          error: 'This repository has no config.json. Use a model repository containing configuration metadata. The Base Model URL is optional and does not need to contain the model weights.'
         };
       }
       return {

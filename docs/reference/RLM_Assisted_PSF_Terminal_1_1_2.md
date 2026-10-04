@@ -53,11 +53,56 @@ A correct PSF RLM implementation should include these parts.
 - Avoids relying on a direct autoregressive answer when the answer was built programmatically.
 - Supports long outputs assembled from environment variables.
 
+## Current PSF Terminal Usage
+
+To use RLM in PSF Terminal:
+1. Open Terminal settings.
+2. Enable `RLM Mode`.
+3. Set `RLM Engine` to `Recursive RLM` for the BMOC-owned recursive engine, or `Document Assist` for the older attachment/document scaffold.
+4. Send a prompt that explicitly asks for RLM behavior, such as `Use the RLM environment...`.
+
+Current deterministic trigger behavior:
+1. Simple greetings and normal chat bypass RLM.
+2. Prompts containing `RLM`, `recursive language model`, or `RLM environment` route through RLM when RLM Mode is enabled.
+3. Document/file/attachment analysis wording can route through the document-assist path.
+4. Prompts containing `sandbox`, `sandbox REPL`, `execute sandbox code`, or `REPL` require the sandboxed Python helper path.
+5. If the user does not use those cues, the model should not be expected to automatically choose sandbox execution yet.
+
+Example grounded PDF/chapter prompt:
+
+```text
+please summarize chapter 4 of College ESL Writers_ Applied Grammar and Composing Strategies for.pdf
+```
+
+Expected trace:
+
+```text
+RLM progress: summarize_attachment started
+RLM progress: summarize_attachment done
+RLM Trace: actions=summarize_attachment source=recursive-loop iterations=0
+```
+
+The `summarize_attachment` path reads extracted text from the selected Terminal/RAG attachment target, attempts to isolate the requested chapter by heading, summarizes bounded chunks, and composes the final answer from those notes. If the chapter heading is not found in extracted text, the answer should say that before summarizing the closest available extracted text.
+
+Example Recursive RLM sandbox prompt:
+
+```text
+Use the RLM environment and sandbox REPL. Write a numbered outline for a short space-opera story where a persecuted star-caravan people recover a stolen legal pardon from flamboyant space pirates before a bureaucratic empire can erase them. Before the final answer, execute sandbox code that reads a prompt slice, calls sub_lm once to summarize the central conflict, stores that summary in Scratch, and then sets the final answer. Keep the final answer under 500 words.
+```
+
+Expected trace:
+
+```text
+RLM progress: execute_sandbox_code started
+RLM progress: execute_sandbox_code done
+RLM Trace: actions=execute_sandbox_code source=recursive-loop iterations=0
+```
+
 ## Difference From Current PSF Implementation
 
 Current PSF code has an RLM document-assist scaffold. It can plan over attachments, execute deterministic tools, summarize chunks, and run limited verification/repair passes.
 
-That is useful, but it is not yet a complete MIT-style Recursive Language Model.
+Current PSF Terminal also includes the first BMOC-owned Recursive RLM service path. It stores the prompt outside root context, runs structured root-loop actions, supports `sub_lm(...)`, and can execute bounded sandboxed Python helper snippets. Persistent multi-step REPL state and nested `sub_rlm(...)` are still pending.
 
 Current implementation characteristics:
 1. Triggered mostly by document/file/attachment intents.

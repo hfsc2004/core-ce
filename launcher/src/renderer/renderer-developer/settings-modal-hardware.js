@@ -17,6 +17,65 @@ const hardwareMicTestState = {
   rafId: null
 };
 
+let aiDeviceRows = [];
+function updateAiDeviceControls() {
+  const mode = document.getElementById('settings-ai-device-mode')?.value;
+  for (const { input, missing, ambiguous } of aiDeviceRows) {
+    input.disabled = mode !== 'selected' || missing || ambiguous;
+    if (mode === 'all') input.checked = !missing;
+    else if (mode === 'cpu') input.checked = false;
+  }
+  const custom = document.getElementById('settings-ai-build-custom-row');
+  if (custom) custom.hidden = document.getElementById('settings-ai-build-mode')?.value !== 'custom';
+}
+function selectAllAiDevices() {
+  document.getElementById('settings-ai-device-mode').value = 'all';
+  for (const row of aiDeviceRows) row.input.checked = !row.missing;
+  updateAiDeviceControls();
+}
+async function loadAiDeviceSettings() {
+  const status = document.getElementById('settings-ai-device-status');
+  const list = document.getElementById('settings-ai-device-list');
+  if (!list || !status) return;
+  try {
+    status.textContent = 'Detecting inference devices…';
+    const result = await window.electronAPI.getAiDeviceSettings();
+    if (!result?.success) throw new Error(result?.error || 'Could not detect AI devices.');
+    document.getElementById('settings-ai-device-mode').value = result.policy.mode;
+    document.getElementById('settings-ai-build-mode').value = result.policy.build_mode;
+    document.getElementById('settings-ai-build-custom').value = result.policy.custom_cuda_architectures || '';
+    list.replaceChildren(); aiDeviceRows = [];
+    const devices = [...result.devices];
+    for (const id of result.policy.device_ids) {
+      if (!devices.some(device => device.id === id)) devices.push({ id, name: id, missing: true, backend: 'Unavailable' });
+    }
+    for (const device of devices) {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;gap:8px;align-items:center;margin:8px 0;';
+      const input = document.createElement('input'); input.type = 'checkbox'; input.value = device.id;
+      input.checked = result.policy.device_ids.includes(device.id);
+      const text = document.createElement('span');
+      text.textContent = `${device.name} — ${device.backend}${device.memory_mb ? `, ${(device.memory_mb / 1024).toFixed(1)} GB` : ''}${device.compute_capability ? `, compute ${device.compute_capability}` : ''}${device.missing ? ' (missing)' : ''}${device.ambiguous ? ' (ambiguous identity; use All detected or Automatic)' : ''}`;
+      label.append(input, text); list.appendChild(label);
+      aiDeviceRows.push({ input, missing: device.missing, ambiguous: device.ambiguous });
+    }
+    if (!devices.length) list.textContent = 'No GPUs detected by NVIDIA tooling or the installed llama.cpp backend. CPU and Automatic remain available.';
+    updateAiDeviceControls(); status.textContent = '';
+  } catch (error) { status.textContent = `Load failed: ${error.message}`; }
+}
+async function saveAiDeviceSettings() {
+  const status = document.getElementById('settings-ai-device-status');
+  try {
+    const policy = { mode: document.getElementById('settings-ai-device-mode').value,
+      device_ids: aiDeviceRows.filter(row => row.input.checked && !row.missing && !row.ambiguous).map(row => row.input.value),
+      build_mode: document.getElementById('settings-ai-build-mode').value,
+      custom_cuda_architectures: document.getElementById('settings-ai-build-custom').value.trim() };
+    const result = await window.electronAPI.setAiDeviceSettings(policy);
+    if (!result?.success) throw new Error(result?.error || 'Could not save AI devices.');
+    status.textContent = 'Saved. Close and relaunch model sessions, or restart Core, to apply to sessions already running. Build targets apply to your next explicit tool build.';
+  } catch (error) { status.textContent = `Save failed: ${error.message}`; }
+}
+
 function getMicTestButton() {
   return document.getElementById('settings-hardware-mic-test-btn');
 }

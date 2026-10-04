@@ -46,7 +46,15 @@ function inferRequestedRlmActions(prompt = '') {
   const lower = text.toLowerCase();
   const actions = [];
   const hasRlmDirective = /\brlm\b|recursive language model|environment/.test(lower);
-  if (!hasRlmDirective) return actions;
+  const hasDocumentSummaryDirective = (
+    /\b(summari[sz]e|outline|analy[sz]e|review|read|extract|find|search)\b/.test(lower) &&
+    /\b(attachment|attachments|attached|file|files|document|documents|doc|docs|pdf|chapter)\b/.test(lower)
+  );
+  if (!hasRlmDirective && !hasDocumentSummaryDirective) return actions;
+
+  if (hasDocumentSummaryDirective) {
+    actions.push('summarize_attachment');
+  }
 
   if (/\bexecute_sandbox_code\b|sandbox(?:ed)?(?: python| code| repl)?|\brepl\b/.test(lower)) {
     actions.push('execute_sandbox_code');

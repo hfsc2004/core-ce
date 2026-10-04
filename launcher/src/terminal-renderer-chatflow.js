@@ -167,6 +167,17 @@
         return entry && entry.error ? 'invalid_action' : 'unknown';
       }).join(' -> ');
     }
+    function summarizeRecursiveRlmError(rlmResult = {}) {
+      const direct = String(rlmResult?.error || '').trim();
+      if (direct) return direct;
+      const observations = Array.isArray(rlmResult?.observations) ? rlmResult.observations : [];
+      const failed = observations.find((entry) => entry && entry.success === false);
+      const action = String(failed?.action?.type || '').trim();
+      const error = String(failed?.error || '').trim();
+      if (action && error) return `${action}: ${error}`;
+      if (error) return error;
+      return 'no final answer returned';
+    }
     function buildOpenAIStyleMessages(messages = []) {
       return (Array.isArray(messages) ? messages : []).map((m) => ({
         role: String(m?.role || 'user'),
@@ -728,12 +739,18 @@
             const legacyResult = await runRlmLoop(rlmPayload);
             if (legacyResult && legacyResult.handled) {
               const answer = String(legacyResult.final || legacyResult.answer || '').trim();
-              if (!answer) return false;
+              const traceTools = summarizeRecursiveRlmActions(legacyResult.observations);
+              const exhaustedNote = legacyResult.budgetExhausted ? ' budget_exhausted=true' : '';
+              if (!answer) {
+                addSystemMessage(`RLM engine error: ${summarizeRecursiveRlmError(legacyResult)}`);
+                addSystemMessage(`RLM Trace: actions=${traceTools} source=recursive-loop iterations=${legacyResult.iterations || 0}${exhaustedNote}`);
+                setWaitingState(false);
+                focusInput();
+                return true;
+              }
               const rlmAnswer = localOnly ? `{local} ${answer}` : answer;
               addRlmAssistantMessage(rlmAnswer, legacyResult);
               appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
-              const traceTools = summarizeRecursiveRlmActions(legacyResult.observations);
-              const exhaustedNote = legacyResult.budgetExhausted ? ' budget_exhausted=true' : '';
               addSystemMessage(`RLM Trace: actions=${traceTools} source=recursive-loop iterations=${legacyResult.iterations || 0}${exhaustedNote}`);
               addSystemMessage(`RLM Engine: mode=recursive-repl profile=${normalizeRlmProfile(getRlmProfile())}`);
               setWaitingState(false);
@@ -767,21 +784,28 @@
           }
           if (rlmResult && rlmResult.handled) {
             const answer = String(rlmResult.final || rlmResult.answer || '').trim();
+            const traceTools = summarizeRecursiveRlmActions(rlmResult.observations);
+            const exhaustedNote = rlmResult.budgetExhausted ? ' budget_exhausted=true' : '';
             if (!answer && rlmResult.budgetExhausted) {
               addSystemMessage('RLM Notice: Stopped at root-loop iteration limit before final answer. Increase profile or Advanced RLM budgets.');
+              addSystemMessage(`RLM Trace: actions=${traceTools} source=recursive-loop iterations=${rlmResult.iterations || 0}${exhaustedNote}`);
               setWaitingState(false);
               focusInput();
               return true;
             }
             if (!answer) {
-              addSystemMessage('RLM engine fallback: no final answer returned.');
-              return false;
+              addSystemMessage(`RLM engine error: ${summarizeRecursiveRlmError(rlmResult)}`);
+              addSystemMessage(`RLM Trace: actions=${traceTools} source=recursive-loop iterations=${rlmResult.iterations || 0}${exhaustedNote}`);
+              if (getRlmVerboseTrace() === true && Array.isArray(rlmResult?.observations)) {
+                rlmResult.observations.forEach((entry) => addSystemMessage(`RLM Step: ${JSON.stringify(entry)}`));
+              }
+              setWaitingState(false);
+              focusInput();
+              return true;
             }
             const rlmAnswer = localOnly ? `{local} ${answer}` : answer;
             addRlmAssistantMessage(rlmAnswer, rlmResult);
             appendConversationPair(message, rlmAnswer, { skipRelay: localOnly });
-            const traceTools = summarizeRecursiveRlmActions(rlmResult.observations);
-            const exhaustedNote = rlmResult.budgetExhausted ? ' budget_exhausted=true' : '';
             addSystemMessage(`RLM Trace: actions=${traceTools} source=recursive-loop iterations=${rlmResult.iterations || 0}${exhaustedNote}`);
             addSystemMessage(`RLM Engine: mode=recursive-repl profile=${normalizeRlmProfile(getRlmProfile())}`);
             if (rlmResult.budgetExhausted) {

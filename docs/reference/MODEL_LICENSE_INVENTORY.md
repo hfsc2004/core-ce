@@ -1,19 +1,19 @@
 # Model License Inventory
 
 Source: `models/catalog-master.json`
-Generated on: 2026-04-26
-Total models: 77
+Generated on: 2026-10-04
+Total models: 81
 
 ## License Family Summary
 
 | License Family | Models | Example Raw Values | Reference URLs |
 |---|---:|---|---|
-| Apache-2.0 | 46 | Apache 2.0, apache-2.0 | https://www.apache.org/licenses/LICENSE-2.0 ; https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/apache-2.0.md |
+| Apache-2.0 | 49 | Apache 2.0, apache-2.0 | https://www.apache.org/licenses/LICENSE-2.0 ; https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/apache-2.0.md |
 | MIT | 9 | mit, MIT | https://opensource.org/licenses/MIT ; https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/mit.md |
 | Llama-3.1-Community | 4 | Llama 3.1 Community License | https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/LICENSE |
 | Gemma Terms of Use | 2 | Gemma Terms of Use | https://ai.google.dev/gemma/terms |
 | Llama 2 Community License | 2 | Llama 2 Community License | https://github.com/facebookresearch/llama/blob/main/LICENSE |
-| Llama-3.2-Community | 2 | llama3.2, Llama 3.2 Community License | https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE |
+| Llama-3.2-Community | 3 | llama3.2, Llama 3.2 Community License | https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE |
 | BigCode-OpenRAIL-M | 1 | bigcode-openrail-m | https://www.bigcode-project.org/docs/pages/bigcode-openrail/ |
 | cc-by-4.0 | 1 | cc-by-4.0 | - |
 | cc-by-nc-4.0 | 1 | cc-by-nc-4.0 | - |
@@ -37,8 +37,8 @@ Total models: 77
 | coding-agents | llama-3.2-8b | Llama 3.2 8B | Llama 3.2 Community License | https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE |
 | coding-agents | mistral-nemo-12b | Mistral NeMo 12B | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | coding-agents | phi-3-mini | Phi-3 Mini 3.8B | MIT | https://opensource.org/licenses/MIT |
-| coding-agents | qwen2-5-coder-1-5b-instruct-thomas_q4_k_m | Qwen2.5-Coder-1.5B-Instruct (ThomasBaruzier Q4_K_M) | apache-2.0 | - |
 | coding-agents | qwen2-5-coder-1-5b-instruct-Thomas_Q6_K | Qwen2.5-Coder-1.5B-Instruct (ThomasBaruzier Q6_K) | apache-2.0 | - |
+| coding-agents | qwen2-5-coder-1-5b-instruct-thomas_q4_k_m | Qwen2.5-Coder-1.5B-Instruct (ThomasBaruzier Q4_K_M) | apache-2.0 | - |
 | coding-agents | qwen2-5-coder-7b-instruct | Qwen2.5-Coder-7B-Instruct (Bartowski_Q6_K) | apache-2.0 | - |
 | coding-agents | qwen2-5-coder-7b-instruct-bartowski_q5_k_m | Qwen2.5-Coder-7B-Instruct-Bartowski_Q5_K_M | apache-2.0 | - |
 | coding-agents | qwen2-5-coder-7b-instruct-gguf | Qwen2.5-Coder-7B-Instruct-GGUF | apache-2.0 | - |
@@ -58,7 +58,9 @@ Total models: 77
 | general-chat | phi-3.5-mini | Phi-3.5 Mini 3.8B | MIT | https://opensource.org/licenses/MIT |
 | general-chat | qwen2.5-3b | Qwen2.5 3B | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | general-chat | qwen2.5-72b-q5 | Qwen2.5 72B Q5 | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
+| general-chat | qwen3-8-4b-distill-gguf | Qwen3.8-4B-Distill-GGUF | apache-2.0 | - |
 | general-chat | tinyllama-1.1b | TinyLlama 1.1B | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
+| research-lab | QwQ-32B-GGUF | Qwen-QwQ-32B | Apache 2.0 | https://huggingface.co/Qwen/QwQ-32B-GGUF/blob/main/LICENSE |
 | research-lab | ai21labs-ai21-jamba-reasoning-3b-gguf | ai21labs_AI21-Jamba-Reasoning-3B-GGUF | Apache 2.0 | - |
 | research-lab | dolphin-mixtral-8x7b | Dolphin Mixtral 8x7B | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | research-lab | exaone-4-0-1-2b-gguf | EXAONE-4.0-1.2B-GGUF | EXAONE | https://huggingface.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF/resolve/main/LICENSE |
@@ -66,6 +68,7 @@ Total models: 77
 | research-lab | gpt-oss-20b-GGUF | GPT-OSS-20b | Apache 2.0 | https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/apache-2.0.md |
 | research-lab | granite-4-0-1b-gguf | Granite-4.0-1b-IBM | apache-2.0 | - |
 | research-lab | ibm-granite / granite-docling-258M | Granite-Docling-258M | Apache 2.0 | https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/apache-2.0.md |
+| research-lab | llama-3-2-3b-instruct-gguf | Llama-3.2-3B-Instruct-GGUF | llama3.2 | - |
 | research-lab | llama-3.3-70b-q4 | Llama 3.3 70B Instruct Q4 | Llama 3 Community License | https://github.com/meta-llama/llama-models/blob/main/models/llama3/LICENSE |
 | research-lab | meta-llama-3-8b | Llama-3-8B | llama3 | - |
 | research-lab | microsoft-phi-4-mini-instruct-gguf | Phi-4-mini-instruct-Microsoft | MIT | - |
@@ -76,10 +79,11 @@ Total models: 77
 | research-lab | qwen2.5-72b-q3 | Qwen2.5 72B Q3 | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | research-lab | qwen2.5-72b-q4 | Qwen2.5 72B Q4 | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | research-lab | qwen2.5-72b-q8 | Qwen2.5 72B Q8 | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
-| research-lab | QwQ-32B-GGUF | Qwen-QwQ-32B | Apache 2.0 | https://huggingface.co/Qwen/QwQ-32B-GGUF/blob/main/LICENSE |
+| research-lab | rwkv7-g1k-2-9b-20260930-q5-k-m | RWKV7-G1k-2.9B-20260930 | apache-2.0 | - |
 | research-lab | solar-10.7b-q4 | SOLAR 10.7B Instruct Q4 | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | research-lab | yarn-mistral-7b-128k | Yarn-Mistral 7B 128K | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | research-lab | yi-34b-q4 | Yi 34B Chat Q4 | Yi License | https://huggingface.co/01-ai/Yi-34B/blob/main/LICENSE |
+| starter-fast | gemma-4-e2b-it-gguf | gemma-4-E2B-it-GGUF | apache-2.0 | - |
 | starter-fast | glm-4-7-flash-gguf | GLM-4.7-Flash-GGUF | mit | - |
 | starter-fast | llama-3-2-1b-gguf | llama-3.2-1b-gguf | llama3.2 | - |
 | starter-fast | llama-3.1-70b-q2 | Llama 3.1 70B Q2 | Llama 3.1 Community License | https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/LICENSE |
@@ -90,7 +94,7 @@ Total models: 77
 | starter-fast | smollm2-360m | SmolLM2 360M | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | starter-fast | tinyllama-1-1b-chat-v1-0-gguf | TinyLlama-1.1B-Chat-v1.0-GGUF | apache-2.0 | - |
 | vision-multimodal | gemma-3-4b-it-abliterated-gguf | gemma-3-4b-it-abliterated (mlabonne) | gemma | - |
-| vision-multimodal | gemma-3-4b-it-mm | Gemma 3:4B-IT-MM | Google | - |
+| vision-multimodal | gemma-3-4b-it-mm | Gemma 3:4B-IT-MM-unsloth | Google | - |
 | vision-multimodal | llava-1.6-mistral-7b | LLaVA 1.6 Mistral 7B | Apache 2.0 | https://www.apache.org/licenses/LICENSE-2.0 |
 | vision-multimodal | llava-1.6-vicuna-13b | LLaVA 1.6 Vicuna 13B | Llama 2 Community License | https://github.com/facebookresearch/llama/blob/main/LICENSE |
 | vision-multimodal | qwen3-5-0-8b-i1-gguf | Qwen3.5-0.8B-i1-GGUF | apache-2.0 | - |

@@ -1,6 +1,6 @@
 {
-  "version": "1.1.18",
-  "last_updated": "2026-09-09",
+  "version": "1.1.20",
+  "last_updated": "2026-10-04",
   "sku_id": "sku-005",
   "sku_name": "The VAULT",
   "storage": "4TB",
@@ -7728,6 +7728,170 @@
           "projector_url": null,
           "projector_filename": null,
           "projector_sha256": null
+        },
+        {
+          "id": "rwkv7-g1k-2-9b-20260930-q5-k-m",
+          "name": "RWKV7-G1k-2.9B-20260930",
+          "model_family": "RWKV-7 Goose",
+          "organization": "shoumenchougou",
+          "version": null,
+          "description": "RWKV 7, also called Goose , is an attention free recurrent language model.",
+          "url": "https://huggingface.co/shoumenchougou/RWKV7-G1k-2.9B-20260930-FLA",
+          "download_url": null,
+          "filename": "RWKV7-G1k-2.9B-20260930-Q5_K_M-368b3d99.gguf",
+          "huggingface_repo": "shoumenchougou/RWKV7-G1k-2.9B-20260930-FLA",
+          "size_mb": 2109,
+          "file_size_bytes": 2211341504,
+          "quantization": "Q5_K_M",
+          "context_length": null,
+          "parameters": "2.9B",
+          "architecture": "rwkv7",
+          "supports_vision": false,
+          "supports_code": false,
+          "supports_function_calling": false,
+          "supports_stt": false,
+          "supports_tts": false,
+          "min_ram_gb": 8,
+          "recommended_ram_gb": 16,
+          "gpu_layers": 24,
+          "license": "apache-2.0",
+          "license_url": null,
+          "ollama_model": null,
+          "base_model_url": "https://huggingface.co/BlinkDL/rwkv7-g1",
+          "hidden_size": null,
+          "num_layers": null,
+          "num_kv_heads": null,
+          "num_attention_heads": null,
+          "sha256": "f18261dc7f2509280e363ada6022c1307459ab068d6a0f06c1c81370b77e0c2d",
+          "checksums": {
+            "main": "f18261dc7f2509280e363ada6022c1307459ab068d6a0f06c1c81370b77e0c2d"
+          },
+          "projector_url": null,
+          "projector_filename": null,
+          "projector_sha256": null,
+          "architecture_description": "RWKV7 recurrent",
+          "runtime": "llama.cpp",
+          "runtimes": [
+            "llama.cpp"
+          ],
+          "backend": "llama.cpp",
+          "provenance": {
+            "source_repository": "shoumenchougou/RWKV7-G1k-2.9B-20260930-FLA",
+            "source_revision": "368b3d994bdf576275489f8a5493d221af3f5a3a",
+            "requested_revision": "main",
+            "original_model_name": "RWKV7-G1k-2.9B-20260930-FLA",
+            "source_architecture": "RWKV7ForCausalLM",
+            "source_model_type": "rwkv7",
+            "source_tensor_format": "safetensors",
+            "original_tensor_datatype": [
+              "BF16"
+            ],
+            "conversion_date": "2026-10-04T21:28:02.945Z",
+            "llama_cpp_commit": "2e7c58c5477478c8cf6e199cfaa5dcd5a4319c81",
+            "llama_cpp_version": "version: 0.5.0-dev (build 125, commit ffeffb3)\nbuilt with GNU 13.3.0 for Linux x86_64",
+            "converter_sha256": "e9a1da876330bbce9687541ab31736542a01b4ac43c6686126514a50f122fb7f",
+            "intermediate_datatype": "f16",
+            "gguf_architecture": "rwkv7",
+            "requested_quantization": "Q5_K_M",
+            "final_quantization": "Q5_K_M",
+            "generated_sha256": "f18261dc7f2509280e363ada6022c1307459ab068d6a0f06c1c81370b77e0c2d",
+            "source_files": [
+              {
+                "path": ".gitattributes",
+                "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361",
+                "upstream_sha256": null,
+                "git_blob_id": "a6344aac8c09253b3b630fb776ae94478aa0275b"
+              },
+              {
+                "path": "LICENSE",
+                "sha256": "475641f33cfd755f19245d2eb6a6d8fb7fdca60835cfa369b7e3774460409cc4",
+                "upstream_sha256": null,
+                "git_blob_id": "a11c29aeb66e7c01aa4f6493efe455e9c248a7b3"
+              },
+              {
+                "path": "NOTICE",
+                "sha256": "cd8ce33a47649b88be6af4291f21285baaaa1961eb0ef142ac672241ff541205",
+                "upstream_sha256": null,
+                "git_blob_id": "50d1ae511d2f2bf90782e34e4142cc2809e0c5e1"
+              },
+              {
+                "path": "README.md",
+                "sha256": "750e7689ddcdb885deb4362391f94b304ba5346d32aabccf9be3e709f06a8d6d",
+                "upstream_sha256": null,
+                "git_blob_id": "20b739ae268ba257b5af390b7d89372ed6c2c9bd"
+              },
+              {
+                "path": "assets/rwkv-logo.webp",
+                "sha256": "78a25b4a260e1a74328d629bcbb02a0417f3b1990898e42da5bc1d5d7ea2f118",
+                "upstream_sha256": null,
+                "git_blob_id": "59de5bf843a2c4fe7016deecfe6c9a1f3ad2cc72"
+              },
+              {
+                "path": "chat_template.jinja",
+                "sha256": "c16f69e123db081df35639bf95fa0b4689ebd8325b0c52434299926c8b21ff71",
+                "upstream_sha256": null,
+                "git_blob_id": "fc62fae2fcb95699bb8823cd79b1aa8ca88c9f42"
+              },
+              {
+                "path": "config.json",
+                "sha256": "ea41b72302c6bc8e839cdac52245fa52d5a58dc363de5896ae041f823e4fbd2b",
+                "upstream_sha256": null,
+                "git_blob_id": "2cecca81dbf6108dc38a15c66fff0ab915b67430"
+              },
+              {
+                "path": "generation_config.json",
+                "sha256": "358114ae91c5eee6fe10b41a22a9ee95a9b1c20ed86d0666617aa049386d63a3",
+                "upstream_sha256": null,
+                "git_blob_id": "262cec02415230c20992b226f62a43ab95ec64d0"
+              },
+              {
+                "path": "tokenizer.json",
+                "sha256": "1c0bc8e5f355de60a4587a1e9abb9aa4ef65508ff59641344e7f9f10f76feacf",
+                "upstream_sha256": null,
+                "git_blob_id": "c1bdb0eea4e8a9d45beae1a704491305e8e5187b"
+              },
+              {
+                "path": "tokenizer_config.json",
+                "sha256": "2b5e075c2c16780061ae272c9f0b52ff620ddd8e87fdf7fa82fc425661667329",
+                "upstream_sha256": null,
+                "git_blob_id": "87c1d014fbb202ddee51d53605c1d306d454e415"
+              },
+              {
+                "path": "model.safetensors",
+                "sha256": "92b14263e2c78aa2a07b636e23395726f15ce3b53e2a5cfaea6681ec7215f4fb",
+                "upstream_sha256": "92b14263e2c78aa2a07b636e23395726f15ce3b53e2a5cfaea6681ec7215f4fb",
+                "git_blob_id": "1db35246e547c53f425171dd41dbd12fd96f9bc6"
+              }
+            ],
+            "supplemental_assets": [
+              {
+                "path": "rwkv_vocab_v20230424.txt",
+                "source": "verified-upstream-companion",
+                "repository": "BlinkDL/ChatRWKV",
+                "revision": "02058ba0624a77c20f0913f83550835eb03a8db4",
+                "upstream_path": "tokenizer/rwkv_vocab_v20230424.txt",
+                "url": "https://raw.githubusercontent.com/BlinkDL/ChatRWKV/02058ba0624a77c20f0913f83550835eb03a8db4/tokenizer/rwkv_vocab_v20230424.txt",
+                "sha256": "e6dee3d4e31b4d5c40ac99508ac6c701ceef4bed681bf2167ce9a908552bca89",
+                "upstream_sha256": "e6dee3d4e31b4d5c40ac99508ac6c701ceef4bed681bf2167ce9a908552bca89",
+                "verification": {
+                  "compatible": true,
+                  "matched_tokens": 65529,
+                  "special_token_id": 0,
+                  "unused_token_count": 6,
+                  "method": "exact-token-id-and-byte-comparison"
+                }
+              }
+            ],
+            "base_model_repository": "BlinkDL/rwkv7-g1",
+            "base_model_revision": "cd67fb95fa9e2ce8757f8d21d713e74a9c788118",
+            "validation": {
+              "metadata": true,
+              "model_load": true,
+              "inference_smoke_test": false
+            },
+            "source_cache_retained": false
+          },
+          "locally_converted": true
         }
       ]
     }

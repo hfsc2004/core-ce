@@ -14,12 +14,20 @@ function subscribeIpc(channel, callback) {
 contextBridge.exposeInMainWorld('electronAPI', {
   // Hardware detection
   detectHardware: () => ipcRenderer.invoke('detect-hardware'),
+  getAiDeviceSettings: () => ipcRenderer.invoke('get-ai-device-settings'),
+  setAiDeviceSettings: (policy) => ipcRenderer.invoke('set-ai-device-settings', policy),
   getGPUInfo: () => ipcRenderer.invoke('get-gpu-info'),
   getSecurityStatus: () => ipcRenderer.invoke('get-security-status'),
   getModelCompatibility: (model) => ipcRenderer.invoke('get-model-compatibility', model),
   calculateModelRequirements: (model) => ipcRenderer.invoke('calculate-model-requirements', model),
   fetchHuggingFaceConfig: (modelUrl) => ipcRenderer.invoke('fetch-huggingface-config', modelUrl),
   fetchHuggingFaceModelInfo: (modelUrl) => ipcRenderer.invoke('fetch-huggingface-model-info', modelUrl),
+  scanHfConversion: (payload) => ipcRenderer.invoke('hf-conversion-scan', payload),
+  prepareHfConversion: (payload) => ipcRenderer.invoke('hf-conversion-prepare', payload),
+  finishHfConversion: (payload) => ipcRenderer.invoke('hf-conversion-finish', payload),
+  cancelHfConversion: (payload = {}) => ipcRenderer.invoke('hf-conversion-cancel', payload),
+  updateHfConversionTools: () => ipcRenderer.invoke('hf-conversion-update-tools'),
+  onHfConversionProgress: (callback) => subscribeIpc('hf-conversion-progress', callback),
   fetchFileInfo: (downloadUrl) => ipcRenderer.invoke('fetch-file-info', downloadUrl),
   
   // Model Editor Window APIs
