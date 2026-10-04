@@ -47,6 +47,8 @@ async function ensureLlamaCppSourceTree(sourceRoot, platformKey, progressCallbac
     maxBuffer: 8 * 1024 * 1024
   });
 
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: tempDir, encoding: 'utf8' }).trim();
+
   const entries = fs.readdirSync(tempDir, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.name === '.git') continue;
@@ -55,6 +57,7 @@ async function ensureLlamaCppSourceTree(sourceRoot, platformKey, progressCallbac
     fs.cpSync(src, dest, { recursive: true, force: true });
   }
   fs.rmSync(tempDir, { recursive: true, force: true });
+  fs.writeFileSync(path.join(sourceRoot, '.psf-source-version.json'), JSON.stringify({ commit, syncedAt: new Date().toISOString() }));
 
   if (progressCallback) {
     progressCallback({
@@ -180,6 +183,8 @@ async function refreshLlamaCppSourceTree(sourceRoot, platformKey, progressCallba
     maxBuffer: 8 * 1024 * 1024
   });
 
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: tempDir, encoding: 'utf8' }).trim();
+
   const entries = fs.readdirSync(tempDir, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.name === '.git') continue;
@@ -188,9 +193,10 @@ async function refreshLlamaCppSourceTree(sourceRoot, platformKey, progressCallba
     fs.cpSync(src, dest, { recursive: true, force: true });
   }
   fs.rmSync(tempDir, { recursive: true, force: true });
+  fs.writeFileSync(path.join(sourceRoot, '.psf-source-version.json'), JSON.stringify({ commit, syncedAt: new Date().toISOString() }));
 }
 
-async function downloadLlamaCpp(fromPath, progressCallback = null) {
+async function downloadLlamaCpp(fromPath, progressCallback = null, options = {}) {
   try {
     const projectRoot = path.join(fromPath, '..');
     const binariesDir = path.join(projectRoot, 'binaries');
@@ -202,12 +208,19 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
 
     fs.mkdirSync(binDir, { recursive: true });
 
-    const buildProfile = detectLlamaCppBuildProfile();
-    const desired = [exe('llama-server'), exe('llama-cli'), exe('llama-gguf-split')];
+    let buildProfile = detectLlamaCppBuildProfile();
+    const selectedBuild = await require('../ai-device-policy').cudaBuildPolicy(fromPath);
+    if (selectedBuild.cpuOnly) buildProfile = { ...buildProfile, label: 'CPU-only (AI device selection)', cmakeFlags: ['-D', 'GGML_CUDA=OFF'], expectCuda: false, requireCuda: false, accelerator: 'cpu' };
+    else if (selectedBuild.architectures && buildProfile.expectCuda) buildProfile.cmakeFlags = [...buildProfile.cmakeFlags, '-D', `CMAKE_CUDA_ARCHITECTURES=${selectedBuild.architectures}`];
+    const desired = [exe('llama-server'), exe('llama-cli'), exe('llama-gguf-split'), exe('llama-quantize')];
     const existsAll = desired.every((name) => fs.existsSync(path.join(binDir, name)));
     const sourceRoot = platformDir;
     let sourceRefreshed = false;
-    if (existsAll) {
+    if (options.refresh === true) {
+      await refreshLlamaCppSourceTree(sourceRoot, platformKey, progressCallback);
+      sourceRefreshed = true;
+    }
+    if (existsAll && !options.refresh && !options.conversionTools) {
       const serverPath = path.join(binDir, exe('llama-server'));
       const capabilityCheck = verifyExistingLlamaServerCapability(serverPath, buildProfile);
       const archSupport = checkRequiredArchitectureSupport(projectRoot, sourceRoot);
@@ -250,7 +263,7 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
       }
     }
 
-    const preflight = runLlamaCppBuildPreflight(fromPath);
+    const preflight = runLlamaCppBuildPreflight(fromPath, buildProfile);
     if (!preflight.selected.ok) {
       return {
         success: false,
@@ -369,7 +382,7 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
         completed: 0,
         total: 1,
         speed: 0,
-        message: `Building llama-server / llama-cli / llama-gguf-split (${buildProfile.label})...`
+        message: `Building llama-server / llama-cli / llama-gguf-split / llama-quantize (${buildProfile.label})...`
       });
     }
 
@@ -378,13 +391,14 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
       [
         '--build', buildDir,
         '--config', 'Release',
-        '--target', 'llama-server', 'llama-cli', 'llama-gguf-split',
+        '--target', 'llama-server', 'llama-cli', 'llama-gguf-split', 'llama-quantize',
         '--parallel', String(getBuildParallelism())
       ],
       { stdio: 'pipe', maxBuffer: 16 * 1024 * 1024 }
     );
 
     const candidates = [
+      path.join(buildDir, 'bin', 'Release'),
       path.join(buildDir, 'bin'),
       path.join(sourceRoot, 'build', 'bin'),
       path.join(sourceRoot, 'bin')
@@ -420,14 +434,28 @@ async function downloadLlamaCpp(fromPath, progressCallback = null) {
       });
     }
 
-    const hasServer = fs.existsSync(path.join(binDir, exe('llama-server')));
-    if (!hasServer) {
+    const missingBinaries = desired.filter(name => !fs.existsSync(path.join(binDir, name)));
+    if (missingBinaries.length) {
       return {
         success: false,
         message:
-          `llama.cpp build finished but ${exe('llama-server')} is missing.\n` +
+          `llama.cpp build finished but ${missingBinaries.join(', ')} is missing.\n` +
           `Checked build output in: ${builtBin}`
       };
+    }
+
+    if (options.conversionTools === true) {
+      const requirements = [
+        path.join(sourceRoot, 'requirements', 'requirements-convert_hf_to_gguf.txt'),
+        path.join(sourceRoot, 'requirements.txt')
+      ].find(p => fs.existsSync(p));
+      if (!requirements) throw new Error('Installed llama.cpp conversion requirements are missing.');
+      progressCallback?.({ message: 'Installing conversion dependencies into the llama.cpp Python environment…' });
+      const venv = path.join(sourceRoot, '.venv');
+      const python = path.join(venv, isWindows ? 'Scripts/python.exe' : 'bin/python');
+      if (!fs.existsSync(python)) execFileSync(isWindows ? 'python' : 'python3', ['-m', 'venv', venv], { stdio: 'pipe', maxBuffer: 8 * 1024 * 1024 });
+      execFileSync(python, ['-m', 'pip', 'install', '-r', requirements], { cwd: sourceRoot, stdio: 'pipe', maxBuffer: 16 * 1024 * 1024 });
+      execFileSync(python, [path.join(sourceRoot, 'convert_hf_to_gguf.py'), '--help'], { cwd: sourceRoot, stdio: 'pipe', maxBuffer: 8 * 1024 * 1024 });
     }
 
     if (buildProfile.expectCuda) {

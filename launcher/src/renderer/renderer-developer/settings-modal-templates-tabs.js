@@ -202,6 +202,34 @@ function getHardwareTabHTML() {
         Global hardware selection shared across PSF Terminal, PSF Coding Terminal, and PSF Relay Pipeline Chat.
       </p>
 
+      <div class="settings-section" style="margin-bottom:20px;">
+        <h4>AI inference devices</h4>
+        <p class="settings-description">Choose one card, any combination of cards, or all detected cards. This controls local llama.cpp and Ollama inference and leaves desktop graphics available to the operating system.</p>
+        <label for="settings-ai-device-mode">Device choice</label>
+        <select id="settings-ai-device-mode" class="settings-input" onchange="SettingsModal.updateAiDeviceControls()">
+          <option value="auto">Automatic (runtime defaults)</option>
+          <option value="selected">Use selected GPUs</option>
+          <option value="all">Use all detected GPUs</option>
+          <option value="cpu">CPU only</option>
+        </select>
+        <div id="settings-ai-device-list" style="margin:12px 0;">Loading devices…</div>
+        <button class="btn-secondary" onclick="SettingsModal.selectAllAiDevices()">Select all cards</button>
+        <button class="btn-secondary" onclick="SettingsModal.loadAiDeviceSettings()">Refresh devices</button>
+        <h4 style="margin-top:18px;">CUDA compilation targets</h4>
+        <p class="settings-description">Choose which GPU architectures future tool builds support. Fewer targets can reduce build time. This setting does not start a build or change the update already running.</p>
+        <select id="settings-ai-build-mode" class="settings-input" onchange="SettingsModal.updateAiDeviceControls()">
+          <option value="all">All detected GPU architectures</option>
+          <option value="selected">Selected AI device architectures</option>
+          <option value="custom">Custom CUDA architectures (advanced)</option>
+        </select>
+        <div id="settings-ai-build-custom-row" hidden>
+          <label for="settings-ai-build-custom">CUDA architectures separated by semicolons</label>
+          <input id="settings-ai-build-custom" class="settings-input" placeholder="86;89">
+        </div>
+        <p class="settings-description">Multi-GPU inference depends on model size and the installed backend. Selecting all cards permits every supported card; the runtime decides how to place the model. Close and relaunch model sessions, or restart Core, to apply changes to sessions already running. A missing selected GPU produces an error instead of substituting another card. Remote inference services use their server's hardware settings.</p>
+        <button class="btn-primary" onclick="SettingsModal.saveAiDeviceSettings()">Apply AI device settings</button>
+        <div id="settings-ai-device-status" role="status" style="margin-top:10px;"></div>
+      </div>
       <h4 style="margin:12px 0 8px 0; color:#ddd;">Microphone Input</h4>
       <div style="display:grid; grid-template-columns: 1fr auto auto; gap:10px; align-items:center;">
         <div>

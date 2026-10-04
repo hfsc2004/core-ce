@@ -9,6 +9,21 @@ const { BrowserWindow } = require('electron');
 
 function createSettingsHandlers() {
   return {
+    'get-ai-device-settings': async (ctx) => {
+      try {
+        const policy = require('../ai-device-policy');
+        return { success: true, policy: policy.read(ctx.appDir), devices: await policy.inventory(ctx.appDir, true) };
+      } catch (error) { return { success: false, error: error.message }; }
+    },
+    'set-ai-device-settings': async (ctx, event, input) => {
+      try {
+        const policy = require('../ai-device-policy');
+        const next = policy.normalize(input);
+        policy.choose(next, await policy.inventory(ctx.appDir, true));
+        const settings = ctx.settingsManager.loadSettings(ctx.appDir);
+        return ctx.settingsManager.saveSettings(ctx.appDir, { ...settings, ai_devices: next });
+      } catch (error) { return { success: false, error: error.message }; }
+    },
     'get-settings': (ctx) => ctx.settingsManager.getSettings(ctx.appDir),
     'save-settings': (ctx, event, settings) => ctx.settingsManager.saveSettings(ctx.appDir, settings),
     'get-hf-token': (ctx) => ctx.settingsManager.getHFToken(ctx.appDir),

@@ -119,7 +119,7 @@ async function startOllamaServerOnPort(appPath, gpuInfo, port) {
   const ollamaPath = pathManager.getOllamaBinaryPath(appPath, 'linux-x64');
   logger.info('Ollama binary path', { path: ollamaPath });
 
-  const env = processTools.createOllamaEnv(appPath, port, false);
+  const env = await require('../ai-device-policy').ollamaEnv(appPath, processTools.createOllamaEnv(appPath, port, false));
   logGpuMode(gpuInfo, false);
   logger.info('Starting model server (via session-manager)', { port });
 
@@ -160,7 +160,7 @@ async function startOllamaServer(appPath, gpuInfo, serviceType = 'terminal', for
   }
   console.log(`[${LOG_PREFIX}] Allocated port ${port} from ${normalizedType.toUpperCase()} pool`);
 
-  const env = processTools.createOllamaEnv(appPath, port, forceCpu);
+  const env = await require('../ai-device-policy').ollamaEnv(appPath, processTools.createOllamaEnv(appPath, port, forceCpu), forceCpu);
   logGpuMode(gpuInfo, forceCpu);
   logger.info('Starting model server', { port, serviceType: normalizedType });
 

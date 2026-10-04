@@ -4,6 +4,10 @@
  * @copyright 2026 Pseudo SF
  */
 const http = require('http');
+const path = require('path');
+function applyCpuPreference(options) {
+  if (require('../ai-device-policy').read(path.resolve(__dirname, '../..')).mode === 'cpu') options.num_gpu = 0;
+}
 
 function createCommonChatApi(deps = {}) {
   const getPlatformModule = deps.getPlatformModule;
@@ -105,6 +109,7 @@ function createCommonChatApi(deps = {}) {
       if (options.repeat_penalty !== undefined) ollamaOptions.repeat_penalty = options.repeat_penalty;
       if (options.seed !== undefined) ollamaOptions.seed = options.seed;
       if (options.stop !== undefined) ollamaOptions.stop = options.stop;
+      applyCpuPreference(ollamaOptions);
       if (Object.keys(ollamaOptions).length > 0) requestBody.options = ollamaOptions;
 
       const port = options.port || getPlatformModule().getPSFOllamaPort() || 52434;
@@ -152,6 +157,7 @@ function createCommonChatApi(deps = {}) {
       if (options.repeat_penalty !== undefined) ollamaOptions.repeat_penalty = options.repeat_penalty;
       if (options.seed !== undefined) ollamaOptions.seed = options.seed;
       if (options.stop !== undefined) ollamaOptions.stop = options.stop;
+      applyCpuPreference(ollamaOptions);
 
       const requestBody = {
         model: modelName,

@@ -134,6 +134,7 @@ function switchSettingsTab(tabId) {
 
   if (tabId === 'hardware' && typeof loadHardwareSettings === 'function') {
     loadHardwareSettings();
+    loadAiDeviceSettings();
   }
 
   if (tabId === 'about' && typeof loadAboutInfo === 'function') {

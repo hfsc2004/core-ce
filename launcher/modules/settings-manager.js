@@ -57,6 +57,7 @@ const DEFAULT_SETTINGS = {
   },
   theme: { ...DEFAULT_THEME },
   inference_backend: 'ollama',
+  ai_devices: { mode: 'auto', device_ids: [], build_mode: 'all', custom_cuda_architectures: '' },
   service_network_policy: 'privacy',
   relay_ingress_bind: 'localhost',
   voice_to_text: {
@@ -238,6 +239,9 @@ function saveSettings(projectRoot, settings) {
   
   try {
     const next = { ...(settings || {}) };
+    if (Object.prototype.hasOwnProperty.call(next, 'ai_devices')) {
+      next.ai_devices = require('./ai-device-policy').normalize(next.ai_devices);
+    }
     if (Object.prototype.hasOwnProperty.call(next, 'huggingface_token')) {
       const requestedToken = String(next.huggingface_token || '').trim();
       const currentToken = String(getHuggingFaceToken(projectRoot) || '').trim();

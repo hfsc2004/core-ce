@@ -160,13 +160,20 @@
     
     if (!urlToFetch) {
       showStatus('arch-status', 'error', '❌ Enter a Base Model URL or Model Page URL first');
+      fetchLocks.arch = false;
       return;
     }
     
     showStatus('arch-status', 'loading', '🔄  Fetching config.json...');
     
     try {
-      const result = await window.electronAPI.fetchHuggingFaceConfig(urlToFetch);
+      let result = await window.electronAPI.fetchHuggingFaceConfig(urlToFetch);
+      let configSource = urlToFetch;
+      if (!result.success && result.notFound && baseUrl && modelUrl && baseUrl !== modelUrl) {
+        showStatus('arch-status', 'loading', 'Base repository has no config.json; checking Model Page URL…');
+        result = await window.electronAPI.fetchHuggingFaceConfig(modelUrl);
+        configSource = modelUrl;
+      }
       if (result.success) {
         const cfg = result.config;
         const tc = cfg.text_config || {};
@@ -195,7 +202,7 @@
           document.getElementById('model-supports-vision').checked = true;
         }
         
-        showStatus('arch-status', 'success', '✅ Fetched! Hidden: ' + (hidden||'N/A') + ', Layers: ' + (layers||'N/A'));
+        showStatus('arch-status', 'success', '✅ Fetched! Hidden: ' + (hidden||'N/A') + ', Layers: ' + (layers||'N/A') + (configSource !== urlToFetch ? ' (from Model Page URL)' : ''));
         
         // Try to calculate RAM
         calculateRAM();
@@ -245,6 +252,7 @@
           : '';
         applyFetchedChecksums(info);
         showStatus('file-status', 'success', '✅ Fetched: ' + (info.name||'Unknown'));
+        await window.ModelEditorConversion?.scan();
       } else {
         showStatus('file-status', 'error', '❌ ' + result.error);
       }
@@ -385,6 +393,10 @@
   
   async function handleSubmit(e) {
     e.preventDefault();
+    if (window.ModelEditorConversion?.active()) {
+      showStatus('file-status', 'error', 'Finish or cancel local conversion before saving.');
+      return;
+    }
 
     const splitCheck = refreshSplitDownloadHint();
     if (!splitCheck.ok) {

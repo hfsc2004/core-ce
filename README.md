@@ -21,6 +21,8 @@ Start by flashing a tri-color LED on a Pico with a breadboard. Scale to driving 
 
 This repository hosts the **PSF Core Community Edition** codebase for community deployment, operations, and extension.
 
+Current release: **1.1.20**. See [release notes](docs/reference/ReleaseNotes_1_1_20.md) for local Hugging Face conversion, verified tokenizer assets, and configurable inference GPUs.
+
 ## Screenshots + Quick Walkthrough
 
 ### 1) Main Menu
@@ -45,6 +47,8 @@ Instruction: Use `Binary Manager` to check, download, repair, or remove runtime 
 
 ### 5) Global Settings + Secure Modding
 Instruction: Open settings to configure HF key, speech/hardware, theme, system info, source control, and signed mod install/approval.
+
+In **Settings → Hardware**, select one GPU, any combination, all detected GPUs, or CPU for local inference. CUDA build targets can follow the selected cards or cover all detected architectures. See [AI device settings](docs/ai-device-settings.md).
 
 ![Settings and Secure Modding](launcher/assets/screenshots/HF-Key_TTS-STT_HW-Detect_Theme-Edit_SysInfo_Git-Controls_Secure-Modding.png)
 
@@ -152,6 +156,16 @@ Reference `.env` format (advanced/manual use only):
 # Local secrets only (git-ignored)
 HUGGINGFACE_TOKEN=hf_your_real_token_here
 ```
+
+## Local Hugging Face → GGUF Conversion
+
+In Catalog Editor, enter a Hugging Face repository URL and click **Fetch Model Info** or **Scan repository**. Existing GGUFs use the normal download workflow. Supported repositories without GGUFs offer **No GGUF available. Convert locally?** The installed llama.cpp converter determines architecture support.
+
+Conversion creates a full-precision GGUF, then offers installed quantization choices, validates metadata and model loading, and registers the result with provenance. Source tensors are deleted after success unless **Keep downloaded source tensors in cache** is selected. **Update conversion tools** explicitly updates/builds the existing llama.cpp toolchain and its conversion dependencies.
+
+The existing optional **Base Model URL** applies to any source packaging. Configuration fetching falls back to Model Page URL when the base repository has no config.json. Missing supported tokenizer assets are retrieved at pinned revisions and verified against source token IDs and bytes before conversion. RWKV7-G1k-2.9B-20260930 was converted to Q5_K_M, registered, and confirmed responding in interactive chat.
+
+See [the conversion guide](docs/hf-gguf-conversion.md) for requirements, provenance, cache behavior, and RWKV7 support.
 
 ## Security
 - Report vulnerabilities privately: see [`SECURITY.md`](./SECURITY.md)

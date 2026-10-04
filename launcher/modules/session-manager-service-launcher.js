@@ -85,6 +85,7 @@ function createSessionServiceLauncher(deps = {}) {
         ollamaPID: ollamaResult.pid,
         metadata: {
           gpu: gpuInfo?.name || 'CPU',
+          aiDevicePolicyKey: require('./ai-device-policy').fingerprint(require('./ai-device-policy').read(appPath)),
           serviceType: serviceType,
           startedVia: 'startOllamaForService'
         }
@@ -227,11 +228,12 @@ function createSessionServiceLauncher(deps = {}) {
           chatTemplate: startResult.chatTemplate || options.chatTemplate || null,
           chatTemplateSource: startResult.chatTemplateSource || (options.chatTemplate ? 'explicit' : 'none'),
           contextSize: effectiveContextSize,
-          gpuLayers: Number.isFinite(Number(options.gpuLayers)) ? Number(options.gpuLayers) : null,
-          forceCpu: options.forceCpu === true,
-          splitMode: options.splitMode || null,
-          mainGpuIndex: Number.isFinite(Number(options.mainGpuIndex)) ? Number(options.mainGpuIndex) : null,
-          cudaVisibleDevices: options.cudaVisibleDevices || null,
+          gpuLayers: startResult.gpuLayers ?? options.gpuLayers ?? null,
+          forceCpu: startResult.forceCpu === true || options.forceCpu === true,
+          splitMode: startResult.splitMode ?? options.splitMode ?? null,
+          mainGpuIndex: startResult.mainGpuIndex ?? options.mainGpuIndex ?? null,
+          cudaVisibleDevices: startResult.cudaVisibleDevices ?? options.cudaVisibleDevices ?? null,
+          aiDevicePolicyKey: startResult.aiDevicePolicyKey,
           serviceType: serviceType,
           startedVia: 'startLlamaCppForService'
         }
@@ -251,7 +253,7 @@ function createSessionServiceLauncher(deps = {}) {
         modelPath: startResult.modelPath || options.modelPath || null,
         projectorPath: startResult.projectorPath || options.projectorPath || null,
         contextSize: effectiveContextSize,
-        forceCpu: options.forceCpu === true,
+        forceCpu: startResult.forceCpu === true || options.forceCpu === true,
         chatTemplate: startResult.chatTemplate || options.chatTemplate || null,
         chatTemplateSource: startResult.chatTemplateSource || (options.chatTemplate ? 'explicit' : 'none'),
         message: `llama.cpp started on port ${startPort} for ${serviceType}`

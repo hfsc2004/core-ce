@@ -22,6 +22,7 @@ function createCommonLaunchApi(deps = {}) {
   } = deps.helpers;
 
   async function launchModelInOllama(modelPath, appPath, gpuConfig = null, projectorPath = null, progressCallback = null, forceCpu = false, runtimeOptions = {}) {
+    forceCpu = forceCpu || require('../ai-device-policy').read(appPath).mode === 'cpu';
     try {
       const fullPath = path.join(appPath, '..', modelPath);
       if (!fs.existsSync(fullPath)) {
@@ -236,6 +237,7 @@ function createCommonLaunchApi(deps = {}) {
           stream: false,
           options: {
             num_predict: 1,
+            ...(forceCpu ? { num_gpu: 0 } : {}),
             temperature: 0
           }
         });

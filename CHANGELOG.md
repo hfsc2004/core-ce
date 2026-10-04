@@ -7,6 +7,26 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.20 Core-CE] - 2026-10-04
+
+### Added
+- Added automatic, pinned upstream vocabulary retrieval for missing RWKV World tokenizer assets, with exact token-ID/byte verification, hash checks, source provenance, and reuse of the existing optional Base Model URL across source formats.
+- Added Settings → Hardware AI device selection for one GPU, multiple GPUs, all detected GPUs, or CPU; NVIDIA UUID persistence, missing-device errors, and CUDA build targets for selected/all/custom architectures. Explicit multi-GPU choices override legacy single-card launch defaults.
+- Added Catalog Editor local Hugging Face → GGUF conversion using the installed llama.cpp converter and its architecture registry, with pinned source downloads, quantization choices from llama-quantize, metadata and CPU load validation, and optional one-token inference validation.
+- Added provenance sidecars and catalog metadata covering source commit, source hashes/datatype, conversion tool version, GGUF architecture/quantization, and generated SHA-256. RWKV7 retains its recurrent architecture identity.
+- Added explicit conversion tool updates through Binary Manager, including llama-quantize staging and an isolated Python dependency environment. Conversion never silently updates tools.
+- Added default source-cache cleanup, optional source retention for subsequent quantizations, cancellation, and regression coverage for validation, cleanup, compatibility, and registration failures.
+
+### Fixed
+- Fixed Catalog Editor architecture fetching to fall back to Model Page URL when the optional upstream repository lacks config.json; clarified that the existing Base Model URL is applicable to any source packaging.
+- Added upstream vocabulary-only checks before downloading source tensors and shard indexes, so recognized architectures with incomplete tokenizer packaging fail early with a useful missing-file explanation.
+- Moved Catalog Editor conversion-tool updates to a background worker so synchronous llama.cpp builds cannot freeze Electron's main process. Long stages now show elapsed-time status, and worker failures return explicit errors.
+
+### Changed
+- Bumped application, package-lock root metadata, and generated catalog versions to `1.1.20`.
+- Added the locally converted RWKV7-G1k-2.9B-20260930 Q5_K_M catalog entry with conversion and tokenizer provenance. The user confirmed successful model loading and interactive chat.
+- Documented the conversion workflow, optional Base Model URL fallback, tool-update duration, source cleanup, and single/multiple/all-GPU selection.
+
 ## [v1.1.19 Core-CE] - 2026-09-10
 
 ### Added

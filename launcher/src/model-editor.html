@@ -233,9 +233,9 @@
             <h3>🧠  Architecture Details</h3>
             <button type="button" class="btn btn-purple" id="btn-fetch-arch">🔍 Fetch from HuggingFace</button>
           </div>
-          <p class="hint" style="margin-bottom: 10px;">Enter Base Model URL for GGUF repos, or Model Page URL will be used</p>
+          <p class="hint" style="margin-bottom: 10px;">Optional upstream repository for any model format. Configuration falls back to Model Page URL. Conversion can use verified supplemental tokenizer assets; their sources are recorded.</p>
           <div class="form-group">
-            <label>Base Model URL (for GGUF repos)</label>
+            <label>Base Model URL (optional upstream repository)</label>
             <input type="url" id="model-base-url" placeholder="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct">
           </div>
           <div class="form-row">
@@ -267,7 +267,7 @@
               <label>HuggingFace Model Page URL *</label>
               <button type="button" class="btn btn-primary" id="btn-fetch-model">🔍 Fetch Model Info</button>
             </div>
-            <input type="url" id="model-url" required placeholder="https://huggingface.co/org/model-GGUF">
+            <input type="url" id="model-url" required placeholder="https://huggingface.co/org/model">
           </div>
           <div class="form-group">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -277,6 +277,40 @@
             <input type="url" id="model-download-url" required placeholder="https://huggingface.co/.../file.gguf">
           </div>
           <div id="file-status" class="status-msg"></div>
+          <div id="hf-conversion-panel" style="border: 1px solid #555; padding: 12px; margin-bottom: 14px;">
+            <strong>Local Hugging Face conversion</strong>
+            <div class="form-row" style="margin-top: 8px;">
+              <div class="form-group">
+                <label>Source revision (branch, tag, or commit)</label>
+                <input id="hf-conversion-revision" type="text" value="main">
+              </div>
+              <button type="button" class="btn btn-secondary" id="hf-conversion-scan">Scan repository</button>
+              <button type="button" class="btn btn-secondary" id="hf-conversion-update">Update conversion tools</button>
+            </div>
+            <p>Updating conversion tools may take about 10–30 minutes on the first run, and longer for a full CUDA rebuild or slow dependency downloads. Time depends on your hardware and connection. Keep Core open until the update reports completion; update status shows the current stage and elapsed time.</p>
+            <div id="hf-existing-gguf" hidden>
+              <label>Available GGUF files</label>
+              <select id="hf-existing-gguf-choice"></select>
+              <button type="button" class="btn btn-secondary" id="hf-existing-gguf-use">Use selected GGUF</button>
+            </div>
+            <div id="hf-conversion-offer" hidden>
+              <p>No GGUF available. Convert locally?</p>
+              <p id="hf-conversion-source"></p>
+              <label><input type="checkbox" id="hf-conversion-keep"> Keep downloaded source tensors in cache</label>
+              <p>Source tensors take substantial disk space and are not required to run GGUF models. Keeping them lets you create another quantization without downloading the weights again. By default, they are deleted after successful GGUF creation.</p>
+              <button type="button" class="btn btn-primary" id="hf-conversion-prepare">Convert locally</button>
+            </div>
+            <div id="hf-conversion-quantization" hidden>
+              <label>Quantization</label>
+              <select id="hf-conversion-choice"></select>
+              <p>Q5_K_M is recommended for the Tesla P4 8 GB profile when supported. Available choices come from your installed llama-quantize.</p>
+              <label><input type="checkbox" id="hf-conversion-smoke"> Also run a one-token inference smoke test</label>
+              <p>GGUF metadata checks and a CPU model load test always run before registration. Quantization uses the original full-precision GGUF.</p>
+              <button type="button" class="btn btn-primary" id="hf-conversion-finish">Quantize, validate &amp; register</button>
+            </div>
+            <button type="button" class="btn btn-secondary" id="hf-conversion-cancel" hidden>Cancel conversion</button>
+            <pre id="hf-conversion-status" role="status" aria-live="polite" style="white-space: pre-wrap; max-height: 160px; overflow: auto;"></pre>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label>Filename</label>
@@ -482,6 +516,7 @@
   <script src="model-editor-utils.js"></script>
   <script src="model-editor-renderer-helpers.js"></script>
   <script src="model-editor-ollama-suggest.js"></script>
+  <script src="model-editor-conversion.js"></script>
   <script src="model-editor-renderer.js"></script>
 </body>
 </html>
