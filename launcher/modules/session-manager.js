@@ -67,6 +67,7 @@ const serviceLauncher = createSessionServiceLauncher({
 });
 
 const moe = createSessionManagerMoe({
+  getSessionStateStatus: (id) => sequenceState.status(id),
   runSessionTurn: (id, request) => sequenceState.runTurn(id, request),
   pingSession: (id) => sequenceState.ping(id),
   startOllamaForService,
@@ -330,6 +331,7 @@ module.exports = {
   pingMoEAgents,
   rerunLastMoEIrg,
   runMoEIrgContract,
+  runMoEKtGateway: (id, command) => moe.runMoEKtGateway(id, command),
   listMoESerialPorts,
   listDeterministicTools,
   executeDeterministicTool,

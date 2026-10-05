@@ -22,6 +22,10 @@ function createSessionManagerMoe(deps = {}) {
   const getDeterministicRuntime = deps.getDeterministicRuntime;
   const getAttachmentStore = deps.getAttachmentStore;
 
+  const ktGateway = require('./moe/moe-kt-emulator').createGatewayClient({
+    getStatus: () => moeDeployment.getStatus(),
+    getStateStatus: (id) => deps.getSessionStateStatus(id)
+  });
   let moeInitialized = false;
 
   function initializeMoE() {
@@ -147,6 +151,7 @@ function createSessionManagerMoe(deps = {}) {
   }
 
   return {
+    runMoEKtGateway: (id, command) => ktGateway.run(id, command),
     initializeMoE,
     deployMoEPipeline,
     getMoEStatus,

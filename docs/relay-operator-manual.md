@@ -195,3 +195,22 @@ only: it does not call the model or alter its state. No native tensor contents,
 conversation text, or generated token IDs are exposed by these lifecycle records.
 
 For the BMOC ownership contract, continuation details, and regression commands, see [Persistent Agent state](relay-persistent-agent-state.md).
+## External kT-emulator Gateway
+
+In an expanded Gateway, select **kT-emulator HTTP**, assign one Agent, and set the running emulator's base URL (normally `http://127.0.0.1:8000`). This is an output Gateway. Deploy after editing settings; manual actions use the deployed configuration.
+
+**Read State** calls `GET /api/state`. **Evaluate** posts the selected existing instruction and evaluation noise to `/api/evaluate`. **Reset Emulator** posts the displayed reset parameters to `/api/reset`; blank starting y is omitted. Reset affects only the external emulator. Relay never starts, stops, or implicitly resets it, and never changes BMOC/model state through these controls.
+
+Operations are serialized, bounded by the configured timeout, and never automatically retried. A timed-out command may already have executed. The Gateway displays its latest operation trace and logs every operation, including Agent/Gateway/BMOC session identity, generation and turn count at dispatch, request parameters, timing, errors, and returned `y`, `ga`, `gb`, and `magnitude`. These identifiers provide correlation only; no RWKV-to-emulator mapping or feedback is applied.
+
+This first integration supports one enabled external emulator Gateway, one assigned deployed Agent, and the emulator's existing single lane/address. Its UI controls share that same emulator state. No Monitor API is used. Trace views are temporary and are not saved in pipeline configuration.
+
+### Manual connection test
+
+1. Start the existing emulator from its project directory with `./start.sh ui --host 127.0.0.1 --port 8000`. Leave it running and dismiss its browser tutorial. Avoid changing its UI controls during the Relay test.
+2. Restart Core-CE to load the new UI. Add/expand a Gateway, select **kT-emulator HTTP**, and select the deployed RWKV7 Agent. Set base URL `http://127.0.0.1:8000` and timeout `5000` ms.
+3. Select instruction `FF` and evaluation noise `0`. Set reset model `float`, initialization `medium_noiseless`, seed `1`, read noise `0`, and starting y `0.25`. Enable persistence on the ordinary RWKV7 Agent and deploy the pipeline.
+4. Click **Read State** and confirm success, HTTP 200, and numeric results. Click **Reset Emulator**, then **Read State**, and copy the values before the next operation.
+5. Click **Evaluate** once. Confirm `/api/evaluate`, the selected instruction/noise, success, and a step increment of one. Compare `y`, `ga`, `gb`, and `magnitude`; magnitude should approximately equal `ga + gb`. One instruction need not change all four fields. Reset returns `y: 0` even when starting y is specified; `FF` reads the initialized pair.
+6. Click **Read State** to inspect the resulting state, then **Reset Emulator** to confirm step zero and the selected initialization. Neither operation changes the BMOC generation or Agent turn count.
+7. Inspect the latest trace below the Gateway controls. Each operation is also logged as `[Relay Gateway]` in the application terminal and `[Relay Gateway trace]` in the renderer console. These are manual operation traces, separate from Agent chat turns. Stop and Deploy again after any settings edits.

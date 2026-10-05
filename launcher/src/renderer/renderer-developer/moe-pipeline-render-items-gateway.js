@@ -73,6 +73,7 @@ function renderGatewayRow(gateway, index) {
  * Render gateway expanded details
  */
 function renderGatewayDetails(gateway) {
+  if (gateway.adapter === 'kt-emulator-http') return window.renderKtGatewayDetails(gateway);
   const theme = getMoeTheme();
   const serialPorts = Array.isArray(window.modelOrderingState?.serialDevices)
     ? window.modelOrderingState.serialDevices
@@ -264,6 +265,7 @@ function renderGatewayDetails(gateway) {
   
   return `
     <div onclick="event.stopPropagation()" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid ${theme.success}33; font-size: 12px;">
+      ${window.renderKtGatewayAdapterSelector(gateway)}
       <div style="margin-bottom: 15px;">
         <label style="color: #888; font-size: 12px; display: block; margin-bottom: 5px;">Gateway Position</label>
         <div style="display: flex; gap: 10px;">
