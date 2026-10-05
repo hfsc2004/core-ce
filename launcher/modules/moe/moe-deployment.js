@@ -372,6 +372,8 @@ async function deployAgent(agent, appPath, gpuInfo) {
   console.log(`[MoE Deployment]    Port ${port}, PID ${pid}`);
 
   activeDeployment.agents[agent.id] = {
+    id: agent.id,
+    ngiManagement: agent.ngiManagement === true,
     persistentSequence: provider === 'llama.cpp' && agent.persistentSequence === true,
     sessionId,
     name: agent.name,

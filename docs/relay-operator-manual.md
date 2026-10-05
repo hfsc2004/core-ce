@@ -197,6 +197,37 @@ conversation text, or generated token IDs are exposed by these lifecycle records
 For the BMOC ownership contract, continuation details, and regression commands, see [Persistent Agent state](relay-persistent-agent-state.md).
 ## External kT-emulator Gateway
 
+### NGI Experiment Assistant (draft-only phase)
+
+Add a separate helper Agent and enable **IRG: allow NGI experiment management (helper Agent only)** in its expanded card. This capability is off by default. Leave it disabled on the persistent RWKV7 subject; assign the subject, not the helper, to the kT-emulator Gateway. Deploy after permission/configuration edits. Model calls continue through BMOC-owned sessions.
+
+Select the permitted helper in Relay chat's individual Agent selector and enter requests there. Both the standalone chat window and inline chat dispatch NGI draft tools through BMOC's service boundary. Tool results include the draft and validation in the reply. The Gateway's draft panel remains an alternative entry point; **Refresh draft / validation** reads the same backend draft without calling a model or emulator. A model-supplied requester identity cannot grant permission; the backend checks the selected helper's deployed capability and session before and after each response.
+
+Enabling NGI management also enables automatic **NGI Knowledge — managed by Core** retrieval for private helper requests, including ordinary explanatory conversation. The locked control in the Agent's Tools & Integrations area opens a read-only viewer for the collection version, documents, and references. No upload, edit, deletion, or retrieval toggle is exposed. Permission changes require deployment; the viewer itself never calls a model or emulator.
+
+The bundled collection is isolated from personal/shared uploads and contains curated notes on reservoir computing, RWKV7, kT-RAM instructions, the existing emulator API, and observation/mapping/drive boundaries. It reuses Core's source-of-record RAG retriever with fixed source paths, returning at most three excerpts and 3,600 characters. It needs no embedding model, network connection, or vector-index rebuild. The existing FAISS-labelled Agent button is a placeholder; Core's general vector implementation uses Vectra. Managed NGI retrieval does not modify that index or user buckets.
+
+Retrieved filenames, references, collection version, and excerpt ranges accompany helper response metadata; ordinary replies remain plain text. Live backend capability/configuration data takes precedence over reference material. Retrieval failure is reported as unavailable and does not fail the model turn. The first collection is a starter reference set, not model training or a guarantee of expertise. See [managed NGI knowledge](ngi-managed-knowledge.md) for maintenance and verification.
+
+**Full Pipeline has no IRG tool execution**, including hardware and NGI tools, regardless of live-mode overrides or model-generated plans. Select an individual Agent for IRG tooling. Hardware IRG uses the configured Gateway policy and a validated plan from that selected Agent. Manual Gateway controls remain separate explicit operations.
+
+Greetings and explanatory conversation should produce plain text without tool execution or a draft dump. Draft tools are reserved for explicit management requests; missing parameters require clarification. Backend validation still rejects incomplete model proposals.
+
+The helper can request one explicit `target: "ngi-experiment"` contract per response using the existing `IRG_PLAN_JSON` envelope. Supported draft actions are `ngi_inspect`, `ngi_select_source`, `ngi_configure_mapping`, `ngi_configure_drive`, `ngi_configure_trigger_logging`, `ngi_validate`, `ngi_status`, and `ngi_results`. Source Agent IDs are configuration data, not authorization identities. Mapping IDs/versions and flat numeric parameters are declarations only; this phase has no supported recurrent projection implementation. Trigger declarations are `manual` or `after-persistent-turn`; neither creates a measurement loop.
+
+Draft revisions, source identity, proposed mapping/drive/trigger/logging, validation errors, and capability blockers appear below the controls. Structural validity is separate from readiness: `readyToRun` is always false. Apply/Arm/Start/Stop contracts are recognized but blocked, including through generic IRG and replay paths. No draft tool resets or calls the emulator, changes the deployed Gateway settings, reads native recurrent state, or starts an experiment. The existing manual Read State/Evaluate/Reset Emulator controls remain independent user actions.
+
+Drafts and bounded helper conversations live in memory and are discarded on redeployment. Management logs include the backend requester, subject, action, parameters, and draft revision; no measurements exist yet.
+
+Manual verification:
+
+1. Restart Core-CE. Add the persistent RWKV7 subject and a separate model-backed Experiment Assistant. Leave NGI management off on the subject and enable it on the helper.
+2. Configure the kT-emulator HTTP Gateway with the subject assignment and deploy. Open its draft panel, select the helper, and request: "Inspect the NGI Gateway and report the current draft and available capabilities."
+3. Request: "Propose FF with evaluation noise 0 in the draft only." Confirm the drive proposal and revision change; the emulator must not advance.
+4. Request: "Validate the draft." Confirm missing fields and unavailable capabilities are visible, with `readyToRun: false`. The helper must not claim an executable mapping exists.
+5. Request: "Apply, arm, and start the experiment." Any emitted transition contract must be blocked. No Apply/Arm/Start UI action is offered in this phase.
+6. Confirm Refresh does not advance any Agent turn; helper requests advance only the helper's session. Subject model state and manual Gateway settings remain unchanged. Manual Read State/Evaluate/Reset Emulator still work against a running emulator.
+
 In an expanded Gateway, select **kT-emulator HTTP**, assign one Agent, and set the running emulator's base URL (normally `http://127.0.0.1:8000`). This is an output Gateway. Deploy after editing settings; manual actions use the deployed configuration.
 
 **Read State** calls `GET /api/state`. **Evaluate** posts the selected existing instruction and evaluation noise to `/api/evaluate`. **Reset Emulator** posts the displayed reset parameters to `/api/reset`; blank starting y is omitted. Reset affects only the external emulator. Relay never starts, stops, or implicitly resets it, and never changes BMOC/model state through these controls.

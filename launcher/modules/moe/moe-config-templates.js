@@ -13,6 +13,7 @@ function ensureItemDefaults(item) {
   const defaults = {
     agent: {
       enabled: true,
+      ngiManagement: false,
       provider: 'llama.cpp',
       modelId: null,
       modelName: null,

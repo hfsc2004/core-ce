@@ -1266,6 +1266,7 @@ function renderMoeChat() {
               `).join('')}
             </select>
             <span id="moe-kvm-indicator" style="font-size: 10px; color: ${theme.success};">● Pipeline</span>
+            <label style="font-size:12px;color:#aaa;" title="Shows NGI retrieval and tool validation, not internal reasoning."><input type="checkbox" ${window.MoeBackendTrace?.isEnabled() ? 'checked' : ''} onchange="MoeBackendTrace.toggle(this.checked)"> Show backend trace</label>
           </div>
           
           <!-- Open Full Chat Window Button -->
@@ -1281,6 +1282,7 @@ function renderMoeChat() {
       </div>
       
       <!-- Mini Preview Chat (Quick Messages) -->
+      <p style="font-size:12px;color:#aaa;">IRG Tooling is unavailable in Full Pipeline. Please select an individual Agent for IRG Tooling use.</p>
       <div id="moe-chat-messages" style="background: rgba(0,0,0,0.3); border: 1px solid #333; border-radius: 8px; 
            height: 250px; overflow-y: auto; padding: 12px; margin-bottom: 12px; font-family: monospace; font-size: 12px;">
         <div style="color: #666; text-align: center; padding: 15px;">

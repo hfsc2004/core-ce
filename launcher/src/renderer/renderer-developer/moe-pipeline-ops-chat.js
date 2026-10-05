@@ -380,12 +380,15 @@ async function sendMoeChatMessage() {
 
       if (result.success) {
         appendChatMessage('direct', result.content, targetAgent?.name);
+        window.MoeBackendTrace?.append(messagesDiv, result);
 
         if (statusSpan) {
           statusSpan.textContent = '(Ready - Direct Mode)';
           statusSpan.style.color = '#8a2be2';
         }
       } else {
+        if (result.ngi && result.content) appendChatMessage('direct', result.content, targetAgent?.name);
+        window.MoeBackendTrace?.append(messagesDiv, result);
         throw new Error(result.error || 'Agent error');
       }
     }

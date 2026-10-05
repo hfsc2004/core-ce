@@ -128,6 +128,9 @@ function normalizePlanContract(candidate, policy) {
   const action = String(candidate?.action || '').trim().toLowerCase();
   if (!action) return null;
   const targetInput = String(candidate?.target || '').trim().toLowerCase();
+  if (targetInput === 'ngi-experiment' || action.startsWith('ngi_')) {
+    return { ...candidate, target: targetInput, action };
+  }
   const target = /esp-?32/.test(targetInput) ? 'esp32' : 'raspberry-pi-pico';
   const params = candidate?.params && typeof candidate.params === 'object' ? candidate.params : {};
   const cyclesDefault = Number(policy?.pico?.defaultSequenceCycles) || 5;

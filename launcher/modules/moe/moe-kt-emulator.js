@@ -64,7 +64,10 @@ function createGatewayClient({ getStatus, getStateStatus, fetch: request = globa
       // disabled below so an external service cannot forward them to a model.
       for (const model of Object.values(deployment.agents || {})) {
         if (!model.endpoint) continue;
-        const endpoint = new URL(model.endpoint);
+        // Deployment uses Core-CE endpoint objects; legacy callers may use URLs.
+        if (model.endpoint.type === 'unix') continue;
+        const endpoint = new URL(typeof model.endpoint === 'string' ? model.endpoint
+          : require('./moe-endpoint').buildEndpointURL(model.endpoint, '/'));
         const local = host => ['localhost', '127.0.0.1', '[::1]'].includes(host);
         if (target.origin === endpoint.origin || (local(target.hostname) && local(endpoint.hostname) && target.port === endpoint.port)) throw new Error('Emulator URL cannot target a model endpoint');
       }

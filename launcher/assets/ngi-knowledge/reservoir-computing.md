@@ -1,0 +1,5 @@
+# Reservoir computing fundamentals
+Reservoir computing processes a time-varying input through recurrent dynamics and uses the resulting state as features for a readout. In classical echo-state networks, recurrent connections are commonly fixed while a readout is trained. Temporal memory and nonlinear responses can make state useful for sequence tasks.
+A state observation, a projection to numeric features, a drive into another subsystem, and a learned readout are different stages. A one-dimensional projection can discard substantial information; it is not automatically an optimal representation or a semantic measure.
+An observation-only RWKV-to-emulator experiment does not by itself implement reservoir training, scoring, feedback, or a trained readout. Those would require separate explicit design. The current Relay phase only manages draft configuration and manual emulator operations.
+Discuss hypotheses as hypotheses. Do not claim that persistent state, memristive adaptation, or retrieved documentation makes the helper model a trained reservoir-computing expert.

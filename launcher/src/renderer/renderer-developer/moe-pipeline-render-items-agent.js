@@ -167,6 +167,12 @@ function renderAgentDetails(agent, counts = {}) {
         <pre style="white-space:pre-wrap; word-break:break-word;">${escapeState(stateSummary)}</pre>
       </div>` : ''}
       <div style="margin-bottom:15px; color:#ddd; font-size:12px;">
+        <label><input type="checkbox" ${agent.ngiManagement === true ? 'checked' : ''}
+          onchange="updateAgentNgiManagement('${agent.id}', this.checked)">
+          IRG: allow NGI experiment management (helper Agent only)</label>
+        <div style="color:#888; margin-top:6px;">Off by default. Keep disabled on the experiment subject. This permits draft management only; deploy after changing.</div>
+      </div>
+      <div style="margin-bottom:15px; color:#ddd; font-size:12px;">
         <label><input type="checkbox" ${agent.persistentSequence === true ? 'checked' : ''}
           ${agent.provider !== 'llama.cpp' ? 'disabled' : ''}
           onchange="toggleAgentPersistentSequence('${agent.id}', this.checked)">
@@ -223,7 +229,9 @@ function renderAgentDetails(agent, counts = {}) {
       <div>
         <label style="color: #888; font-size: 12px; display: block; margin-bottom: 5px;">Tools & Integrations</label>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button onclick="notifyMoeComingSoon('FAISS (RAG) integration')" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px dashed #555; border-radius: 6px; color: #666; cursor: pointer;">FAISS (RAG)</button>
+          ${agent.ngiManagement === true
+            ? window.renderNgiKnowledge(agent.id)
+            : `<button onclick="notifyMoeComingSoon('FAISS (RAG) integration')" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px dashed #555; border-radius: 6px; color: #666; cursor: pointer;">FAISS (RAG)</button>`}
           <button onclick="notifyMoeComingSoon('Vision integration')" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px dashed #555; border-radius: 6px; color: #666; cursor: pointer;">Vision</button>
           <button onclick="notifyMoeComingSoon('Web Search integration')" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px dashed #555; border-radius: 6px; color: #666; cursor: pointer;">Web Search</button>
         </div>
