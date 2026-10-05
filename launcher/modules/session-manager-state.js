@@ -79,6 +79,7 @@ function createSessionStateManager(deps = {}) {
 
     for (const sessionId of sessionIds) {
       const session = activeSessions[sessionId];
+      if (deps.beforeClose) await deps.beforeClose(sessionId);
       const ollamaRunning = session.ollamaPID ? await isProcessRunning(session.ollamaPID) : false;
       const serviceRunning = session.servicePID ? await isProcessRunning(session.servicePID) : false;
 
@@ -143,6 +144,7 @@ function createSessionStateManager(deps = {}) {
     console.log(`[Session Manager] Closing session: ${sessionId}`);
 
     try {
+      if (deps.beforeClose) await deps.beforeClose(sessionId);
       if (session.servicePID) {
         await killProcess(session.servicePID, session.type);
 

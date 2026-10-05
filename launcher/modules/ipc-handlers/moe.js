@@ -46,6 +46,11 @@ function createMoEHandlers() {
     },
     'moe-send-to-agent': async (ctx, event, agentId, message, options) =>
       ctx.sessionManager.sendToMoEAgent(agentId, message, options),
+    'moe-reset-agent-state': async (ctx, event, agentId) => {
+      const agent = ctx.sessionManager.getMoEStatus()?.agents?.[agentId];
+      if (!agent?.sessionId) return { success: false, error: 'Agent is not deployed' };
+      return ctx.sessionManager.resetSessionState(agent.sessionId);
+    },
     'moe-ping-agents': async (ctx) => ctx.sessionManager.pingMoEAgents(),
     'moe-list-serial-ports': (ctx) => ctx.sessionManager.listMoESerialPorts(),
     'moe-pick-code-file': async (ctx) => {

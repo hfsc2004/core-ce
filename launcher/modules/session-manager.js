@@ -24,7 +24,10 @@ const createSessionManagerMoe = require('./session-manager-moe');
 const { createRlmService } = require('./rlm-service/rlm-service');
 const attachments = require('./attachments');
 
+const createSequenceState = require('./session-manager-sequence-state');
+let sequenceState;
 const sessionState = createSessionStateManager({
+  beforeClose: (id) => sequenceState?.invalidate(id),
   processUtils: {
     isProcessRunning,
     killProcess,
@@ -42,6 +45,7 @@ const sessionState = createSessionStateManager({
   }
 });
 
+sequenceState = createSequenceState({ getSession: (id) => sessionState.getSession(id) });
 const deterministic = createSessionManagerDeterministic();
 const gpuMonitorManager = createSessionGpuMonitor();
 const attachmentStore = attachments.createAttachmentStore({
@@ -63,6 +67,8 @@ const serviceLauncher = createSessionServiceLauncher({
 });
 
 const moe = createSessionManagerMoe({
+  runSessionTurn: (id, request) => sequenceState.runTurn(id, request),
+  pingSession: (id) => sequenceState.ping(id),
   startOllamaForService,
   startLlamaCppForService,
   closeSession,
@@ -159,7 +165,10 @@ async function deployMoEPipeline(pipelineConfig, appPath, gpuInfo) {
 }
 
 function getMoEStatus() {
-  return moe.getMoEStatus();
+  const deployment = moe.getMoEStatus();
+  if (!deployment) return deployment;
+  return { ...deployment, agents: Object.fromEntries(Object.entries(deployment.agents || {}).map(([id, agent]) =>
+    [id, { ...agent, bmocState: agent.provider === 'llama.cpp' ? sequenceState.status(agent.sessionId) : null }])) };
 }
 
 async function teardownMoEPipeline() {
@@ -288,6 +297,10 @@ function isGpuMonitorRunning() {
 
 module.exports = {
   initialize,
+  runSessionTurn: (id, request) => sequenceState.runTurn(id, request),
+  pingSession: (id) => sequenceState.ping(id),
+  resetSessionState: (id) => sequenceState.reset(id),
+  getSessionStateStatus: (id) => sequenceState.status(id),
   startOllamaForService,
   startLlamaCppForService,
   getOllamaPortForService,

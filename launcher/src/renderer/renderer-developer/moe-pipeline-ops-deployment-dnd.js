@@ -118,6 +118,7 @@ function setMoePipelineFrameState(stateName = 'idle') {
 }
 
 async function deployMoePipeline() {
+  if (window.modelOrderingState) window.modelOrderingState.moeBmocState = {};
   const items = Array.isArray(window.modelOrderingState?.moeItems)
     ? window.modelOrderingState.moeItems
     : [];
@@ -261,6 +262,7 @@ async function teardownMoePipeline() {
       setMoeDeployBusyUi(false);
       setMoePipelineFrameState('stopped');
       console.log('[MoE] Pipeline torn down:', result);
+      window.modelOrderingState.moeBmocState = {};
       appendMoeDeployStatusLine(`Pipeline stopped. Closed ${result.closedAgents} agent(s).`, 'success');
       clearMoePostDeployDirty();
       setMoeDeployStatusSummary('Stopped');
@@ -312,8 +314,12 @@ async function getMoePipelineStatus() {
       );
       appendMoeDeployStatusLine(`Pipeline path: ${status.ingress.endpoint || '/v1/chat'}`, 'info');
     }
+    window.modelOrderingState.moeBmocState = Object.fromEntries(
+      Object.entries(status.agents || {}).map(([id, agent]) => [id, agent.bmocState])
+    );
     for (const agent of Object.values(status.agents || {})) {
       appendMoeDeployStatusLine(`Agent: ${agent.name} (port ${agent.port}, PID ${agent.pid})`, 'info');
+      if (agent.bmocState) appendMoeDeployStatusLine(`BMOC state: ${JSON.stringify(agent.bmocState)}`, 'info');
     }
   } catch (err) {
     console.error('[MoE] Status check failed:', err);

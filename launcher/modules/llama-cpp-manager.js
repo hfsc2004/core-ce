@@ -361,6 +361,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     mainGpuIndex = null,
     cudaVisibleDevices = null,
     parallel = 1,
+    enableSequenceReset = false,
     startupTimeoutMs = 600000
   } = options;
 
@@ -394,6 +395,14 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     '--ctx-size', String(Math.max(256, Number(contextSize) || 32768)),
     '--parallel', String(Math.max(1, Number(parallel) || 1))
   ];
+  // The server gates erase behind slot-save-path. This empty control directory
+  // enables reset only; BMOC exposes no snapshot/restore operations.
+  const sequenceControlPath = enableSequenceReset
+    ? path.join(appDir, '..', '.psf', 'llama-sequence-control', String(port)) : null;
+  if (sequenceControlPath) {
+    fs.mkdirSync(sequenceControlPath, { recursive: true });
+    args.push('--slot-save-path', sequenceControlPath + path.sep);
+  }
   if (resolvedProjectorPath) {
     args.push('--mmproj', resolvedProjectorPath);
   }
@@ -481,6 +490,11 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     env: childEnv
   });
 
+  const clearSequenceControl = () => {
+    if (sequenceControlPath) fs.rmdir(sequenceControlPath, () => {});
+  };
+  child.once('exit', clearSequenceControl);
+  child.once('error', clearSequenceControl);
   let startupError = '';
   let exited = false;
   let exitCode = null;
@@ -521,6 +535,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
   }
 
   return {
+    sequenceControlPath,
     pid: child.pid,
     port,
     process: child,

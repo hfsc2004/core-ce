@@ -5,46 +5,7 @@
  */
 const moeEndpoint = require('./moe-endpoint');
 
-function createAgentTransport({ requestTimeout }) {
-  function normalizeMessagesForLlamaTemplate(messages = []) {
-    const rows = Array.isArray(messages) ? messages : [];
-    const normalized = [];
-    for (const row of rows) {
-      const rawRole = String(row?.role || '').trim().toLowerCase();
-      const content = String(row?.content || '').trim();
-      if (!content) continue;
-      const role = rawRole === 'assistant' ? 'assistant' : 'user';
-      if (normalized.length === 0 && role === 'assistant') {
-        normalized.push({ role: 'user', content: 'Continue.' });
-      }
-      const prev = normalized[normalized.length - 1];
-      if (prev && prev.role === role) {
-        prev.content = `${prev.content}\n\n${content}`.trim();
-      } else {
-        normalized.push({ role, content });
-      }
-    }
-    if (normalized.length === 0) normalized.push({ role: 'user', content: 'Hello.' });
-    if (normalized[normalized.length - 1]?.role !== 'user') {
-      normalized.push({ role: 'user', content: 'Continue.' });
-    }
-    return normalized;
-  }
-
-  function extractLlamaAssistantContent(data = {}) {
-    return String(
-      data?.choices?.[0]?.message?.content ||
-      data?.choices?.[0]?.message?.reasoning_content ||
-      data?.choices?.[0]?.message?.reasoning ||
-      data?.choices?.[0]?.message?.thinking ||
-      data?.choices?.[0]?.text ||
-      data?.message?.content ||
-      data?.content ||
-      data?.response ||
-      ''
-    );
-  }
-
+function createAgentTransport({ requestTimeout, runSessionTurn, pingSession }) {
   async function callAgent(agent, messages, options = {}) {
     const provider = String(agent?.provider || '').trim().toLowerCase() === 'llama.cpp' ? 'llama.cpp' : 'ollama';
     const modelTag = String(agent?.modelId || agent?.modelName || '').trim();
@@ -53,6 +14,12 @@ function createAgentTransport({ requestTimeout }) {
       return { success: false, error: `No model assigned to agent ${agent.name}` };
     }
 
+    if (provider === 'llama.cpp') {
+      if (!runSessionTurn) return { success: false, error: 'BMOC session support unavailable' };
+      return runSessionTurn(agent.sessionId, { model: modelTag,
+        messages, timeoutMs: options.timeoutMs || requestTimeout,
+        endpoint: moeEndpoint.buildEndpointURL(agent.endpoint, '') });
+    }
     try {
       const controller = new AbortController();
       const timeoutMs = Number.isFinite(Number(options.timeoutMs))
@@ -60,20 +27,8 @@ function createAgentTransport({ requestTimeout }) {
         : requestTimeout;
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-      const url = provider === 'llama.cpp'
-        ? moeEndpoint.buildEndpointURL(agent.endpoint, '/v1/chat/completions')
-        : moeEndpoint.buildOllamaChatURL(agent.endpoint);
-      const body = provider === 'llama.cpp'
-        ? {
-            model: modelTag,
-            messages: normalizeMessagesForLlamaTemplate(messages),
-            stream: false
-          }
-        : {
-            model: modelTag,
-            messages,
-            stream: false
-          };
+      const url = moeEndpoint.buildOllamaChatURL(agent.endpoint);
+      const body = { model: modelTag, messages, stream: false };
 
       const response = await fetch(url, {
         method: 'POST',
@@ -90,9 +45,7 @@ function createAgentTransport({ requestTimeout }) {
       }
 
       const data = await response.json();
-      const content = provider === 'llama.cpp'
-        ? extractLlamaAssistantContent(data)
-        : String(data?.message?.content || data?.response || '');
+      const content = String(data?.message?.content || data?.response || '');
       return { success: true, content };
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -125,9 +78,11 @@ function createAgentTransport({ requestTimeout }) {
     if (!agent) return { reachable: false, error: 'Agent not found' };
     try {
       const provider = String(agent?.provider || '').trim().toLowerCase() === 'llama.cpp' ? 'llama.cpp' : 'ollama';
-      const url = provider === 'llama.cpp'
-        ? moeEndpoint.buildEndpointURL(agent.endpoint, '/v1/models')
-        : moeEndpoint.buildOllamaTagsURL(agent.endpoint);
+      if (provider === 'llama.cpp') {
+        if (!pingSession) return { reachable: false, error: 'BMOC session support unavailable' };
+        return await pingSession(agent.sessionId);
+      }
+      const url = moeEndpoint.buildOllamaTagsURL(agent.endpoint);
       const response = await fetch(url, {
         method: 'GET',
         signal: AbortSignal.timeout(5000)

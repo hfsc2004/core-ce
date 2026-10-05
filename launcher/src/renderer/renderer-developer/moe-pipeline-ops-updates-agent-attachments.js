@@ -490,3 +490,32 @@ window.toggleAgentRlmAssist = toggleAgentRlmAssist;
 window.updateAgentMultiGpuSplit = updateAgentMultiGpuSplit;
 window.openMoeAttachmentManager = openMoeAttachmentManager;
 window.openMoeRoutingHelp = openMoeRoutingHelp;
+
+function toggleAgentPersistentSequence(agentId, enabled) {
+  const agent = window.modelOrderingState.moeItems.find(i => i.id === agentId && i.type === 'agent');
+  if (!agent) return;
+  agent.persistentSequence = enabled === true;
+  if (typeof markMoePipelineConfigChanged === 'function') markMoePipelineConfigChanged('Agent state policy');
+  renderModelOrdering();
+}
+window.toggleAgentPersistentSequence = toggleAgentPersistentSequence;
+
+async function resetAgentModelState(agentId) {
+  const result = await window.electronAPI.resetMoEAgentState(agentId);
+  if (result?.success) await refreshAgentBmocState(agentId);
+  appendMoeDeployStatusLine(result?.success ? 'Agent model state reset.' : `Reset failed: ${result?.error || 'Unknown error'}`, result?.success ? 'success' : 'warn');
+}
+window.resetAgentModelState = resetAgentModelState;
+
+async function refreshAgentBmocState(agentId) {
+  try {
+    const deployment = await window.electronAPI.getMoEStatus();
+    const state = deployment?.agents?.[agentId]?.bmocState;
+    window.modelOrderingState.moeBmocState = Object.fromEntries(
+      Object.entries(deployment?.agents || {}).map(([id, agent]) => [id, agent.bmocState])
+    );
+    appendMoeDeployStatusLine(state ? `BMOC state: ${JSON.stringify(state)}` : 'Agent has no active BMOC session.', 'info');
+    renderModelOrdering();
+  } catch (err) { appendMoeDeployStatusLine(`BMOC state unavailable: ${err.message}`, 'warn'); }
+}
+window.refreshAgentBmocState = refreshAgentBmocState;

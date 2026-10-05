@@ -174,13 +174,14 @@ function createSessionServiceLauncher(deps = {}) {
         try {
           startResult = await llamaCppManager.startLlamaServerOnPort(appPath, {
             port,
+            enableSequenceReset: options.persistentSequence === true,
             modelPath: options.modelPath,
             projectorPath: options.projectorPath,
             modelName: options.modelName,
             chatTemplate: options.chatTemplate,
             contextSize: effectiveContextSize,
             threads: options.threads,
-            parallel: options.parallel,
+            parallel: options.persistentSequence === true ? 1 : options.parallel,
             gpuLayers: options.gpuLayers,
             forceCpu: options.forceCpu === true,
             splitMode: options.splitMode,
@@ -220,9 +221,12 @@ function createSessionServiceLauncher(deps = {}) {
         ollamaPID: startResult.pid,
         metadata: {
           backend: 'llama-cpp',
+          persistentSequence: options.persistentSequence === true,
+          sequenceControlPath: startResult.sequenceControlPath || null,
           ownerWindowId: Number.isFinite(Number(options.ownerWindowId)) ? Number(options.ownerWindowId) : null,
           modelPath: startResult.modelPath || options.modelPath || null,
           projectorPath: startResult.projectorPath || options.projectorPath || null,
+          modelId: options.modelId || null,
           modelName: options.modelName || null,
           logPath: startResult.logPath || null,
           chatTemplate: startResult.chatTemplate || options.chatTemplate || null,

@@ -128,6 +128,19 @@ function renderAgentDetails(agent, counts = {}) {
   const sharedCount = Number(counts?.sharedCount || 0);
   const provider = String(agent.provider || '').trim().toLowerCase() === 'llama.cpp' ? 'llama.cpp' : 'ollama';
   const multiGpuSplit = agent.multiGpuSplit !== false;
+  const bmocState = window.modelOrderingState.moeBmocState?.[agent.id];
+  const escapeState = value => String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
+  const stateSummary = bmocState ? JSON.stringify({
+    sessionId: bmocState.sessionId, persistence: bmocState.enabled,
+    status: bmocState.status, generation: bmocState.generation,
+    turnsThisGeneration: bmocState.turnCount, totalTurns: bmocState.totalTurnCount,
+    resetCount: bmocState.resetCount, modelId: bmocState.modelId,
+    modelName: bmocState.modelName, runtime: bmocState.runtime,
+    recentEvents: bmocState.events?.slice(-10)
+  }, null, 2) : 'Refresh to read the deployed BMOC session metadata.';
+
 
   return `
     <div onclick="event.stopPropagation()" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid ${theme.accent}33;">
@@ -147,6 +160,19 @@ function renderAgentDetails(agent, counts = {}) {
         ${agent.routingMode === 'dynamic'
           ? ' Dynamic lets the model choose the next hop from context (best for dispatch/planning agents).'
           : ' Static uses deterministic rule-based routing (recommended for control and safety-critical agents).'}
+      </div>
+      ${provider === 'llama.cpp' ? `<div style="margin-bottom:15px; color:#aaa; font-size:12px;">
+        <strong>BMOC Agent state</strong>
+        <button onclick="refreshAgentBmocState('${agent.id}')">Refresh state</button>
+        <pre style="white-space:pre-wrap; word-break:break-word;">${escapeState(stateSummary)}</pre>
+      </div>` : ''}
+      <div style="margin-bottom:15px; color:#ddd; font-size:12px;">
+        <label><input type="checkbox" ${agent.persistentSequence === true ? 'checked' : ''}
+          ${agent.provider !== 'llama.cpp' ? 'disabled' : ''}
+          onchange="toggleAgentPersistentSequence('${agent.id}', this.checked)">
+          Keep model state between calls (llama.cpp)</label>
+        <div style="color:#888; margin-top:6px;">BMOC retains this Agent's conversation until reset or Stop/Deploy. Off by default.</div>
+        ${agent.persistentSequence === true ? `<button onclick="resetAgentModelState('${agent.id}')">Reset Agent model state</button>` : ''}
       </div>
       <div style="margin-bottom: 15px; background: rgba(0,0,0,0.18); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
         <label style="display:flex; align-items:center; gap:8px; color:#ddd; font-size:12px; cursor:pointer;">
