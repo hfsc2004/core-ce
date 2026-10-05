@@ -7,17 +7,24 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.21 Core-CE] - 2026-10-04
+
 ### Added
+- Manual external kT-emulator HTTP Gateway with Read State, Evaluate, and Reset Emulator, one assigned Agent, serialized requests, bounded timeouts, and correlated numeric operation traces. No automatic mapping, model feedback, Monitor calls, or implicit emulator resets.
+- Fourteen focused Gateway regression cases covering real HTTP/timeouts, errors, assignment preservation, IPC/UI, and unchanged BMOC/model state.
 - Opt-in persistent llama.cpp sequence state for Relay Agents, including exact generated-token continuation, BMOC-owned reset, and close/restart invalidation. llama.cpp retains ownership of recurrent tensors.
 - Read-only BMOC lifecycle metadata in Relay Agent settings, deployment logs, and chat traces: session identity, persistence policy, status, generation, successful turns, resets, and model/runtime identity.
 - Regression coverage for persistent and ordinary calls, state isolation, lifecycle races, harmless metadata updates, and metadata-only logging; an optional CPU-only native test verifies cached sequence reuse, reset, close, and restart.
 
 ### Changed
+- Bumped application, package-lock root metadata, master/generated catalog versions, and runtime SKU configuration to `1.1.21`.
+- Gateway deployment preserves Agent assignments and external HTTP configuration; kT Gateways bypass IRG execution.
 - Relay llama.cpp generation, provider/template normalization, and health checks use the normal BMOC-owned session path. Non-persistent sessions retain their previous request payload and per-call context behavior.
 - Session ownership follows runtime lifetime fields rather than registry-object identity, so harmless metadata updates preserve queued turns and native context.
 - Relay teardown closes sessions through BMOC and releases their agent-port allocations.
 
 ### Validation
+- All 14 external Gateway tests pass, along with the existing Relay coordinator regression suite and changed JavaScript syntax/whitespace checks.
 - All 22 BMOC regression cases and the native RWKV7 continuity test pass. Repository regression result: 23 of 24 suites pass.
 - The IRG suite has independent failures reproduced from committed baseline `6f71500`: mood-arc “few cycles” alignment and an expanded nested-repeat cycle phrase. IRG implementation and tests remain unchanged in this work.
 

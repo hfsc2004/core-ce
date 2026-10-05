@@ -437,12 +437,13 @@ async function waitForOllama(port, timeoutMs = 10000) {
 
 function deployGateway(gateway) {
   activeDeployment.gateways[gateway.id] = {
+    ...require('./moe-kt-emulator').deployFields(gateway),
     name: gateway.name,
     position: gateway.position,
     enabled: gateway.enabled !== false,
     sources: { ...gateway.sources },
     irg: {
-      enabled: gateway?.irg?.enabled !== false,
+      enabled: gateway.adapter === 'kt-emulator-http' ? false : gateway?.irg?.enabled !== false,
       executeMode: String(gateway?.irg?.executeMode || 'simulate').toLowerCase(),
       entryMode: String(gateway?.irg?.entryMode || 'deterministic-first').toLowerCase(),
       deterministicFallbackMode: String(gateway?.irg?.deterministicFallbackMode || 'on-gaps-or-low-confidence').toLowerCase(),

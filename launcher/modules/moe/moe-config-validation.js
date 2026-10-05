@@ -27,6 +27,11 @@ function validateConfig(config) {
     return { valid: false, errors: ['Configuration must have items array'] };
   }
 
+  const ktGateways = config.items.filter(item => item.type === 'gateway' && item.adapter === 'kt-emulator-http' && item.enabled !== false);
+  if (ktGateways.length > 1) errors.push('Only one enabled kT-emulator Gateway is supported');
+  for (const gateway of ktGateways) {
+    if (!config.items.some(item => item.type === 'agent' && item.id === gateway.assignedAgentIds?.[0] && item.enabled !== false)) errors.push('kT Gateway must reference an enabled Agent');
+  }
   config.items.forEach((item, index) => {
     const itemErrors = validateItem(item, index);
     errors.push(...itemErrors);
@@ -159,6 +164,12 @@ function validateItem(item, index) {
       break;
 
     case 'gateway':
+      if (item.adapter && item.adapter !== 'kt-emulator-http') errors.push(`${prefix}: unknown Gateway adapter`);
+      if (item.adapter === 'kt-emulator-http') {
+        try { require('./moe-kt-emulator').settings(item.ktEmulator); } catch (err) { errors.push(`${prefix}: ${err.message}`); }
+        if (item.position !== 'output') errors.push(`${prefix}: kT Gateway must be output`);
+        if (!Array.isArray(item.assignedAgentIds) || item.assignedAgentIds.length !== 1 || typeof item.assignedAgentIds[0] !== 'string') errors.push(`${prefix}: assign exactly one Agent`);
+      }
       if (!item.name) {
         errors.push(`${prefix}: gateway missing name`);
       }

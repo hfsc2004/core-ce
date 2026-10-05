@@ -10,6 +10,7 @@ function createMoEHandlers() {
   return {
     'moe-deploy-pipeline': async (ctx, event, pipelineConfig) =>
       ctx.sessionManager.deployMoEPipeline(pipelineConfig, ctx.appDir, ctx.gpuInfo),
+    'moe-kt-gateway': (ctx, event, id, command) => ctx.sessionManager.runMoEKtGateway(id, command),
     'moe-get-status': (ctx) => ctx.sessionManager.getMoEStatus(),
     'moe-teardown-pipeline': async (ctx) => ctx.sessionManager.teardownMoEPipeline(),
     'moe-save-pipeline': async (ctx, event, pipelineConfig) =>
