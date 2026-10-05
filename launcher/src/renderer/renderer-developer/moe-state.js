@@ -90,6 +90,7 @@ function createAgent(name = 'New Agent') {
     routingRules: [],
     groups: [],
     rlmAssist: false,
+    persistentSequence: false,
     rlmAttachmentBucketId: '',
     rlmAttachmentSessionId: '',
     rlmSharedAttachmentBucketId: '',

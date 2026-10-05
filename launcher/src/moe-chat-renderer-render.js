@@ -98,14 +98,16 @@
     const escapeHtml = typeof deps.escapeHtml === 'function' ? deps.escapeHtml : ((v) => String(v || ''));
     if (!meta || typeof meta !== 'object') return '';
     const route = meta.route && typeof meta.route === 'object' ? meta.route : null;
-    if (!route) return '';
+    const state = meta.bmocState;
+    const lifecycle = state ? `<div style="color:#9aa; font-size:11px;">BMOC: ${escapeHtml(JSON.stringify(state))}</div>` : '';
+    if (!route) return lifecycle;
     const mode = String(route.mode || 'sequential');
     const target = String(route.target || 'next');
     const reason = String(route.reason || '').trim();
     const rlm = meta.rlmAssistApplied === true ? 'on' : 'off';
     const ctxChars = Number(meta.rlmAssistContextChars || 0);
     const ctxNote = ctxChars > 0 ? ` ctx=${ctxChars}` : '';
-    return `<div style="margin:2px 0 8px 0; color:#9aa; font-size:11px; line-height:1.35;">Route Trace: mode=${escapeHtml(mode)} target=${escapeHtml(target)} rlm=${escapeHtml(rlm)}${escapeHtml(ctxNote)}${reason ? ` reason=${escapeHtml(reason)}` : ''}</div>`;
+    return lifecycle + `<div style="margin:2px 0 8px 0; color:#9aa; font-size:11px; line-height:1.35;">Route Trace: mode=${escapeHtml(mode)} target=${escapeHtml(target)} rlm=${escapeHtml(rlm)}${escapeHtml(ctxNote)}${reason ? ` reason=${escapeHtml(reason)}` : ''}</div>`;
   }
 
   function buildHandoffDetails(meta, deps = {}) {

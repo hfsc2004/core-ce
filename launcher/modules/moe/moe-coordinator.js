@@ -56,10 +56,18 @@ const CLI_AGENT_WORKSPACE_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 const REQUEST_TIMEOUT = 120000;
 
-const transport = createAgentTransport({ requestTimeout: REQUEST_TIMEOUT });
+let runSessionTurn = null;
+let pingSession = null;
+const transport = createAgentTransport({ requestTimeout: REQUEST_TIMEOUT,
+  runSessionTurn: (...args) => runSessionTurn ? runSessionTurn(...args)
+    : Promise.resolve({ success: false, error: 'BMOC session support unavailable' }),
+  pingSession: (...args) => pingSession ? pingSession(...args)
+    : Promise.resolve({ reachable: false, error: 'BMOC session support unavailable' }) });
 
 function initialize(deployment, options = {}) {
   deploymentManager = deployment;
+  runSessionTurn = options.runSessionTurn || null;
+  pingSession = options.pingSession || null;
   deterministicToolsRuntime = options?.deterministicToolsRuntime || null;
   attachmentStore = options?.attachmentStore || null;
   gatewayRuntime.clear();
@@ -992,6 +1000,7 @@ async function routeMessage(userMessage, options = {}) {
         durationMs: stepDuration,
         success: response.success,
         attempts: response.attempts || 1,
+        bmocState: response.bmocState || null,
         execution: resolvedExecution.meta || null,
         rlmAssistApplied: rlmAssistContext.length > 0,
         rlmAssistContextChars: rlmAssistContext.length,

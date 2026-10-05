@@ -31,6 +31,7 @@ function createSessionManagerMoe(deps = {}) {
       moeDeployment.initialize({
         startOllamaForService,
         startLlamaCppForService,
+        pingSession: deps.pingSession,
         closeSession,
         registerSession,
         getSession,
@@ -41,6 +42,8 @@ function createSessionManagerMoe(deps = {}) {
       });
 
       moeCoordinator.initialize(moeDeployment, {
+        runSessionTurn: deps.runSessionTurn,
+        pingSession: deps.pingSession,
         deterministicToolsRuntime: getDeterministicRuntime(),
         attachmentStore: typeof getAttachmentStore === 'function' ? getAttachmentStore() : null
       });

@@ -335,6 +335,8 @@ async function deployAgent(agent, appPath, gpuInfo) {
       throw new Error('BMOC startLlamaCppForService is unavailable for Relay deploy.');
     }
     const result = await bmoc.startLlamaCppForService('moe-agent', appPath, {
+      persistentSequence: agent.persistentSequence === true,
+      modelId: agent.modelId,
       modelPath: resolvedModelPath,
       modelName: agent.modelName || agent.modelId || path.basename(String(resolvedModelPath || '')),
       gpuLayers: Number.isFinite(Number(agent?.gpuLayers))
@@ -370,6 +372,7 @@ async function deployAgent(agent, appPath, gpuInfo) {
   console.log(`[MoE Deployment]    Port ${port}, PID ${pid}`);
 
   activeDeployment.agents[agent.id] = {
+    persistentSequence: provider === 'llama.cpp' && agent.persistentSequence === true,
     sessionId,
     name: agent.name,
     role: String(agent.role || agent.routingRole || '').trim() || null,
@@ -393,7 +396,9 @@ async function deployAgent(agent, appPath, gpuInfo) {
   };
 
   const t2 = Date.now();
-  const ready = await waitForProvider(provider, port, 10000);
+  const ready = provider === 'llama.cpp'
+    ? (await bmoc.pingSession(sessionId)).reachable
+    : await waitForOllama(port, 10000);
   console.log(`[MoE Deployment]    ⏱️ ${provider} ready: ${Date.now() - t2}ms`);
 
   if (ready) {
@@ -424,30 +429,6 @@ async function waitForOllama(port, timeoutMs = 10000) {
     await new Promise(r => setTimeout(r, 250));
   }
   return false;
-}
-
-async function waitForProvider(provider, port, timeoutMs = 10000) {
-  const p = String(provider || '').trim().toLowerCase();
-  if (p === 'llama.cpp') {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      try {
-        const ok = await new Promise((resolve) => {
-          const req = require('http').get(`http://127.0.0.1:${port}/health`, (res) => {
-            resolve(res.statusCode >= 200 && res.statusCode < 500);
-          });
-          req.on('error', () => resolve(false));
-          req.setTimeout(1000, () => { req.destroy(); resolve(false); });
-        });
-        if (ok) return true;
-      } catch (_) {
-        // retry
-      }
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    return false;
-  }
-  return waitForOllama(port, timeoutMs);
 }
 
 // ============================================================================
@@ -584,12 +565,9 @@ async function teardownPipeline() {
     try {
       console.log(`[MoE Deployment]    Closing ${agent.name}...`);
       if (bmoc.closeSession) {
-        await bmoc.closeSession(agent.sessionId);
-      } else if (bmoc.removeSession) {
-        bmoc.removeSession(agent.sessionId);
-        if (agent.pid) {
-          try { process.kill(agent.pid, 'SIGTERM'); } catch (e) { }
-        }
+        await bmoc.closeSession(agent.sessionId, { ollama: require('../port-pool/port-pool-ollama') });
+      } else {
+        throw new Error('BMOC session lifecycle unavailable');
       }
       closedCount++;
     } catch (err) {

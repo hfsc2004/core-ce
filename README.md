@@ -60,6 +60,8 @@ Instruction: Use terminal chat for model interaction; voice controls (`Voice Off
 ### 7) Core Relay Orchestration
 Instruction: Configure pipeline agents/channels/gateway/bindings, then deploy and run routed orchestration flows.
 
+llama.cpp Agents can opt into **Keep model state between calls**. BMOC owns their sequence, exact token context, reset, and teardown; Relay displays read-only lifecycle metadata. See [persistent Agent state](docs/relay-persistent-agent-state.md) and the [Relay operator manual](docs/relay-operator-manual.md).
+
 ![Core Relay Orchestration](launcher/assets/screenshots/Core_Relay_Orchestration.png)
 
 ### 8) Industrial Reflex Gateway (Pipeline Chat)

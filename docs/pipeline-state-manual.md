@@ -111,3 +111,5 @@ If state does not appear to work, check:
 - State is pipeline-scoped and non-executable.
 - It is not a code runner or shell channel.
 - Keep secrets out of state values unless profile policy explicitly permits it.
+
+BMOC-owned model sequence state is described in [Persistent Agent state](relay-persistent-agent-state.md). Its lifetime follows the model session; this manual’s pipeline variables belong to one routed run.

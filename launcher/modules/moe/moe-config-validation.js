@@ -64,6 +64,12 @@ function validateItem(item, index) {
       if (item.routingMode && !VALID_ROUTING_MODES.includes(item.routingMode)) {
         errors.push(`${prefix}: invalid routingMode '${item.routingMode}'`);
       }
+      if (item.persistentSequence != null && typeof item.persistentSequence !== 'boolean') {
+        errors.push(`${prefix}: persistentSequence must be boolean`);
+      }
+      if (item.persistentSequence === true && item.provider !== 'llama.cpp') {
+        errors.push(`${prefix}: persistentSequence requires llama.cpp`);
+      }
       if (item.rlmAssist != null && typeof item.rlmAssist !== 'boolean') {
         errors.push(`${prefix}: rlmAssist must be boolean`);
       }

@@ -153,3 +153,45 @@ Step follow-through:
 Recommended sandbox for validation:
 - `/tmp/psf-cli-agent-sandbox`
 - Use this as CLI Agent `projectPath` during prototype testing to avoid touching the main project tree.
+
+## Optional persistent llama.cpp Agent state
+
+In an Agent's settings, enable **Keep model state between calls (llama.cpp)**,
+then Stop and Deploy to apply the policy. It is off by default. This is useful
+for recurrent models such as RWKV7 and is a capability of the normal BMOC-owned
+session, not a separate service.
+
+BMOC serializes turns, retains the matching conversation and exact generated token IDs, and addresses slot 0
+of that Agent's dedicated llama.cpp process. llama.cpp owns the native sequence
+memory; Core-CE never manipulates RWKV tensors. Ordinary llama.cpp Agent calls
+also go through BMOC, retaining their previous per-call conversation behavior.
+
+Use **Reset Agent model state** to erase the native slot and retained conversation.
+Stop/Deploy creates a fresh session. State does not survive closing or restarting
+the model process. After a failed persistent request, reset before continuing:
+the server may have partially processed the request. Conversation length remains
+subject to the configured context limit; reset when that limit is reached.
+
+All llama.cpp Agents must use their BMOC-owned endpoint. An endpoint registry
+cannot redirect a BMOC session to an unowned server. No snapshot, restore, or clone
+operations are provided. Reset clears logical state; closing the process releases
+its allocated model and sequence buffers.
+
+### BMOC state visibility
+
+Expand a llama.cpp Agent and use **Refresh state** to read BMOC's current session
+metadata. Relay displays the BMOC session ID, persistence policy, state status,
+generation, successful turns in that generation, lifetime successful turns,
+reset count, model/runtime identity, and recent lifecycle events. Pipeline Status
+also writes this metadata to the deployment log. Chat run traces capture the
+BMOC metadata returned for each completed or failed model call.
+
+A turn means one successful BMOC model call, including repeated visits to an
+Agent within a routing cycle. Failed calls do not increment it. A successful reset
+increments the generation and reset count and clears the generation's turn count.
+Counters start fresh with a new model session. BMOC logs lifecycle transitions;
+its in-memory event list retains the latest 100 events. Refresh reads metadata
+only: it does not call the model or alter its state. No native tensor contents,
+conversation text, or generated token IDs are exposed by these lifecycle records.
+
+For the BMOC ownership contract, continuation details, and regression commands, see [Persistent Agent state](relay-persistent-agent-state.md).
