@@ -21,7 +21,7 @@ Start by flashing a tri-color LED on a Pico with a breadboard. Scale to driving 
 
 This repository hosts the **PSF Core Community Edition** codebase for community deployment, operations, and extension.
 
-Current release: **1.1.21**. See [release notes](docs/reference/ReleaseNotes_1_1_21.md) for BMOC-owned persistent Agent state and the manual external kT-emulator Gateway.
+Current release: **1.1.22**. See [release notes](docs/reference/ReleaseNotes_1_1_22.md) for conversational NGI draft management, managed knowledge, backend traces, and Relay Help.
 
 ## Screenshots + Quick Walkthrough
 

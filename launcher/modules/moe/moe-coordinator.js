@@ -31,7 +31,6 @@ const {
   listAvailableSerialPorts,
   getInputGateway,
   getAnyEnabledIrgGateway,
-  normalizeIrgEntryMode,
   normalizeIrgModeOverride,
   isLikelyHardwareIntent,
   buildHardwarePlanContext
@@ -794,69 +793,7 @@ async function routeMessage(userMessage, options = {}) {
     return { success: false, error: 'No agents in pipeline' };
   }
 
-  const hardwareIntent = isLikelyHardwareIntent(userMessage);
-  const inputGateway = getInputGateway(deploymentManager);
-  const irgGateway = inputGateway || (hardwareIntent ? getAnyEnabledIrgGateway(deploymentManager) : null);
-  if (irgGateway && !gatewayRuntime.has(irgGateway.id)) {
-    gatewayRuntime.set(irgGateway.id, startGateway(irgGateway));
-  }
-
-  const irgEntryMode = normalizeIrgEntryMode(irgGateway?.irg?.entryMode);
-  const irgModeOverride = normalizeIrgModeOverride(options?.irgModeOverride);
-  let forceLlmIrgRefinement = false;
-  let deterministicDraftResult = null;
-
-  if (irgGateway && irgEntryMode === 'deterministic-first') {
-    const irgResult = await moeIrg.tryHandleGatewayRequest({
-      message: userMessage,
-      gatewayConfig: irgGateway,
-      llmPlan: '',
-      requireLlmPlan: false,
-      modeOverride: irgModeOverride
-    });
-    if (irgResult.handled) {
-      if (irgResult.needsLlmRefinement === true) {
-        forceLlmIrgRefinement = true;
-        deterministicDraftResult = irgResult;
-      } else {
-      if (irgResult.success) {
-        rememberLastIrgExecution({
-          contract: irgResult.contract || null,
-          gatewayConfig: irgGateway
-        });
-      }
-      const trace = {
-        conversationId: options.conversationId || `conv-${Date.now()}`,
-        startedAt: new Date().toISOString(),
-        steps: [{
-          agentId: 'irg-gateway',
-          agentName: irgGateway.name || 'IRG Gateway',
-          modelName: 'deterministic-irg',
-          input: String(userMessage || '').slice(0, 200),
-          output: irgResult.response,
-          durationMs: 0,
-          success: !!irgResult.success
-        }],
-        finalResponse: irgResult.response,
-        completedAt: new Date().toISOString(),
-        totalDurationMs: 0,
-        mode: 'irg-deterministic'
-      };
-      return {
-        success: !!irgResult.success,
-        response: irgResult.response,
-        trace,
-        error: irgResult.success ? undefined : (String(irgResult.response || '').trim() || 'IRG error'),
-        irg: {
-          handled: true,
-          contract: irgResult.contract || null,
-          execution: irgResult.execution || null
-        }
-      };
-      }
-    }
-  }
-
+  // Full Pipeline has no IRG dispatch: only individual Agent calls select a tool operator.
   const deploymentStatus = deploymentManager?.getStatus?.() || null;
   const cliAgentNodes = collectCliAgentNodes(deploymentStatus?.config?.items || []);
   const orderedAgentIds = agents.map((agent) => agent.id);
@@ -880,24 +817,6 @@ async function routeMessage(userMessage, options = {}) {
     },
     pipelineState: {}
   };
-  if (forceLlmIrgRefinement && deterministicDraftResult) {
-    trace.steps.push({
-      agentId: 'irg-gateway',
-      agentName: irgGateway?.name || 'IRG Gateway',
-      modelName: 'deterministic-irg',
-      input: String(userMessage || '').slice(0, 200),
-      output: deterministicDraftResult.response,
-      durationMs: 0,
-      success: false,
-      route: {
-        mode: 'llm-refinement-required',
-        reason: Array.isArray(deterministicDraftResult?.analysis?.gaps)
-          ? deterministicDraftResult.analysis.gaps.join(', ')
-          : 'coverage-gaps'
-      }
-    });
-  }
-
   let currentContext = userMessage;
   const pipelineState = new Map();
   const structuredRecord = {
@@ -955,11 +874,8 @@ async function routeMessage(userMessage, options = {}) {
         previousResponses,
         isLast,
         {
-          includeHardwarePlanContext:
-            currentAgentIndex === 0 &&
-            !!irgGateway &&
-            hardwareIntent,
-          hardwarePlanContext: currentAgentIndex === 0 ? buildHardwarePlanContext(irgGateway) : '',
+          includeHardwarePlanContext: false,
+          hardwarePlanContext: '',
           rlmAssistContext,
           pipelineStateToolCapabilities: extractAgentToolCapabilities(agent),
           pipelineStateReadContext: buildPipelineStateReadContext(
@@ -1130,94 +1046,6 @@ async function routeMessage(userMessage, options = {}) {
     trace.completedAt = new Date().toISOString();
     trace.totalDurationMs = trace.steps.reduce((sum, s) => sum + s.durationMs, 0);
 
-    const shouldRunPostLlmIrg =
-      !!irgGateway &&
-      hardwareIntent;
-    if (shouldRunPostLlmIrg) {
-      const llmPlan = String(trace.finalResponse || '').trim();
-      const strictLlmPlan = irgGateway?.irg?.requireLlmPlanForLive === true || forceLlmIrgRefinement;
-      const irgResult = await moeIrg.tryHandleGatewayRequest({
-        message: String(userMessage || '').trim(),
-        gatewayConfig: irgGateway,
-        llmPlan,
-        requireLlmPlan: strictLlmPlan,
-        modeOverride: irgModeOverride
-      });
-      if (irgResult.handled) {
-        trace.steps.push({
-          agentId: 'irg-gateway',
-          agentName: irgGateway.name || 'IRG Gateway',
-          modelName: 'deterministic-irg',
-          input: String(userMessage || '').trim().slice(0, 200),
-          output: irgResult.response,
-          durationMs: 0,
-          success: !!irgResult.success
-        });
-        trace.finalResponse = irgResult.response;
-        trace.mode = forceLlmIrgRefinement
-          ? 'deterministic-first+llm-refined+irg'
-          : (irgEntryMode === 'llm-plan-first'
-            ? 'llm-plan-first+irg'
-            : 'deterministic-first+llm-plan+irg');
-        if (!irgResult.success) {
-          trace.error = String(irgResult.response || 'IRG error');
-          return {
-            success: false,
-            response: irgResult.response,
-            trace,
-            error: String(irgResult.response || 'IRG error'),
-            irg: {
-              handled: true,
-              contract: irgResult.contract || null,
-              execution: irgResult.execution || null
-            }
-          };
-        }
-        rememberLastIrgExecution({
-          contract: irgResult.contract || null,
-          gatewayConfig: irgGateway
-        });
-        return {
-          success: true,
-          response: irgResult.response,
-          trace,
-          irg: {
-            handled: true,
-            contract: irgResult.contract || null,
-            execution: irgResult.execution || null
-          }
-        };
-      }
-      const llmPlanPreview = llmPlan.length > 700 ? `${llmPlan.slice(0, 700)}...` : llmPlan;
-      const parseError =
-        'Error\n' +
-        'Reason: LLM returned a hardware plan that did not map to an allowed deterministic action schema.\n' +
-        'Expected prefix/schema: IRG_PLAN_JSON: {"action":"<allowed_action>","params":{...}} (allowed: blink_gpio, blink_color_sequence, blink_color_group, blink_pattern_sequence, blink_multi_phase, push_esp32_code)\n' +
-        `LLM output (preview):\n${llmPlanPreview}`;
-      trace.steps.push({
-        agentId: 'irg-gateway',
-        agentName: irgGateway.name || 'IRG Gateway',
-        modelName: 'deterministic-irg',
-        input: String(userMessage || '').trim().slice(0, 200),
-        output: parseError,
-        durationMs: 0,
-        success: false
-      });
-      trace.finalResponse = parseError;
-      trace.error = parseError;
-      return {
-        success: false,
-        response: parseError,
-        trace,
-        error: parseError,
-        irg: {
-          handled: false,
-          contract: null,
-          execution: null
-        }
-      };
-    }
-
     return { success: true, response: trace.finalResponse, trace };
   } catch (err) {
     trace.error = err.message;
@@ -1272,6 +1100,10 @@ async function sendToAgent(agentId, message, options = {}) {
 
   const messages = [];
   if (agent.systemPrompt) messages.push({ role: 'system', content: agent.systemPrompt });
+  const gateway = getInputGateway(deploymentManager) || getAnyEnabledIrgGateway(deploymentManager);
+  if (gateway?.irg?.enabled === true && isLikelyHardwareIntent(message)) {
+    messages.push({ role: 'system', content: buildHardwarePlanContext(gateway) });
+  }
   if (rlmAssistContext) {
     messages.push({
       role: 'system',
@@ -1290,6 +1122,19 @@ async function sendToAgent(agentId, message, options = {}) {
   const response = await transport.callAgent(agent, messages);
   if (!response?.success) return response;
 
+  if (gateway?.irg?.enabled === true && isLikelyHardwareIntent(message)) {
+    const result = await moeIrg.tryHandleGatewayRequest({
+      message, gatewayConfig: gateway, llmPlan: String(response.content || ''),
+      requireLlmPlan: true, modeOverride: normalizeIrgModeOverride(options?.irgModeOverride)
+    });
+    if (result.handled) {
+      if (result.success) rememberLastIrgExecution({ contract: result.contract, gatewayConfig: gateway });
+      return { ...response, success: !!result.success, content: result.response,
+        error: result.success ? undefined : result.response,
+        irg: { ...result, requestingAgentId: agentId } };
+    }
+  }
+
   let finalContent = String(response.content || '');
   const ownedCliAgents = getOwnedCliAgentsForAgent(agent, cliAgentNodes, orderedAgents);
   for (const cliNode of ownedCliAgents) {
@@ -1301,6 +1146,14 @@ async function sendToAgent(agentId, message, options = {}) {
   }
 
   return { ...response, content: finalContent };
+}
+
+async function callNgiHelper(agentId, messages) {
+  const agent = deploymentManager?.getAgent(agentId);
+  if (!agent?.sessionId || agent.ngiManagement !== true) return { success: false, error: 'NGI helper permission unavailable' };
+  // Only this selected helper is called; no pipeline routing, CLI hooks, RLM,
+  // subject calls, or device planning/execution run on this management path.
+  return transport.callAgent(agent, messages);
 }
 
 async function pingAgent(agentId) {
@@ -1322,6 +1175,7 @@ async function pingAllAgents() {
 
 module.exports = {
   initialize,
+  callNgiHelper,
   routeMessage,
   sendToAgent,
   pingAgent,

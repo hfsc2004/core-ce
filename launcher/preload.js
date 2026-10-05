@@ -285,6 +285,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // MoE Pipeline APIs (Core - Community Edition)
   deployMoEPipeline: (pipelineConfig) => ipcRenderer.invoke('moe-deploy-pipeline', pipelineConfig),
+  getMoENgiExperiment: (id) => ipcRenderer.invoke('moe-ngi-inspect', id),
+  getMoENgiKnowledge: () => ipcRenderer.invoke('moe-ngi-knowledge'),
+  requestMoENgiHelper: (gatewayId, helperId, message) => ipcRenderer.invoke('moe-ngi-helper', gatewayId, helperId, message),
   runMoEKtGateway: (id, command) => ipcRenderer.invoke('moe-kt-gateway', id, command),
   getMoEStatus: () => ipcRenderer.invoke('moe-get-status'),
   onMoEIrgProgress: (callback) => subscribeIpc('moe-irg-progress', callback),

@@ -8,6 +8,130 @@
  * Extracted from settings-modal-templates.js (structural split only).
  */
 
+function syncSettingsHelpToggle() {
+  const entries = document.getElementById('settings-help-entries');
+  const button = document.getElementById('settings-help-toggle-all');
+  if (!entries || !button) return;
+  const details = Array.from(entries.querySelectorAll('details'));
+  const allOpen = details.length > 0 && details.every(entry => entry.open);
+  button.textContent = allOpen ? '▼' : '▶';
+  button.title = allOpen ? 'Collapse all' : 'Expand all';
+  button.setAttribute('aria-label', `${button.title} Help entries`);
+  button.setAttribute('aria-expanded', String(allOpen));
+}
+
+function toggleSettingsHelpAll() {
+  const entries = document.getElementById('settings-help-entries');
+  if (!entries) return;
+  const details = Array.from(entries.querySelectorAll('details'));
+  const expand = details.some(entry => !entry.open);
+  details.forEach(entry => { entry.open = expand; });
+  syncSettingsHelpToggle();
+}
+
+function getHelpTabHTML() {
+  return `
+    <div class="settings-section">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <h3 style="margin:0;">PSF Relay</h3>
+        <button id="settings-help-toggle-all" type="button" onclick="toggleSettingsHelpAll()"
+          title="Expand all" aria-label="Expand all Help entries" aria-expanded="false" aria-controls="settings-help-entries"
+          style="background:none; border:none; color:inherit; cursor:pointer; padding:8px; font-size:16px;">▶</button>
+      </div>
+      <div id="settings-help-entries" style="margin-top:8px;">
+      <details ontoggle="syncSettingsHelpToggle()">
+        <summary style="cursor:pointer; padding:8px 0;">What is IRG in the Gateway card?</summary>
+        <div class="settings-description">
+          <p><strong>IRG means Industrial Reflex Gateway.</strong> It provides pre-programmed, deterministic tooling for a defined set of supported device actions, such as LED blinking patterns and firmware upload on devices such as an ESP32 or Raspberry Pi Pico.</p>
+          <p>A selected Agent can interpret a request and propose a structured action plan. IRG checks that plan against its supported actions and parameters, then carries it out through the configured device tools. The LLM helps decide what to request; the tooling controls how the action executes. Full Pipeline does not dispatch IRG tools; select an individual Agent chat for tooling.</p>
+          <p><strong>Enable IRG when this Gateway handles device-control requests.</strong> Simulation mode can plan and simulate actions without connected hardware. Live execution requires the appropriate device connection, tools, and configuration, such as serial/USB settings. Ordinary Agent conversations and model inference do not require IRG.</p>
+        </div>
+      </details>
+      <details ontoggle="syncSettingsHelpToggle()">
+        <summary style="cursor:pointer; padding:8px 0;">What are the currently supported IRG tools?</summary>
+        <div class="settings-description" style="margin-left:20px; padding-left:12px; border-left:1px solid rgba(128,128,128,0.25);">
+          <p>These categories describe the current IRG action contracts. HTTP actions are restricted to allowed endpoints and GET requests. Live operations require the corresponding hardware, firmware, bindings, and installed tools; simulation does not operate the physical device.</p>
+          <p>With IRG enabled and the Gateway configured, describe a supported action in an individual Relay Agent chat. The Agent proposes a structured plan; IRG validates the action and its parameters before using the device tools. Requests do not need to include the internal tool name. Live execution needs the correct device, firmware, connections, and settings, and automatic execution depends on the Gateway's execution policy.</p>
+          <p>"Blink the Raspberry Pi Pico's red LED every 500 milliseconds for five cycles so I can check that it is connected and working."</p>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">Pico GPIO blinking</summary>
+            <p><code>blink_gpio</code> toggles a selected Raspberry Pi Pico GPIO using a configured period and repetition count. Live execution runs the generated MicroPython program through the serial/USB toolchain.</p>
+            <p><strong>Example request:</strong> “Program the Raspberry Pi Pico to blink GPIO 25 every 500 ms for 5 cycles.”</p>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">Pico color sequences</summary>
+            <p><code>blink_color_sequence</code> blinks red, blue, green, or white LEDs in a specified order, with timing and repetition settings. Color names resolve to GPIO pins through the Gateway's runtime bindings.</p>
+            <p><strong>Example request:</strong> “Program the Raspberry Pi Pico to blink red, blue, and green in order for 5 cycles using the runtime bindings.”</p>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">Pico simultaneous color groups</summary>
+            <p><code>blink_color_group</code> blinks a group of bound color LEDs together rather than one at a time, using the configured on/off timing and cycle count.</p>
+            <p><strong>Example request:</strong> “Program the Raspberry Pi Pico to blink red and blue together for 5 cycles using the runtime bindings.”</p>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">Pico composed blink patterns</summary>
+            <p><code>blink_pattern_sequence</code> combines color sequences with the supported grouped white-flash burst pattern, including burst counts and timing.</p>
+            <p><strong>Example request:</strong> “Program the Raspberry Pi Pico to strobe white twice quickly and then cycle red, blue, and green for 5 cycles.”</p>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">Pico multi-phase sequences</summary>
+            <p><code>blink_multi_phase</code> executes an ordered list of phases. Phases can blink one or more bound colors with their own timing and repetitions, or insert a pause; the complete sequence can repeat.</p>
+            <p><strong>Example request:</strong> “Program the Raspberry Pi Pico to blink red for 150 ms, pause for 500 ms, then blink blue for 250 ms. Run the full sequence for 5 cycles.”</p>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">ESP32 firmware compilation and upload</summary>
+            <p><code>push_esp32_code</code> compiles and uploads an Arduino/C++ sketch to the configured ESP32 board using the Arduino toolchain. Gateway settings supply the board profile, connection, and build/upload options; camera-board profiles and libraries are supported through this firmware path.</p>
+            <p><strong>Example request:</strong> “Compile and upload the attached Arduino sketch to the ESP32 using the configured board and USB port.” Supply or attach the sketch; requesting an upload alone does not provide the firmware source.</p>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">ESP32 Wi-Fi status and discovery</summary>
+            <p><code>esp32_wifi_http</code> can read the device's health, telemetry, and Wi-Fi scan endpoints over HTTP. The ESP32 must be running firmware that implements those endpoints.</p>
+            <p><strong>Example request:</strong> “Read telemetry from the ESP32 at 172.20.0.15 on port 8080.”</p>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">ESP32 Wi-Fi configuration and reboot</summary>
+            <p>The same HTTP tool supports the allowed network-configuration, drive-configuration, and reboot endpoints. These requests use the configured host and port and require matching support in the device firmware.</p>
+            <p><strong>Example request:</strong> “Create an ESP32 HTTP action plan to reboot the device at 172.20.0.15 on port 8080 using GET /reboot.” For configuration requests, include the endpoint parameters required by the device firmware; these actions may require an Agent-generated structured plan.</p>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">ESP32 drive commands</summary>
+            <p>The HTTP command endpoint supports device commands such as forward, reverse, turning, and stop when implemented by the ESP32's firmware. The Gateway provides the drive settings and controls.</p>
+            <p><strong>Example request:</strong> “Stop the ESP32 robot at 172.20.0.15 on port 8080.”</p>
+          </details>
+        </div>
+      </details>
+      <details ontoggle="syncSettingsHelpToggle()">
+        <summary style="cursor:pointer; padding:8px 0;">Neuromorphic Gateway Integration</summary>
+        <div class="settings-description" style="margin-left:20px; padding-left:12px; border-left:1px solid rgba(128,128,128,0.25);">
+          <p>Neuromorphic Gateway Integration (NGI) provides PSF Relay with an interface to the kT-RAM Neural Lane Emulator, a frontend for the ktram-neural-core emulator. NGI allows Relay to send supported kT-RAM commands, read the resulting neural-lane state, and record returned values such as activation and memristive conductance in Relay traces.</p>
+          <p>The integration is intended to let PSF Relay interact with the emulator as an external neuromorphic subsystem while keeping the emulator's internal state and kT-RAM dynamics separate from Relay's LLM runtime.</p>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">Enable and connect</summary>
+            <ol>
+              <li>Start the existing kT-emulator from its project directory with <code>./start.sh ui --host 127.0.0.1 --port 8000</code>. Leave the server running.</li>
+              <li>In PSF Relay, add a Gateway and expand its card. Under <strong>Adapter</strong>, select <strong>kT-emulator HTTP</strong>. The Gateway becomes an output Gateway. If Adapter is missing, restart Core-CE to load the updated UI.</li>
+              <li>Set <strong>Base URL</strong> to <code>http://127.0.0.1:8000</code> and <strong>Timeout</strong> to <code>5000</code> ms. Use the emulator's actual address if it runs elsewhere. The existing <strong>HTTP API</strong> source checkbox is for incoming Relay requests; it does not connect to the emulator.</li>
+              <li>Select one Agent in the Gateway's <strong>Agent</strong> dropdown, such as an RWKV7 Agent. Enable the Gateway and deploy the pipeline. IRG is disabled for this adapter during deployment.</li>
+              <li>After changing Gateway settings, Stop and Deploy again. Manual actions use the deployed configuration.</li>
+            </ol>
+          </details>
+          <details ontoggle="syncSettingsHelpToggle()" style="padding:4px 0;">
+            <summary style="cursor:pointer; padding:6px 0; color:var(--text-primary, #ddd);">Use the manual controls</summary>
+            <ul>
+              <li><strong>Read State</strong> reads the emulator's current neural-lane state without evaluating an instruction or resetting it.</li>
+              <li><strong>Evaluate</strong> sends the selected existing emulator instruction and evaluation noise once. Select the instruction/noise before deployment; click Evaluate explicitly to run it.</li>
+              <li><strong>Reset Emulator</strong> applies the configured reset model, initialization, seed, read noise, and optional starting y. It resets only the external emulator, not the assigned Agent or its BMOC session.</li>
+            </ul>
+            <p>The trace below the Gateway controls shows success or error, request parameters, timing, Agent/Gateway/BMOC correlation, and returned <code>y</code> (activation), <code>ga</code>/<code>gb</code> (paired conductances), and <code>magnitude</code>. Each operation is also logged as <code>[Relay Gateway]</code> in the application terminal and <code>[Relay Gateway trace]</code> in the renderer console. The UI shows the latest operation; trace views are temporary.</p>
+            <p>Operations are serialized and never automatically retried. A timed-out command may already have executed. The emulator's own UI controls share the same state. One instruction need not change every returned value.</p>
+            <p>The current integration supports one assigned Agent, one external emulator instance, and its existing single lane/address. Operations are manual only: there is no automatic RWKV-to-kT mapping, feedback into the Agent, or Monitor API use.</p>
+          </details>
+        </div>
+      </details>
+      </div>
+    </div>`;
+}
+
 function getSpeechTabHTML() {
   return `
     <div class="settings-section">

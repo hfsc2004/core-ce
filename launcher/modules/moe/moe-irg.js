@@ -87,6 +87,13 @@ function applyEsp32ContractPolicyOverrides(policy, contract) {
 }
 
 async function executeContract(contract, gatewayConfig = {}, options = {}) {
+  if (contract?.target === 'ngi-experiment' || String(contract?.action || '').startsWith('ngi_')) {
+    const validation = validateContract(contract);
+    if (!validation.valid) return { success: false, blocked: true, reason: validation.errors.join('; ') };
+    if (typeof options.ngiExecute !== 'function') return { success: false, blocked: true,
+      reason: 'NGI management requires a backend-authorized Experiment Assistant request' };
+    return options.ngiExecute(contract);
+  }
   let policy = options?.policy || mergePolicy(gatewayConfig);
   let effectiveGatewayConfig = gatewayConfig;
   if (policy.enabled === false || policy.executeMode === 'disabled') {
@@ -210,6 +217,11 @@ async function tryHandleGatewayRequest({
   }
   const requirePlan = requireLlmPlan === true || policy?.requireLlmPlanForLive === true;
   const llmPlanContract = parseLlmPlanContract(llmPlanText, policy);
+  if (llmPlanContract?.target === 'ngi-experiment' || String(llmPlanContract?.action || '').startsWith('ngi_')) {
+    const execution = await executeContract(llmPlanContract, gatewayConfig);
+    return { handled: true, success: false, blocked: true, contract: llmPlanContract,
+      execution, response: execution.reason || 'Use the NGI Experiment Assistant controls' };
+  }
   if (policy.enabled === false || policy.executeMode === 'disabled') {
     return { handled: false };
   }

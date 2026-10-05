@@ -26,6 +26,10 @@ function createSessionManagerMoe(deps = {}) {
     getStatus: () => moeDeployment.getStatus(),
     getStateStatus: (id) => deps.getSessionStateStatus(id)
   });
+  const ngiExperiment = require('./moe/moe-ngi-experiment').createController({
+    getStatus: () => moeDeployment.getStatus(),
+    callHelper: (id, messages) => moeCoordinator.callNgiHelper(id, messages)
+  });
   let moeInitialized = false;
 
   function initializeMoE() {
@@ -98,7 +102,10 @@ function createSessionManagerMoe(deps = {}) {
   }
 
   function getMoEStatus() {
-    return moeDeployment.getStatus();
+    const status = moeDeployment.getStatus();
+    if (!status) return status;
+    return { ...status, gateways: Object.fromEntries(Object.entries(status.gateways || {}).map(([id, gateway]) =>
+      [id, { ...gateway, ...(gateway.adapter === 'kt-emulator-http' ? { ngiExperiment: ngiExperiment.inspect(id) } : {}) }])) };
   }
 
   async function teardownMoEPipeline() {
@@ -128,6 +135,8 @@ function createSessionManagerMoe(deps = {}) {
 
   async function sendToMoEAgent(agentId, message, options = {}) {
     initializeMoE();
+    const ngiResult = await ngiExperiment.chat(agentId, message);
+    if (ngiResult) return ngiResult;
     return moeCoordinator.sendToAgent(agentId, message, options);
   }
 
@@ -151,6 +160,12 @@ function createSessionManagerMoe(deps = {}) {
   }
 
   return {
+    getMoENgiKnowledge: () => require('./moe/moe-ngi-knowledge').inspect(),
+    getMoENgiExperiment: (id) => ngiExperiment.inspect(id),
+    requestMoENgiHelper: (gatewayId, helperId, message) => {
+      initializeMoE();
+      return ngiExperiment.request(gatewayId, helperId, message);
+    },
     runMoEKtGateway: (id, command) => ktGateway.run(id, command),
     initializeMoE,
     deployMoEPipeline,

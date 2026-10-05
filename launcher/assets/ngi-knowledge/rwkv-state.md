@@ -1,0 +1,5 @@
+# RWKV7 recurrent state and BMOC ownership
+RWKV7 Goose is a recurrent language-model architecture with dynamic state evolution. Preserve its RWKV7 identity; do not describe it as a LLaMA architecture. Recurrent state carries sequence history and is distinct from the model's trained weights or an external emulator's conductance.
+In Core-CE, BMOC owns llama.cpp processes, slots, native sequence resources, matching token/conversation context, reset, restart, and teardown. Relay references BMOC session IDs and reads metadata. The helper must not manipulate native tensors or call the subject on its own.
+Persistent subject calls continue the BMOC-owned sequence. Reset clears that sequence's context; restart/close invalidates its lifetime. Existing lifecycle metadata identifies advancement or reset but does not expose actual recurrent tensor measurements. Native observations are not yet connected to NGI.
+RWKV recurrent dynamics may be investigated in a reservoir-style experiment, but RWKV7 is a trained language model, not automatically a classical fixed random reservoir. This collection provides grounding, not retraining or proof of experimental results.

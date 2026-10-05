@@ -87,6 +87,18 @@ test('model endpoint and localhost aliases are rejected without touching the mod
     assert.match((await f.client.run('g', 'reset')).error, /model endpoint/); assert.equal(f.calls.length, 0);
   }
 });
+test('real deployed endpoint objects permit emulator requests and still reject model targets', async () => {
+  const endpoints = require('./moe-endpoint');
+  for (const endpoint of [endpoints.createLocalEndpoint(12345), endpoints.createLocalIPv6Endpoint(12345)]) {
+    const f = fixture();
+    f.setDeployment({ id: 'd', gateways: { g: f.gateway }, agents: { a: { sessionId: 'bmoc-a', endpoint } } });
+    assert.equal((await f.client.run('g', 'read')).success, true);
+    assert.equal(f.calls.length, 1);
+    f.gateway.ktEmulator.baseUrl = 'http://localhost:12345';
+    assert.match((await f.client.run('g', 'reset')).error, /model endpoint/);
+    assert.equal(f.calls.length, 1);
+  }
+});
 test('only origins and valid existing emulator settings are accepted', () => {
   for (const config of [{ baseUrl: 'file:///tmp/model' }, { baseUrl: 'http://localhost:8000/api/reset' },
     { baseUrl: 'http://user:pass@localhost:8000' }, { timeoutMs: 0 }, { instruction: 'XX' },

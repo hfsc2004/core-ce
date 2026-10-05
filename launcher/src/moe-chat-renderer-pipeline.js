@@ -54,11 +54,13 @@ window.createMoeChatPipelineOps = function createMoeChatPipelineOps(ctx = {}) {
       elements.kvmIndicator.textContent = '● Pipeline';
       elements.kvmIndicator.className = 'kvm-indicator';
       elements.input.placeholder = 'Type a message to send through the full pipeline...';
+      elements.kvmIndicator.title = 'IRG Tooling is unavailable in Full Pipeline. Please select an individual Agent for IRG Tooling use.';
     } else {
       const agent = getAgents().find((a) => a.id === nextTarget);
       elements.kvmIndicator.textContent = `● Direct: ${agent?.name || 'Agent'}`;
       elements.kvmIndicator.className = 'kvm-indicator direct';
       elements.input.placeholder = `Type a message directly to ${agent?.name || 'agent'}...`;
+      elements.kvmIndicator.title = '';
     }
   }
 
@@ -97,7 +99,7 @@ window.createMoeChatPipelineOps = function createMoeChatPipelineOps(ctx = {}) {
         if (elements?.input) elements.input.placeholder = 'Type a message to send through the full pipeline...';
 
         if (elements?.messages) elements.messages.innerHTML = '';
-        ctx.addSystemMessage?.('Pipeline connected. Your message will flow through each agent in sequence.');
+        ctx.addSystemMessage?.('Pipeline connected. IRG Tooling is unavailable in Full Pipeline. Please select an individual Agent for IRG Tooling use.');
 
         elements?.input?.focus?.();
         ctx.startEsp32TelemetryPolling?.();

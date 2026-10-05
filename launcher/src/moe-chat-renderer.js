@@ -381,8 +381,11 @@ const MoEChat = (function() {
         
         if (result.success) {
           addMessage('direct', result.content, targetAgent?.name);
+          window.MoeBackendTrace?.append(elements.messages, result);
           setStatus('connected', 'Ready • Direct Mode');
         } else {
+          if (result.ngi && result.content) addMessage('direct', result.content, targetAgent?.name);
+          window.MoeBackendTrace?.append(elements.messages, result);
           throw new Error(result.error || 'Agent error');
         }
       }
@@ -446,6 +449,10 @@ const MoEChat = (function() {
   }
 
   async function runContractFromMessage(contract) {
+    if (kvmTarget === 'pipeline') {
+      addMessage('error', 'IRG Tooling is unavailable in Full Pipeline. Please select an individual Agent for IRG Tooling use.');
+      return;
+    }
     if (!window.electronAPI?.runMoEIrgContract) {
       addMessage('error', 'Contract run API not available.');
       return;

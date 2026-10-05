@@ -1,0 +1,5 @@
+# Observation, numeric mapping, and drive
+Observation describes a model-state measurement. BMOC owns the RWKV7 native recurrent sequence and its lifetime. Turn counts, token counts, and message counts describe activity; they do not measure recurrent tensor contents. Native observations are not connected in this phase.
+Numeric mapping transforms an observation, or a change between observations, into a numeric signal suitable for the single kT neural lane. The experimental projection has not been selected or implemented. A mapping is not an instruction or a noise parameter. Draft mapping identifiers are proposals, not functioning implementations or substitutes for unavailable capabilities.
+Drive specifies the kT instruction and evaluation noise. For example FF with noise 0 configures drive independently of mapping. It does not define how RWKV state becomes a signal. Trigger specifies when a future measurement would run; logging specifies what records to retain.
+Observation-only means emulator output never enters RWKV inputs. The helper manages proposals; it does not participate in the measurement loop. No loop, feedback, snapshots, or cloning is implemented.

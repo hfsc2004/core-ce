@@ -100,6 +100,7 @@ async function runIrgContractInternal({ contractInput, options = {}, getInputGat
   }
   const modeOverride = normalizeIrgModeOverride(options?.irgModeOverride);
   const planPayload = {
+    target: contract.target,
     action: contract.action,
     params: contract.params
   };

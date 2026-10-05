@@ -7,6 +7,29 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.22 Core-CE] - 2026-10-05
+
+### Added
+- NGI experiment-management IRG family with deployed helper-Agent permission, separate subject identity, draft configuration, validation, and read-only status. Runtime transitions remain blocked.
+- Conversational NGI draft tools in individual Relay Agent chat, with natural-language model instructions and backend-enforced contract validation.
+- Automatic application-managed NGI knowledge collection (version `1.0.1`), isolated from user documents. Bounded offline source retrieval uses BM25 ranking, short instruction identifiers, and complete-sentence excerpts. A locked viewer exposes sources and collection version.
+- Optional backend trace in standalone and inline chat showing actual retrieved excerpts, source provenance, contracts, and validation. It displays observable evidence, not internal model reasoning.
+- Settings Help tab covering PSF Relay, deterministic IRG tool categories, examples, and NGI setup/use, with collapsed categories and expand/collapse controls.
+
+### Changed
+- Full Pipeline no longer dispatches IRG tooling; individual Agent chat retains configured tool paths. Both chat interfaces explain this boundary.
+- Bumped application, package-lock root metadata, master/generated catalogs, and runtime SKU configuration to `1.1.22`.
+
+### Fixed
+- External Gateway URL checks correctly handle deployed model endpoint objects, including IPv6, while retaining model-origin rejection.
+- Improved Gateway input contrast and helper instructions for conversation/tool selection, missing parameters, conditional claims, and evidence grounding.
+
+### Validation
+- Full repository regression matrix: 26 of 28 suites pass. The two previously established independent IRG failures (few-cycle mood arc and expanded nested-repeat) remain. All 20 NGI, 13 managed knowledge/trace/retrieval, 15 Gateway, and 22 BMOC cases pass; syntax, whitespace, and release metadata checks pass.
+- Manual Qwen3 1.7B checks verified natural-language drive changes, preservation of existing noise, validation, source retrieval/traces, and rejection of Start. Technical explanations still show small-model interpretation limits.
+- Manual Relay commands were confirmed to update the external emulator and, after its separate frontend refresh fix, its graph automatically. The emulator fix is maintained outside Core-CE.
+- No native RWKV observation, selected projection, measurement loop, automatic emulator execution, feedback, snapshot/restore/clone, or Monitor API publishing was added.
+
 ## [v1.1.21 Core-CE] - 2026-10-04
 
 ### Added

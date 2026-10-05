@@ -6,6 +6,9 @@
 const { isAllowedEsp32WifiPath } = require('./moe-esp32-wifi');
 
 function validateContract(contract, policy) {
+  if (contract?.target === 'ngi-experiment' || String(contract?.action || '').startsWith('ngi_')) {
+    return require('./moe-ngi-experiment').validateContract(contract);
+  }
   const errors = [];
   const target = String(contract?.target || '').trim().toLowerCase();
   if (!contract || (target !== 'raspberry-pi-pico' && target !== 'esp32')) {

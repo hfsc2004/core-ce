@@ -658,9 +658,11 @@
         </select>
       </div>
       <span id="kvm-indicator" class="kvm-indicator">Pipeline</span>
+      <label style="font-size:12px;color:#aaa;" title="Shows retrieved references and tool validation for NGI helper replies, not internal model reasoning."><input type="checkbox" onchange="MoeBackendTrace.toggle(this.checked)"> Show backend trace</label>
     </div>
   </div>
 
+  <p style="margin:6px 16px;font-size:12px;color:#aaa;">IRG Tooling is unavailable in Full Pipeline. Please select an individual Agent for IRG Tooling use.</p>
   <div id="chat-messages" class="messages-container">
     <div class="message system">
       <div class="message-header"><span class="message-header-inline message-system-inline"><span class="message-info-icon" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"><circle cx="5" cy="5" r="4"></circle><line x1="5" y1="4" x2="5" y2="7"></line><circle cx="5" cy="2.5" r="0.4" fill="#58a6ff" stroke="none"></circle></svg></span>SYSTEM</span></div>
@@ -688,6 +690,7 @@
   <script src="shared-voice-to-text-adapters.js"></script>
   <script src="shared-voice-to-text-controller.js"></script>
   <script src="shared-voice-to-text.js"></script>
+  <script src="moe-chat-backend-trace.js"></script>
   <script src="moe-chat-renderer-utils.js"></script>
   <script src="moe-chat-renderer-esp32.js"></script>
   <script src="moe-chat-renderer-messages.js"></script>

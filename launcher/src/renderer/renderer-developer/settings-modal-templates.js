@@ -65,6 +65,13 @@ function getSettingsModalHTML(settings) {
             </svg>
             Mods
           </button>
+          <button class="settings-tab" data-tab="help" onclick="SettingsModal.switchTab('help')">
+            <svg width="19.5" height="19.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-3px; margin-right:8px;">
+              <circle cx="8" cy="8" r="6"></circle>
+              <path d="M6.3 6a1.7 1.7 0 1 1 2.4 1.5C8 7.8 8 8.3 8 9M8 11h.01"></path>
+            </svg>
+            Help
+          </button>
           <button class="settings-tab" data-tab="about" onclick="SettingsModal.switchTab('about')">
             <svg width="19.5" height="19.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="vertical-align:-3px; margin-right:8px;">
               <circle cx="8" cy="8" r="6"></circle>
@@ -100,6 +107,11 @@ function getSettingsModalHTML(settings) {
             ${getModsTabHTML()}
           </div>
           
+          <!-- Help Tab -->
+          <div id="settings-tab-help" class="settings-tab-content">
+            ${getHelpTabHTML()}
+          </div>
+
           <!-- About Tab -->
           <div id="settings-tab-about" class="settings-tab-content">
             ${getAboutTabHTML()}

@@ -31,6 +31,7 @@ function validateConfig(config) {
   if (ktGateways.length > 1) errors.push('Only one enabled kT-emulator Gateway is supported');
   for (const gateway of ktGateways) {
     if (!config.items.some(item => item.type === 'agent' && item.id === gateway.assignedAgentIds?.[0] && item.enabled !== false)) errors.push('kT Gateway must reference an enabled Agent');
+    if (config.items.some(item => item.id === gateway.assignedAgentIds?.[0] && item.ngiManagement === true)) errors.push('NGI subject Agent must have NGI management disabled');
   }
   config.items.forEach((item, index) => {
     const itemErrors = validateItem(item, index);
@@ -69,6 +70,7 @@ function validateItem(item, index) {
       if (item.routingMode && !VALID_ROUTING_MODES.includes(item.routingMode)) {
         errors.push(`${prefix}: invalid routingMode '${item.routingMode}'`);
       }
+      if (item.ngiManagement != null && typeof item.ngiManagement !== 'boolean') errors.push(`${prefix}: ngiManagement must be boolean`);
       if (item.persistentSequence != null && typeof item.persistentSequence !== 'boolean') {
         errors.push(`${prefix}: persistentSequence must be boolean`);
       }
