@@ -21,7 +21,7 @@ Start by flashing a tri-color LED on a Pico with a breadboard. Scale to driving 
 
 This repository hosts the **PSF Core Community Edition** codebase for community deployment, operations, and extension.
 
-Current release: **1.1.22**. See [release notes](docs/reference/ReleaseNotes_1_1_22.md) for conversational NGI draft management, managed knowledge, backend traces, and Relay Help.
+Current release: **1.1.23**. See [release notes](docs/reference/ReleaseNotes_1_1_23.md) for shared NGI experiment configuration, BMOC-owned native RWKV7 observations, deterministic emulator execution, and Read + Feedback drive mode.
 
 ## Screenshots + Quick Walkthrough
 

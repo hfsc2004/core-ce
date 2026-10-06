@@ -1,10 +1,10 @@
 {
   "id": "core-ngi-managed",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "reviewedAt": "2026-10-05",
   "documents": [
     {"file":"signal-boundaries.md","title":"Observation, numeric mapping, and drive","references":["Core-CE: launcher/modules/moe/moe-ngi-experiment.js","Core-CE: launcher/modules/session-manager-sequence-state.js"]},
-    {"file":"relay-capabilities.md","title":"Relay permissions and phase-one capabilities","references":["Core-CE: docs/relay-operator-manual.md","Core-CE: launcher/modules/moe/moe-kt-emulator.js"]},
+    {"file":"relay-capabilities.md","title":"Relay permissions and experiment capabilities","references":["Core-CE: docs/relay-operator-manual.md","Core-CE: launcher/modules/moe/moe-kt-emulator.js"]},
     {"file":"emulator-api.md","title":"External emulator API and returned values","references":["kT-emulator: app.py (inspected 2026-10-05)","https://github.com/knowm/ktram-neural-core/blob/main/docs/architecture.md"]},
     {"file":"kt-instructions.md","title":"kT-RAM instructions and conductance","references":["kT-emulator installed ktram_neural_core/lane.py: NeuralLane.evaluate (inspected 2026-10-05)","https://github.com/knowm/ktram-neural-core/blob/main/docs/architecture.md","https://knowm.org/thermodynamic-computing-physik/"]},
     {"file":"rwkv-state.md","title":"RWKV7 recurrent state and BMOC ownership","references":["https://arxiv.org/abs/2503.14456","Core-CE: launcher/modules/session-manager-sequence-state.js"]},

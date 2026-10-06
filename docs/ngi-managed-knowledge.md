@@ -15,7 +15,7 @@ The original summaries draw on Core-CE's current implementation and the inspecte
 - [Knowm thermodynamic computing](https://knowm.org/thermodynamic-computing-physik/): kT-RAM read/adaptation concepts.
 - [Herbert Jaeger's echo-state network article](https://www.scholarpedia.org/article/Echo_state_network): reservoir computing background.
 
-Installed emulator/API behavior and live Relay capability metadata override background descriptions. The mapping notes describe the purpose of a future observation-to-signal transformation; they do not choose a projection or introduce an implementation. Drive instruction/noise settings are separate.
+Installed emulator/API behavior and live Relay capability metadata override background descriptions. The mapping notes describe the registered seeded native projection and scalar-delta mapping; live compatibility validation remains authoritative. Drive instruction/noise settings are separate.
 
 Helper instructions require conditional claims to retain their conditions, avoid unsupported frequency claims, and check earlier assistant statements against current sources. These are model instructions, not phrase matching, answer replacement, or a guarantee of factual accuracy. Backend traces allow manual verification of the evidence supplied to the model.
 
@@ -26,8 +26,8 @@ Maintainers update bundled documents and manifest version/review date together t
 Relay's standalone and inline chat provide **Show backend trace**, off by default. It reveals a collapsible record after each private NGI helper reply: exact supplied knowledge excerpts, filenames/references/version, selected contract (including rejected proposals), outcome, draft revision, and validation. It shows observable backend evidence, not internal model reasoning. Turning it on also reveals retained trace rows in the current window. It makes no backend/model calls and does not affect tool permissions or execution. Older replies from before this feature and reloaded conversation transcripts do not acquire traces retroactively.
 
 1. Restart Core-CE. Enable NGI management on the separate Experiment Assistant and deploy. Keep it disabled on the RWKV7 subject.
-2. Expand the helper Agent card and open **NGI Knowledge — managed by Core**. Confirm version `1.0.1`, six sources, source text/references, and no edit/upload controls. The subject card retains its existing integrations.
+2. Expand the helper Agent card and open **NGI Knowledge — managed by Core**. Confirm version `1.0.4`, six sources, source text/references, and no edit/upload controls. The subject card retains its existing integrations.
 3. In the helper's private chat, ask: "Why does the experiment need a numeric mapping?" Expect an explanation separating native-state observations, numeric mapping, and instruction/noise drive settings. No draft action is necessary. Live model quality still requires manual verification.
 4. Ask: "What is the difference between FF and Read State?" The curated notes explain that instruction evaluation can adapt conductances while the HTTP snapshot is separate. Explanation must not execute the emulator.
-5. Ask: "Review our configuration for gaps." Expect the model to request `ngi_validate`; the backend still returns unavailable observations/mappings and readiness false.
-6. Verify personal uploads do not appear among managed retrieval sources. Redeployment clears draft state, not the bundled collection. Full Pipeline remains unable to dispatch IRG tools.
+5. Ask: "Review our configuration for gaps." Expect the model to request `ngi_validate`; the backend reports registered capabilities, missing configuration, and current runtime compatibility. Readiness becomes true only for a complete supported definition.
+6. Verify personal uploads do not appear among managed retrieval sources. Redeployment clears conversations and runtime status while restoring a saved experiment definition; it does not change the bundled collection. Full Pipeline remains unable to dispatch IRG tools. UI, CLI, and helper tools share the [NGI draft controller](ngi-experiment-configuration.md).

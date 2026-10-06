@@ -53,23 +53,28 @@ test('permission is deployed and subject cannot impersonate or become helper', a
 test('only separate subject can be selected; deployed Gateway assignment stays untouched', async () => {
   const f = fixture();
   for (const id of ['helper','missing']) assert.equal((await f.request('ngi_select_source', { agentId: id, observationId: 'proposed-native-state' })).success, false);
-  const result = await f.request('ngi_select_source', { agentId: 'other', observationId: 'proposed-native-state' });
+  const result = await f.request('ngi_select_source', { agentId: 'other', observationId: 'proposed-native-state', version: '1' });
   assert.equal(result.success, true); assert.equal(result.experiment.source.agentId, 'other');
   assert.deepEqual(f.status.gateways.g.assignedAgentIds, ['subject']);
   assert(f.calls.every(call => call.id === 'helper'));
 });
 test('draft tools update only proposals and validation remains explicitly not runnable', async () => {
-  const f = fixture(); const before = JSON.stringify(f.status);
-  await f.request('ngi_select_source', { agentId: 'subject', observationId: 'proposed-native-state' });
+  const f = fixture(); const before = JSON.stringify(f.status.agents);
+  await f.request('ngi_select_source', { agentId: 'subject', observationId: 'proposed-native-state', version: '1' });
+  await f.request('ngi_configure_projection', { id: 'proposal-only', version: '1', seed: 1 });
+  await f.request('ngi_configure_delta', { id: 'proposal-only', version: '1', parameters: {} });
   await f.request('ngi_configure_mapping', { id: 'proposal-only', version: '1', parameters: {} });
   await f.request('ngi_configure_drive', { instruction: 'FF', noise: 0 });
   await f.request('ngi_configure_trigger_logging', { trigger: 'after-persistent-turn', logging: { enabled: true, maxRecords: 100 } });
   const result = await f.request('ngi_validate');
-  assert.equal(result.success, true); assert.equal(result.experiment.revision, 4);
+  assert.equal(result.success, true); assert.equal(result.experiment.revision, 6);
   assert.equal(result.experiment.validation.valid, true); assert.equal(result.experiment.validation.readyToRun, false);
-  assert.equal(result.experiment.validation.blockers.length, 3);
+  assert(result.experiment.validation.blockers.some(error => /supported observation/.test(error)));
   assert.equal(result.experiment.running, false); assert.equal(result.experiment.applied, false);
-  assert.equal(JSON.stringify(f.status), before); assert.equal(result.experiment.capabilities.mappings.length, 0);
+  assert.equal(JSON.stringify(f.status.agents), before);
+  assert.deepEqual(f.status.gateways.g.assignedAgentIds, ['subject']);
+  assert.equal(f.status.gateways.g.ngiExperiment.definition.projection.id, 'proposal-only');
+  assert.deepEqual(result.experiment.capabilities.mappings,[{ id:'scaled-delta-sign',version:'1' }]);
   assert.equal(f.logs[0].requestingAgentId, 'helper'); assert.equal(f.logs[0].subjectAgentId, 'subject');
 });
 test('missing fields and invalid subject policy appear in visible validation', () => {
@@ -240,7 +245,7 @@ test('ordinary helper conversation has no draft dump or tool execution', async (
 });
 test('incomplete source proposals remain rejected without changing the draft', async () => {
   const f = fixture();
-  f.setResponse({ success: true, content: JSON.stringify(plan('ngi_select_source', { agentId: 'subject' })) });
+  f.setResponse({ success: true, content: JSON.stringify(plan('ngi_select_source', { agentId: 'subject', observationId: 'proposal-only' })) });
   const result = await f.controller.chat('helper', 'Select the subject');
   assert.equal(result.success, false);
   assert.equal(result.backendTrace.toolRequested, true);
@@ -254,7 +259,9 @@ test('helper instructions translate everyday management requests without requiri
   f.setResponse({ success: true, content: JSON.stringify(plan('ngi_configure_drive', { instruction: 'FF', noise: 0 })) });
   const result = await f.controller.chat('helper', 'Set the draft to FF with no noise');
   assert.equal(result.success, true);
-  assert.deepEqual(result.experiment.drive, { instruction: 'FF', noise: 0 });
+  assert.equal(result.experiment.drive.instruction, 'FF');
+  assert.equal(result.experiment.drive.noise, 0);
+  assert.equal(result.experiment.drive.negativeInstruction, 'FF');
   const prompt = f.calls[0].messages[0].content;
   assert.match(prompt, /users never need to know action names/);
   assert.match(prompt, /Check the draft and tell me what is missing/);

@@ -11,6 +11,7 @@ function createMoEHandlers() {
     'moe-deploy-pipeline': async (ctx, event, pipelineConfig) =>
       ctx.sessionManager.deployMoEPipeline(pipelineConfig, ctx.appDir, ctx.gpuInfo),
     'moe-ngi-inspect': (ctx, event, id) => ctx.sessionManager.getMoENgiExperiment(id),
+    'moe-ngi-command': (ctx, event, id, action, params) => ctx.sessionManager.commandMoENgiExperiment(id, action, params),
     'moe-ngi-knowledge': (ctx) => ctx.sessionManager.getMoENgiKnowledge(),
     'moe-ngi-helper': (ctx, event, gatewayId, helperId, message) => ctx.sessionManager.requestMoENgiHelper(gatewayId, helperId, message),
     'moe-kt-gateway': (ctx, event, id, command) => ctx.sessionManager.runMoEKtGateway(id, command),

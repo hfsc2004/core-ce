@@ -917,6 +917,8 @@ async function routeMessage(userMessage, options = {}) {
         success: response.success,
         attempts: response.attempts || 1,
         bmocState: response.bmocState || null,
+        bmocObservation:response.bmocObservation || null,
+        ngiRun:response.ngiRun || null,
         execution: resolvedExecution.meta || null,
         rlmAssistApplied: rlmAssistContext.length > 0,
         rlmAssistContextChars: rlmAssistContext.length,

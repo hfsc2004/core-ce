@@ -18,6 +18,7 @@ const processUtils = require('./session-manager-process-utils');
 const PortPool = require('./port-pool/port-pool-ollama');
 
 async function run() {
+  const observations = process.argv.includes('--observation');
   const root = path.resolve(__dirname, '../..');
   const modelPath = path.resolve(process.argv[2]);
   assert(fs.existsSync(modelPath), 'GGUF file must exist');
@@ -46,6 +47,13 @@ async function run() {
     });
     assert.equal(result.success, true, result.message);
     ids.add(result.sessionId);
+    if (observations) {
+      assert.equal(manager.observationCapabilities(result.sessionId).available,true);
+      const c=require('./session-manager-rwkv-observation');
+      const configured=await manager.configureObservation(result.sessionId,{ observation:c.OBSERVATION,
+        projection:{ ...c.PROJECTION,seed:42 },delta:{ ...c.DELTA,parameters:{} } },'native-test',true);
+      assert.equal(configured.success,true,configured.error);
+    }
     return result.sessionId;
   }
   async function turn(id, content) {
@@ -60,10 +68,19 @@ async function run() {
   }
   try {
     const id = await start();
-    await turn(id, 'Hello');
+    const first=await turn(id, 'Hello');
     // A normal BMOC metadata update must not break state ownership.
     registry.updateSession(id, { metadata: { ...registry.getSession(id).metadata, reviewLabel: 'native-test' } });
-    await turn(id, 'Continue');
+    const second=await turn(id, 'Continue');
+    if (observations) {
+      assert.equal(first.bmocObservation.status,'baseline-established',JSON.stringify(first.bmocObservation));
+      assert.equal(first.bmocObservation.d_t,null);
+      assert.equal(second.bmocObservation.status,'delta-ready',JSON.stringify(second.bmocObservation));
+      assert.equal(second.bmocObservation.d_t,second.bmocObservation.q_t-first.bmocObservation.q_t);
+      assert.equal(first.bmocObservation.elementCount,5406720);
+      assert.deepEqual(fs.readdirSync(registry.getSession(id).metadata.sequenceControlPath),[]);
+      console.log('Native observation cost:',JSON.stringify(manager.status(id).observationCost));
+    }
     await turn(id, 'Continue again');
     for (let i = 1; i < 3; i++) {
       const prior = completions[i - 1];
@@ -81,7 +98,12 @@ async function run() {
     assert.equal(reset.success, true, reset.error);
     assert.equal(reset.bmocState.generation, 1);
     assert.equal(manager.status(id).tokenCount, 0);
-    await turn(id, 'Hello');
+    if (observations) {
+      const c=require('./session-manager-rwkv-observation');
+      assert.equal((await manager.configureObservation(id,{ observation:c.OBSERVATION,projection:{ ...c.PROJECTION,seed:42 },delta:{ ...c.DELTA,parameters:{} } },'native-test',true)).success,true);
+    }
+    const fresh=await turn(id, 'Hello');
+    if (observations) assert.equal(fresh.bmocObservation.d_t,null);
     assert.equal(completions[3].data.timings.cache_n, 0, 'Reset must clear the native slot');
     assert.deepEqual(completions[3].body.prompt, completions[0].body.prompt);
     await close(id);

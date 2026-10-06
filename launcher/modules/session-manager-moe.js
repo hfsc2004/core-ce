@@ -28,6 +28,15 @@ function createSessionManagerMoe(deps = {}) {
   });
   const ngiExperiment = require('./moe/moe-ngi-experiment').createController({
     getStatus: () => moeDeployment.getStatus(),
+    getStateStatus: (id) => deps.getSessionStateStatus?.(id),
+    native: {
+      capabilities:deps.getSessionObservationCapabilities,
+      configure:deps.configureSessionObservation,
+      activate:deps.activateSessionObservation,
+      clear:deps.clearSessionObservation,
+      reset:deps.resetSessionState
+    },
+    emulator:(id,operation) => ktGateway.runExperiment(id,operation),
     callHelper: (id, messages) => moeCoordinator.callNgiHelper(id, messages)
   });
   let moeInitialized = false;
@@ -45,6 +54,11 @@ function createSessionManagerMoe(deps = {}) {
         getSession,
         removeSession,
         routeMoEMessage: (message, options = {}) => moeCoordinator.routeMessage(message, options),
+        ngiCommand: (payload) => payload.action === 'ngi_list' ? {
+          success: true, gateways: Object.entries(moeDeployment.getStatus()?.gateways || {})
+            .filter(([, gateway]) => gateway.adapter === 'kt-emulator-http')
+            .map(([id, gateway]) => ({ id, name: gateway.name }))
+        } : ngiExperiment.command(payload.gatewayId, payload.action, payload.params || {}, { kind: 'user', surface: 'cli' }),
         allocateCoordinatorPort,
         releaseCoordinatorPort
       });
@@ -98,22 +112,24 @@ function createSessionManagerMoe(deps = {}) {
 
   async function deployMoEPipeline(pipelineConfig, appPath, gpuInfo) {
     initializeMoE();
-    return moeDeployment.deployPipeline(pipelineConfig, appPath, gpuInfo);
+    await ngiExperiment.stopAll();
+    return moeDeployment.deployPipeline(ngiExperiment.pipelineConfig(pipelineConfig), appPath, gpuInfo);
   }
 
   function getMoEStatus() {
     const status = moeDeployment.getStatus();
     if (!status) return status;
     return { ...status, gateways: Object.fromEntries(Object.entries(status.gateways || {}).map(([id, gateway]) =>
-      [id, { ...gateway, ...(gateway.adapter === 'kt-emulator-http' ? { ngiExperiment: ngiExperiment.inspect(id) } : {}) }])) };
+      [id, { ...gateway, ...(gateway.adapter === 'kt-emulator-http' ? { ngiExperimentState: ngiExperiment.inspect(id) } : {}) }])) };
   }
 
   async function teardownMoEPipeline() {
+    await ngiExperiment.stopAll();
     return moeDeployment.teardownPipeline();
   }
 
   function saveMoEPipelineConfig(pipelineConfig, appPath, options = {}) {
-    return moeConfig.saveConfig(pipelineConfig, appPath, options);
+    return moeConfig.saveConfig(ngiExperiment.pipelineConfig(pipelineConfig), appPath, options);
   }
 
   function loadMoEPipelineConfig(appPath, options = {}) {
@@ -160,13 +176,21 @@ function createSessionManagerMoe(deps = {}) {
   }
 
   return {
+    consumeCompletedTurn:ngiExperiment.consumeTurn,
+    onSessionLifecycle:ngiExperiment.onLifecycle,
+    commandMoENgiExperiment: (gatewayId, action, params = {}) => {
+      initializeMoE();
+      return ngiExperiment.command(gatewayId, action, params, { kind: 'user', surface: 'ui' });
+    },
     getMoENgiKnowledge: () => require('./moe/moe-ngi-knowledge').inspect(),
     getMoENgiExperiment: (id) => ngiExperiment.inspect(id),
     requestMoENgiHelper: (gatewayId, helperId, message) => {
       initializeMoE();
       return ngiExperiment.request(gatewayId, helperId, message);
     },
-    runMoEKtGateway: (id, command) => ktGateway.run(id, command),
+    runMoEKtGateway: async (id, command) => {
+      const result=await ktGateway.run(id,command); ngiExperiment.manualOperation(id,result); return result;
+    },
     initializeMoE,
     deployMoEPipeline,
     getMoEStatus,

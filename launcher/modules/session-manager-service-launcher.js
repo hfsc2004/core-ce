@@ -223,6 +223,7 @@ function createSessionServiceLauncher(deps = {}) {
           backend: 'llama-cpp',
           persistentSequence: options.persistentSequence === true,
           sequenceControlPath: startResult.sequenceControlPath || null,
+          llamaSourceRoot: startResult.llamaSourceRoot || null,
           ownerWindowId: Number.isFinite(Number(options.ownerWindowId)) ? Number(options.ownerWindowId) : null,
           modelPath: startResult.modelPath || options.modelPath || null,
           projectorPath: startResult.projectorPath || options.projectorPath || null,

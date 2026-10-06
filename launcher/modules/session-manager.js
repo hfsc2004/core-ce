@@ -67,6 +67,11 @@ const serviceLauncher = createSessionServiceLauncher({
 });
 
 const moe = createSessionManagerMoe({
+  getSessionObservationCapabilities:(id) => sequenceState.observationCapabilities(id),
+  configureSessionObservation:(id,selection,owner) => sequenceState.configureObservation(id,selection,owner),
+  activateSessionObservation:(id,owner,onActivated) => sequenceState.activateObservation(id,owner,onActivated),
+  clearSessionObservation:(id,owner) => sequenceState.clearObservation(id,owner),
+  resetSessionState:(id) => sequenceState.reset(id),
   getSessionStateStatus: (id) => sequenceState.status(id),
   runSessionTurn: (id, request) => sequenceState.runTurn(id, request),
   pingSession: (id) => sequenceState.ping(id),
@@ -79,6 +84,8 @@ const moe = createSessionManagerMoe({
   getDeterministicRuntime: () => deterministic.initializeDeterministicTools(),
   getAttachmentStore: () => attachmentStore
 });
+
+sequenceState.setObservers(moe.consumeCompletedTurn,moe.onSessionLifecycle);
 
 function initialize(appPath) {
   const sessionsFile = sessionState.initialize(appPath);
@@ -332,6 +339,7 @@ module.exports = {
   rerunLastMoEIrg,
   runMoEIrgContract,
   getMoENgiExperiment: (id) => moe.getMoENgiExperiment(id),
+  commandMoENgiExperiment: (id, action, params) => moe.commandMoENgiExperiment(id, action, params),
   getMoENgiKnowledge: () => moe.getMoENgiKnowledge(),
   requestMoENgiHelper: (gatewayId, helperId, message) => moe.requestMoENgiHelper(gatewayId, helperId, message),
   runMoEKtGateway: (id, command) => moe.runMoEKtGateway(id, command),
