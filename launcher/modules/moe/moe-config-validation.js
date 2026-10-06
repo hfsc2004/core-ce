@@ -168,6 +168,10 @@ function validateItem(item, index) {
     case 'gateway':
       if (item.adapter && item.adapter !== 'kt-emulator-http') errors.push(`${prefix}: unknown Gateway adapter`);
       if (item.adapter === 'kt-emulator-http') {
+        if (item.ngiExperiment != null) {
+          try { require('./moe-ngi-config').loadManifest(item.ngiExperiment); } catch (err) { errors.push(`${prefix}: ${err.message}`); }
+        }
+        if (item.ngiSubjectAgentId != null && (typeof item.ngiSubjectAgentId !== 'string' || !item.ngiSubjectAgentId.trim())) errors.push(`${prefix}: invalid NGI subject binding`);
         try { require('./moe-kt-emulator').settings(item.ktEmulator); } catch (err) { errors.push(`${prefix}: ${err.message}`); }
         if (item.position !== 'output') errors.push(`${prefix}: kT Gateway must be output`);
         if (!Array.isArray(item.assignedAgentIds) || item.assignedAgentIds.length !== 1 || typeof item.assignedAgentIds[0] !== 'string') errors.push(`${prefix}: assign exactly one Agent`);

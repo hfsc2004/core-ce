@@ -31,6 +31,8 @@ function settings(value = {}) {
 }
 function deployFields(gateway) {
   return { assignedAgentIds: [...(gateway.assignedAgentIds || [])], adapter: gateway.adapter || '',
+    ...(gateway.ngiExperiment ? { ngiExperiment: require('./moe-ngi-config').loadManifest(gateway.ngiExperiment) } : {}),
+    ...(gateway.ngiSubjectAgentId ? { ngiSubjectAgentId: gateway.ngiSubjectAgentId } : {}),
     ktEmulator: gateway.adapter === ADAPTER ? settings(gateway.ktEmulator) : undefined };
 }
 function createGatewayClient({ getStatus, getStateStatus, fetch: request = globalThis.fetch, log = entry => console.log('[Relay Gateway]', JSON.stringify(entry)) }) {
@@ -40,9 +42,26 @@ function createGatewayClient({ getStatus, getStateStatus, fetch: request = globa
     tail = operation.catch(() => {});
     return operation;
   }
-  async function execute(gatewayId, command) {
+  function runExperiment(gatewayId, operation) {
+    const pending = tail.then(async () => {
+      if (operation.driveMode !== 'read-feedback' || operation.command !== 'evaluate') return execute(gatewayId,operation.command || 'evaluate',operation);
+      // Reserve the adapter queue for the entire pair: manual operations cannot
+      // replace the retained read activation between read and feedback.
+      const read = await execute(gatewayId,'evaluate',{ ...operation,phase:'read',drive:{ instruction:'FF',noise:operation.drive.noise } });
+      if (!read.success) return { ...read,read };
+      const feedback = await execute(gatewayId,'evaluate',{ ...operation,phase:'feedback',drive:{ ...operation.drive,noise:0 } });
+      return { success:feedback.success,error:feedback.error,read,feedback,
+        result:feedback.success ? { ...feedback.result,y:read.result.y } : undefined,
+        trace:{ startedAt:read.trace.startedAt,completedAt:feedback.trace.completedAt,
+          steps:[...read.trace.steps,...feedback.trace.steps] } };
+    });
+    tail = pending.catch(() => {}); return pending;
+  }
+  async function execute(gatewayId, command, experiment = null) {
     const started = Date.now();
-    const entry = { gatewayId, kind: 'external-emulator-observation', origin: 'manual', command,
+    const entry = { gatewayId, kind: 'external-emulator-observation', origin: experiment ? 'experiment' : 'manual', command,
+      ...(experiment ? { runId:experiment.runId, experimentId:experiment.experimentId,
+        driveMode:experiment.driveMode || 'single-instruction',phase:experiment.phase || 'instruction' } : {}),
       startedAt: new Date(started).toISOString(), success: false };
     let timer;
     try {
@@ -52,13 +71,15 @@ function createGatewayClient({ getStatus, getStateStatus, fetch: request = globa
       if (Object.values(deployment.gateways).filter(g => g.adapter === ADAPTER && g.enabled !== false).length !== 1) throw new Error('Only one external emulator Gateway is supported');
       if (gateway.position !== 'output') throw new Error('External emulator Gateway must be output');
       if (gateway.assignedAgentIds?.length !== 1) throw new Error('Assign exactly one Agent');
-      const agentId = gateway.assignedAgentIds[0];
+      if (experiment?.guard && !experiment.guard()) throw new Error('Experiment lifetime invalidated before emulator dispatch');
+      const agentId = experiment?.agentId || gateway.assignedAgentIds[0];
       const agent = deployment.agents?.[agentId];
       if (!agent?.sessionId) throw new Error('Assigned Agent is not deployed');
       const state = getStateStatus(agent.sessionId);
       Object.assign(entry, { agentId, sessionId: agent.sessionId, generation: state?.generation ?? null,
         turnCount: state?.turnCount ?? null });
-      const config = settings(gateway.ktEmulator);
+      if (experiment) Object.assign(entry,{ origin:'experiment', runId:experiment.runId, experimentId:experiment.experimentId });
+      const config = settings({ ...gateway.ktEmulator, ...(experiment?.drive || {}), ...(command === 'reset' ? experiment?.resetSettings : {}) });
       const target = new URL(config.baseUrl);
       // Never send emulator commands to any deployed model endpoint. Redirects are
       // disabled below so an external service cannot forward them to a model.
@@ -104,6 +125,6 @@ function createGatewayClient({ getStatus, getStateStatus, fetch: request = globa
     return { success: entry.success, error: entry.error, result: entry.result,
       trace: { startedAt: entry.startedAt, completedAt: new Date().toISOString(), steps: [entry] } };
   }
-  return { run };
+  return { run, runExperiment };
 }
 module.exports = { ADAPTER, INSTRUCTIONS, DEFAULTS, settings, deployFields, createGatewayClient };

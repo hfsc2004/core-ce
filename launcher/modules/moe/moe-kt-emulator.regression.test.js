@@ -43,6 +43,20 @@ test('reset sends optional starting y, never resets BMOC', async () => {
   await f.client.run('g', 'reset'); assert.equal(JSON.parse(f.calls[0].options.body).start_y, 0.2);
   assert.deepEqual(f.state, { generation: 3, turnCount: 4 });
 });
+test('automatic and manual operations serialize together without changing manual settings or BMOC state',async () => {
+  const f=fixture(); const before=JSON.stringify(f.gateway.ktEmulator);
+  const [automatic,manual]=await Promise.all([
+    f.client.runExperiment('g',{ command:'evaluate',agentId:'a',runId:'run',experimentId:'experiment',drive:{ instruction:'RF',noise:0.1 },guard:()=>true }),
+    f.client.run('g','evaluate')
+  ]);
+  assert.equal(automatic.success,true); assert.equal(manual.success,true);
+  assert.deepEqual(JSON.parse(f.calls[0].options.body),{ instruction:'RF',noise:0.1 });
+  assert.deepEqual(JSON.parse(f.calls[1].options.body),{ instruction:'FF',noise:0 });
+  assert.equal(automatic.trace.steps[0].origin,'experiment'); assert.equal(automatic.trace.steps[0].runId,'run');
+  assert.equal(JSON.stringify(f.gateway.ktEmulator),before); assert.deepEqual(f.state,{ generation:3,turnCount:4 });
+  assert.equal((await f.client.runExperiment('g',{ guard:()=>false,drive:{ instruction:'RF' } })).success,false);
+  assert.equal(f.calls.length,2);
+});
 test('timeout aborts once without retry and warns execution may have occurred', async () => {
   const f = fixture((url, options) => new Promise((resolve, reject) => {
     options.signal.addEventListener('abort', () => reject(Object.assign(new Error('abort'), { name: 'AbortError' })));
@@ -50,6 +64,42 @@ test('timeout aborts once without retry and warns execution may have occurred', 
   f.gateway.ktEmulator.timeoutMs = 100;
   const result = await f.client.run('g', 'evaluate');
   assert.equal(result.success, false); assert.match(result.error, /timed out.*already/); assert.equal(f.calls.length, 1);
+});
+test('read-feedback reserves both requests, records fresh read y and post-feedback conductances separately',async () => {
+  const f=fixture(async (_url,options)=>{
+    const instruction=options.body ? JSON.parse(options.body).instruction : 'FF';
+    const data=instruction === 'FF' ? { ...snapshot,y:0.25,ga:0.6,gb:0.4,step:3 } :
+      { ...snapshot,instruction,y:0.9,ga:0.7,gb:0.2,magnitude:0.9,step:4 };
+    return { ok:true,status:200,json:async()=>data };
+  });
+  const before=JSON.stringify(f.gateway.ktEmulator);
+  const [pair,manual]=await Promise.all([
+    f.client.runExperiment('g',{ command:'evaluate',agentId:'a',runId:'r',driveMode:'read-feedback',drive:{ instruction:'FH',noise:0.2 },guard:()=>true }),
+    f.client.run('g','read')
+  ]);
+  assert.equal(pair.success,true); assert.equal(manual.success,true);
+  assert.deepEqual(f.calls.slice(0,2).map(c=>JSON.parse(c.options.body)),[{ instruction:'FF',noise:0.2 },{ instruction:'FH',noise:0 }]);
+  assert.match(f.calls[2].url,/api\/state$/);
+  assert.equal(pair.result.y,0.25); assert.equal(pair.result.ga,0.7); assert.equal(pair.result.gb,0.2); assert.equal(pair.result.magnitude,0.9);
+  assert.equal(pair.read.result.ga,0.6); assert.equal(pair.feedback.result.y,0.9);
+  assert.deepEqual(pair.trace.steps.map(s=>s.phase),['read','feedback']);
+  assert(pair.trace.steps.every(s=>s.startedAt && s.durationMs >= 0 && s.runId === 'r'));
+  assert.equal(JSON.stringify(f.gateway.ktEmulator),before); assert.deepEqual(f.state,{ generation:3,turnCount:4 });
+});
+test('read-feedback never continues after failed read and never retries partial or invalidated pairs',async () => {
+  const operation={ command:'evaluate',agentId:'a',driveMode:'read-feedback',drive:{ instruction:'RL',noise:0 },guard:()=>true };
+  const failedRead=fixture(async()=>{ throw new Error('read failed'); });
+  const a=await failedRead.client.runExperiment('g',operation);
+  assert.equal(a.success,false); assert.equal(failedRead.calls.length,1); assert.equal(a.read.success,false); assert.equal(a.feedback,undefined);
+  let count=0;
+  const failedFeedback=fixture(async()=>{ if (++count === 2) throw new Error('feedback failed'); return { ok:true,status:200,json:async()=>snapshot }; });
+  const b=await failedFeedback.client.runExperiment('g',operation);
+  assert.equal(b.success,false); assert.equal(failedFeedback.calls.length,2); assert.equal(b.read.success,true); assert.equal(b.feedback.success,false);
+  assert.equal(b.trace.steps.length,2); assert.equal(b.result,undefined);
+  let alive=true;
+  const invalidated=fixture(async()=>{ alive=false; return { ok:true,status:200,json:async()=>snapshot }; });
+  const c=await invalidated.client.runExperiment('g',{ ...operation,guard:()=>alive });
+  assert.equal(c.success,false); assert.equal(invalidated.calls.length,1); assert.equal(c.trace.steps[1].phase,'feedback');
 });
 test('HTTP, connection, malformed JSON and non-finite output failures are traced', async () => {
   for (const fetch of [

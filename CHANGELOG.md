@@ -7,6 +7,26 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [v1.1.23 Core-CE] - 2026-10-05
+
+### Added
+- Shared NGI experiment configuration/controller across the Gateway UI, authenticated local CLI, and authorized IRG helper, with portable manifests, local subject binding, validation, results, and user-only Apply/Arm/Start/Stop.
+- Registered BMOC-owned native RWKV7 sequence observation and deterministic seeded Rademacher projection, successive-turn scalar deltas, and configurable scaled-delta-sign mapping. First turns establish a baseline; reset/restart/close invalidate the run and baseline.
+- Deterministic completed-subject-turn execution against the external kT-emulator. No helper calls participate in the measurement loop and no emulator output feeds back into RWKV.
+- Configurable single-instruction and read-feedback drive modes. Read-feedback queues FF with configured noise followed by the user-selected instruction with noise 0; separate phase traces distinguish fresh read y from post-feedback conductances.
+- Visible experiment capability selectors, lifecycle controls, bounded results, and scalar observation/backend traces. Manual emulator controls remain available.
+
+### Changed
+- Managed NGI reference collection updated to `1.0.4` to describe executable capabilities, lifecycle boundaries, and drive semantics.
+- Application, package-lock root metadata, and master/generated catalog versions updated to `1.1.23`.
+- Native projection runs in a short-lived BMOC worker, with private temporary serialization cleanup, layout checks, and cost telemetry. Unsupported installed layouts block execution without guessing tensor mappings.
+
+### Validation
+- 74 NGI/Gateway/configuration/knowledge tests pass: 18 Gateway, 10 shared configuration/CLI, 13 deterministic runtime, 20 experiment-management, and 13 managed knowledge cases.
+- All 22 BMOC lifecycle tests and Relay coordinator/endpoint-registry checks pass. A real CPU-only RWKV7 test confirms native sequence continuity through serialization/projection, baseline/delta behavior, reset, close, and restart.
+- JavaScript syntax, whitespace, and release metadata checks pass. The previously established unrelated IRG few-cycle assertion still fails; this release does not claim a fully passing repository regression matrix.
+- Positive/negative instructions remain user-selected. No LCT preset, physical hardware, Monitor publishing, multi-lane support, feedback into RWKV, or public snapshot/restore/clone controls were added.
+
 ## [v1.1.22 Core-CE] - 2026-10-05
 
 ### Added

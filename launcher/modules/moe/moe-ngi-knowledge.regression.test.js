@@ -9,7 +9,7 @@ const { createController } = require('./moe-ngi-experiment');
 
 test('managed catalogue is versioned, readable, and returned as a detached copy', () => {
   const a = knowledge.inspect();
-  assert.equal(a.version, '1.0.1'); assert.equal(a.managed, true); assert.equal(a.readOnly, true);
+  assert.equal(a.version, '1.0.4'); assert.equal(a.managed, true); assert.equal(a.readOnly, true);
   assert.equal(a.documents.length, 6);
   assert(a.documents.every(d => d.references.length && d.text.length));
   a.documents[0].text = 'user uploaded replacement';
@@ -88,7 +88,7 @@ test('knowledge UI is locked and inspects a read-only IPC catalogue', async () =
   assert.match(context.window.renderNgiKnowledge('helper'), /🔒 NGI Knowledge — managed by Core/);
   await context.window.inspectNgiKnowledge('helper');
   const html = context.window.renderNgiKnowledge('helper');
-  assert.match(html, /version 1.0.1/); assert.match(html, /read only/);
+  assert.match(html, /version 1.0.4/); assert.match(html, /read only/);
   assert.match(html, /signal-boundaries.md/); assert(!html.includes('<input')); assert(!html.includes('<textarea'));
   const handlers = require('../ipc-handlers/moe').createMoEHandlers();
   assert.equal(handlers['moe-ngi-knowledge']({ sessionManager: { getMoENgiKnowledge: () => knowledge.inspect() } }).readOnly, true);
@@ -134,7 +134,7 @@ test('FF grounding distinguishes read-induced adaptation from a dedicated write'
   assert.match(source.excerpt, /does not reclassify FF as a write instruction/);
   assert.match(source.excerpt, /sub-threshold read can leave conductances unchanged/);
   for (const hit of result.metadata.sources) assert.match(hit.excerpt, /[.!?]$/);
-  assert.equal(result.metadata.version, '1.0.1');
+  assert.equal(result.metadata.version, '1.0.4');
   assert(result.context.length <= knowledge.MAX_CONTEXT);
 });
 test('excerpt bounds preserve complete sentences without cutting words or decimal dots', () => {

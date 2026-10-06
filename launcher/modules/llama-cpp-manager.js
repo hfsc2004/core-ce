@@ -396,11 +396,12 @@ async function startLlamaServerOnPort(appDir, options = {}) {
     '--parallel', String(Math.max(1, Number(parallel) || 1))
   ];
   // The server gates erase behind slot-save-path. This empty control directory
-  // enables reset only; BMOC exposes no snapshot/restore operations.
+  // enables reset and private read-only observations; no public snapshot/restore.
   const sequenceControlPath = enableSequenceReset
     ? path.join(appDir, '..', '.psf', 'llama-sequence-control', String(port)) : null;
   if (sequenceControlPath) {
-    fs.mkdirSync(sequenceControlPath, { recursive: true });
+    fs.mkdirSync(sequenceControlPath, { recursive: true, mode:0o700 });
+    fs.chmodSync(sequenceControlPath,0o700);
     args.push('--slot-save-path', sequenceControlPath + path.sep);
   }
   if (resolvedProjectorPath) {
@@ -536,6 +537,7 @@ async function startLlamaServerOnPort(appDir, options = {}) {
 
   return {
     sequenceControlPath,
+    llamaSourceRoot: path.join(appDir, '..', 'binaries', 'llama.cpp', getPlatformTag()),
     pid: child.pid,
     port,
     process: child,

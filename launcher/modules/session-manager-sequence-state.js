@@ -2,7 +2,11 @@
 
 // BMOC owns conversation history, slot identity, and lifetime. llama.cpp owns
 // all model-specific recurrent tensors. Nothing here is persisted across starts.
-module.exports = function createSequenceState({ getSession, fetch: request = globalThis.fetch, log = entry => console.log('[BMOC State]', JSON.stringify(entry)) }) {
+module.exports = function createSequenceState({ getSession, fetch: request = globalThis.fetch, observationReader = require('./session-manager-rwkv-observation').createReader(), log = entry => console.log('[BMOC State]', JSON.stringify(entry)) }) {
+  let turnObserver = null; let lifecycleObserver = null;
+  const fs = require('node:fs/promises');
+  const path = require('node:path');
+  const crypto = require('node:crypto');
   function normalizeMessagesForLlamaTemplate(messages = []) {
     const rows = Array.isArray(messages) ? messages : [];
     const normalized = [];
@@ -60,12 +64,14 @@ module.exports = function createSequenceState({ getSession, fetch: request = glo
   function describe(id, state, session) {
     return {
       sessionId: id, enabled: session?.metadata?.persistentSequence === true,
+      lifetimeId: crypto.createHash('sha256').update(lifetimeKey(session)).digest('hex'),
       status: state?.closed ? 'invalidated' : (state?.status || 'empty'),
       generation: state?.generation || 0, turnCount: state?.turnCount || 0,
       totalTurnCount: state?.totalTurnCount || 0, resetCount: state?.resetCount || 0,
       modelId: session?.metadata?.modelId || session?.metadata?.modelName || null,
       modelName: session?.metadata?.modelName || null, runtime: 'llama.cpp',
-      events: (state?.events || []).map(event => ({ ...event }))
+      events: (state?.events || []).map(event => ({ ...event })),
+      ...(state?.observation?.costs ? { observationCost:{ ...state.observation.costs } } : {})
     };
   }
   function record(id, state, session, type) {
@@ -77,8 +83,9 @@ module.exports = function createSequenceState({ getSession, fetch: request = glo
     const { events, ...metadata } = describe(id, state, session);
     // Metadata only: never log prompts, token IDs, or model tensor contents.
     try { log({ ...metadata, event: { ...event } }); } catch (_) { /* logging cannot break a turn */ }
+    try { lifecycleObserver?.({ ...metadata, event: { ...event } }); } catch (_) {}
   }
-  function enqueue(id, action) {
+  function enqueue(id, action, invalidateOnError = true) {
     let entry;
     try { entry = get(id); } catch (err) { return Promise.resolve({ success: false, error: err.message }); }
     const { state, session } = entry;
@@ -91,8 +98,7 @@ module.exports = function createSequenceState({ getSession, fetch: request = glo
         const result = await action(state, current);
         return { ...result, bmocState: describe(id, state, session) };
       } catch (err) {
-        state.status = 'invalid';
-        record(id, state, session, 'error');
+        if (invalidateOnError) { state.status = 'invalid'; record(id, state, session, 'error'); }
         return { success: false, error: err.message, bmocState: describe(id, state, session) };
       }
     });
@@ -179,7 +185,19 @@ module.exports = function createSequenceState({ getSession, fetch: request = glo
       state.turnCount++;
       state.totalTurnCount++;
       record(id, state, session, 'turn-completed');
-      return { success: true, content };
+      const observation = state.observation?.active ? await observe(state, session) : null;
+      const result = { success: true, content, ...(observation ? { bmocObservation: observation } : {}), bmocState: describe(id,state,session) };
+      // Still inside BMOC's turn queue: another turn/reset cannot overtake the
+      // observation or its deterministic consumer. This callback owns no model.
+      try { const ngi = await turnObserver?.(id,result); if (ngi) {
+        result.ngiRun = ngi;
+        if (ngi.success === false && state.observation) { state.observation.active=false; state.observation.previous=null; }
+      } }
+      catch (err) {
+        if (state.observation) { state.observation.active=false; state.observation.previous=null; }
+        result.ngiRun = { success:false, error:err.message };
+      }
+      return result;
     });
   }
   function reset(id) {
@@ -191,6 +209,7 @@ module.exports = function createSequenceState({ getSession, fetch: request = glo
       state.tokens = [];
       state.promptText = '';
       state.generation++;
+      state.observation = null;
       state.turnCount = 0;
       state.resetCount++;
       state.status = 'empty';
@@ -232,5 +251,75 @@ module.exports = function createSequenceState({ getSession, fetch: request = glo
       return { reachable: response.ok, status: response.status, provider: 'llama.cpp' };
     } catch (err) { return { reachable: false, error: err.message }; }
   }
-  return { runTurn, reset, invalidate, status, ping };
+  function observationCapabilities(id) {
+    try {
+      const session = getSession(id); observationReader.inspect(session);
+      const { OBSERVATION, PROJECTION, DELTA } = require('./session-manager-rwkv-observation');
+      return { available:true, observations:[OBSERVATION], projections:[PROJECTION], deltas:[DELTA] };
+    } catch (err) { return { available:false, observations:[], projections:[], deltas:[], error:err.message }; }
+  }
+  function configureObservation(id, selection, owner, active = false) {
+    return enqueue(id, async (state,session) => {
+      observationReader.validateSelection(selection); const layout = observationReader.inspect(session);
+      await fs.chmod(session.metadata.sequenceControlPath,0o700);
+      if (typeof owner !== 'string' || !owner) throw new Error('Observation owner is required');
+      if (state.observation && state.observation.owner !== owner) throw new Error('Session observation already belongs to another experiment');
+      // Read-only ABI/slot probe, including an empty newly opened sequence.
+      // The projected value is discarded: only a completed turn can baseline.
+      await readNative(state,session,{ selection,layout },true);
+      state.observation = { selection:JSON.parse(JSON.stringify(selection)), owner, active, layout, previous:null };
+      return { success:true };
+    }, false);
+  }
+  function activateObservation(id,owner,onActivated) {
+    return enqueue(id, async state => {
+      if (state.observation?.owner !== owner) throw new Error('BMOC observation ownership changed');
+      state.observation.active = true; state.observation.previous = null;
+      try { onActivated?.(); } catch (err) { state.observation.active=false; throw err; }
+      return { success:true };
+    }, false);
+  }
+  function clearObservation(id,owner) {
+    return enqueue(id, async state => { if (state.observation?.owner === owner) state.observation = null; return { success:true }; }, false);
+  }
+  async function readNative(state,session,policy,allowEmpty = false) {
+    const filename = `observation-${crypto.randomUUID()}.bin`;
+    const file = path.join(session.metadata.sequenceControlPath,filename);
+    const savedAt = performance.now();
+    try {
+      await call(state,session,`/slots/${state.slotId}?action=save`,{ filename },120000);
+      await fs.chmod(file,0o600);
+      const controller=new AbortController(); state.controller=controller;
+      let projected;
+      try { projected=await observationReader.projectFile(file,policy.layout,policy.selection.projection.seed,allowEmpty,controller.signal); }
+      finally { if (state.controller === controller) state.controller=null; }
+      if (state.closed || lifetimeKey(getSession(state.sessionId)) !== state.lifetime) throw new Error('BMOC observation lifetime invalidated');
+      projected.costs.totalDurationMs=performance.now()-savedAt;
+      return projected;
+    } finally { await fs.unlink(file).catch(() => {}); }
+  }
+  async function observe(state,session) {
+    const policy = state.observation; const seed = policy.selection.projection.seed;
+    try {
+      const projected = await readNative(state,session,policy);
+      const previous = policy.previous;
+      const key = `${state.lifetime}:${state.generation}:${seed}:${projected.layoutKey}`;
+      const delta = previous?.key === key ? projected.q-previous.q : null;
+      if (delta !== null && !Number.isFinite(delta)) throw new Error('Non-finite recurrent-state delta');
+      if (state.closed || lifetimeKey(getSession(state.sessionId)) !== state.lifetime) throw new Error('BMOC observation lifetime invalidated');
+      policy.previous = { key,q:projected.q };
+      // Cost telemetry remains BMOC metadata, never part of the tensor payload.
+      policy.costs = { ...projected.costs };
+      return { q_t:projected.q,d_t:delta,seed,version:policy.selection.projection.version,
+        observationId:policy.selection.observation.id,projectionId:policy.selection.projection.id,
+        deltaVersion:policy.selection.delta.version,elementCount:projected.elementCount,
+        status:delta === null ? 'baseline-established' : 'delta-ready' };
+    } catch (err) {
+      policy.previous = null; policy.active = false;
+      const diagnostic=/^(Unsupported|Unexpected|Non-finite|Observation requires|BMOC|Incomplete|Truncated)/.test(err.message) ? err.message : 'Native sequence observation failed';
+      return { q_t:null,d_t:null,seed,version:policy.selection.projection.version,elementCount:0,status:'error',error:diagnostic };
+    }
+  }
+  return { runTurn, reset, invalidate, status, ping, observationCapabilities, configureObservation, activateObservation, clearObservation,
+    setObservers: (turn,lifecycle) => { turnObserver=turn; lifecycleObserver=lifecycle; } };
 };

@@ -44,7 +44,8 @@ let bmoc = {
 };
 
 let coordinatorBridge = {
-  routeMoEMessage: null
+  routeMoEMessage: null,
+  ngiCommand: null
 };
 let catalogModelRuntimeIndex = null;
 const DEFAULT_LLAMA_GPU_LAYERS = 999;
@@ -69,6 +70,7 @@ function initialize(bmocFunctions) {
   bmoc = bmocFunctions;
   coordinatorBridge.routeMoEMessage =
     typeof bmocFunctions?.routeMoEMessage === 'function' ? bmocFunctions.routeMoEMessage : null;
+  coordinatorBridge.ngiCommand = typeof bmocFunctions?.ngiCommand === 'function' ? bmocFunctions.ngiCommand : null;
   console.log('[MoE Deployment] Initialized with BMOC functions');
 }
 

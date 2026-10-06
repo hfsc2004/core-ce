@@ -34,3 +34,6 @@ hf_token.txt
 /RLM_MIT.pdf
 /Screenshot at *.png
 /.gitignore.bak
+# Ephemeral local CLI management credential (never an experiment manifest)
+/config/relay/ngi-management.json
+/config/relay/ngi-management.json.*.tmp
